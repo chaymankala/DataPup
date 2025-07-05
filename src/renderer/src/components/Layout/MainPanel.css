@@ -1,0 +1,6 @@
+.main-panel {
+  flex: 1;
+  height: 100%;
+  background: var(--gray-1);
+  overflow: hidden;
+}
