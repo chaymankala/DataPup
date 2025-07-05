@@ -1,3 +1,4 @@
+import { Button, Input, Label } from '../ui'
 import { useState, useEffect } from 'react'
 import { Button, Dialog, Flex, Select, Text, TextField, Checkbox } from '@radix-ui/themes'
 import './DatabaseConnection.css'
@@ -104,7 +105,7 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
 
   return (
     <>
-      <Button size="3" onClick={() => setOpen(true)}>
+      <Button size="1" onClick={() => setOpen(true)}>
         Connect to Database
       </Button>
 
@@ -116,12 +117,10 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
           </Dialog.Description>
 
           <Flex direction="column" gap="3">
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Database Type
-              </Text>
-              <Select.Root value={dbType} onValueChange={handleDbTypeChange}>
-                <Select.Trigger className="full-width" />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="db-type">Database Type</Label>
+              <Select.Root value={dbType} onValueChange={setDbType}>
+                <Select.Trigger id="db-type" className="full-width" />
                 <Select.Content>
                   {supportedTypes.map(type => (
                     <Select.Item key={type} value={type}>
@@ -130,73 +129,43 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
                   ))}
                 </Select.Content>
               </Select.Root>
-            </label>
+            </Flex>
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Host
-              </Text>
-              <TextField.Root
-                value={connectionData.host}
-                onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
-                placeholder="localhost"
-              />
-            </label>
+            <Input
+              label="Host"
+              value={connectionData.host}
+              onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
+              placeholder="localhost"
+            />
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Port
-              </Text>
-              <TextField.Root
-                value={connectionData.port}
-                onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
-                placeholder={getDefaultPort(dbType)}
-              />
-            </label>
+            <Input
+              label="Port"
+              value={connectionData.port}
+              onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
+              placeholder="5432"
+            />
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Database
-              </Text>
-              <TextField.Root
-                value={connectionData.database}
-                onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
-                placeholder="default"
-              />
-            </label>
+            <Input
+              label="Database"
+              value={connectionData.database}
+              onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
+              placeholder="my_database"
+            />
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Username
-              </Text>
-              <TextField.Root
-                value={connectionData.username}
-                onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
-                placeholder="default"
-              />
-            </label>
+            <Input
+              label="Username"
+              value={connectionData.username}
+              onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
+              placeholder="username"
+            />
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Password
-              </Text>
-              <TextField.Root
-                type="password"
-                value={connectionData.password}
-                onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
-                placeholder="password"
-              />
-            </label>
-
-            <label>
-              <Flex gap="2" align="center">
-                <Checkbox 
-                  checked={saveConnection} 
-                  onCheckedChange={(checked) => setSaveConnection(checked as boolean)}
-                />
-                <Text size="2">Save connection for future use</Text>
-              </Flex>
-            </label>
+            <Input
+              label="Password"
+              type="password"
+              value={connectionData.password}
+              onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
+              placeholder="password"
+            />
           </Flex>
 
           <Flex gap="3" mt="4" justify="end">

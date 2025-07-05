@@ -1,4 +1,7 @@
-import { Box, Flex, Heading, ScrollArea, Separator, Text } from '@radix-ui/themes'
+import { Box, Flex, Heading, ScrollArea, Text } from '@radix-ui/themes'
+import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
+import { ThemeSwitcher } from '../ThemeSwitcher'
+import { Separator } from '../ui'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { ConnectionList } from '../ConnectionList/ConnectionList'
 import './Sidebar.css'
@@ -11,10 +14,13 @@ interface SidebarProps {
 export function Sidebar({ onConnectionSelect, onConnectionDelete }: SidebarProps) {
   return (
     <Box className="sidebar">
-      <Flex direction="column" gap="4" p="4" height="100%">
-        <Heading size="4" weight="bold">
-          🐶 Data-Pup
-        </Heading>
+      <Flex direction="column" gap="4" p="4">
+        <Flex justify="between" align="center">
+          <Heading size="4" weight="bold">
+            🐶 Data-Pup
+          </Heading>
+          <ThemeSwitcher />
+        </Flex>
         
         <DatabaseConnection onConnectionSuccess={onConnectionSelect} />
         
