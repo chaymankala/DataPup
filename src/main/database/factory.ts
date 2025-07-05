@@ -1,4 +1,4 @@
-import { DatabaseManagerInterface, DatabaseConfig } from './interface'
+import { DatabaseManagerInterface } from './interface'
 import { ClickHouseManager } from './clickhouse'
 
 class DatabaseManagerFactory {

@@ -247,3 +247,13 @@ ipcMain.handle('db:getSupportedTypes', async () => {
     return { success: false, types: [] }
   }
 })
+
+ipcMain.handle('db:getAllConnections', async () => {
+  try {
+    const connections = databaseManager.getAllConnections()
+    return { success: true, connections }
+  } catch (error) {
+    console.error('Error getting all connections:', error)
+    return { success: false, connections: [] }
+  }
+})

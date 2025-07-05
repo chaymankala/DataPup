@@ -11,7 +11,7 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
   const [dbType, setDbType] = useState('clickhouse')
   const [saveConnection, setSaveConnection] = useState(true)
   const [isConnecting, setIsConnecting] = useState(false)
-  const [supportedTypes, setSupportedTypes] = useState<string[]>(['clickhouse'])
+  const [supportedTypes] = useState<string[]>(['clickhouse'])
   const [connectionData, setConnectionData] = useState({
     host: 'localhost',
     port: '8123',

@@ -178,6 +178,27 @@ class DatabaseManager {
     return this.activeConnection ? this.activeConnection.id : null
   }
 
+  getAllConnections(): string[] {
+    const allConnections: string[] = []
+    
+    // Get connections from all database manager instances
+    const supportedTypes = this.factory.getSupportedTypes()
+    
+    for (const dbType of supportedTypes) {
+      const manager = this.factory.getManager(dbType)
+      if (manager) {
+        try {
+          const connections = manager.getAllConnections()
+          allConnections.push(...connections)
+        } catch (error) {
+          console.error(`Error getting connections from ${dbType} manager:`, error)
+        }
+      }
+    }
+    
+    return allConnections
+  }
+
   getSupportedDatabaseTypes(): string[] {
     return this.factory.getSupportedTypes()
   }

@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, ScrollArea, Separator, Text } from '@radix-ui/themes'
+import { Box, Flex, Heading, ScrollArea, Separator, Text } from '@radix-ui/themes'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { ConnectionList } from '../ConnectionList/ConnectionList'
 import './Sidebar.css'

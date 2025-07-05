@@ -11,7 +11,8 @@ const api = {
     getTables: (connectionId: string, database?: string) => ipcRenderer.invoke('db:getTables', connectionId, database),
     getTableSchema: (connectionId: string, tableName: string, database?: string) => ipcRenderer.invoke('db:getTableSchema', connectionId, tableName, database),
     isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
-    getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes')
+    getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
+    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')
   },
   connections: {
     getAll: () => ipcRenderer.invoke('connections:getAll'),

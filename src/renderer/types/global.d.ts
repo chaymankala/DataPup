@@ -1,8 +1,5 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
 declare global {
   interface Window {
-    electron: ElectronAPI
     api: {
       database: {
         connect: (config: any) => Promise<{ success: boolean; message: string; connectionId?: string; error?: string }>
@@ -24,3 +21,5 @@ declare global {
     }
   }
 }
+
+export {} 
