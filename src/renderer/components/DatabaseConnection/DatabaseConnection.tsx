@@ -1,34 +1,106 @@
-import { useState } from 'react'
-import { Dialog, Flex, Select } from '@radix-ui/themes'
 import { Button, Input, Label } from '../ui'
+import { useState, useEffect } from 'react'
+import { Button, Dialog, Flex, Select, Text, TextField, Checkbox } from '@radix-ui/themes'
 import './DatabaseConnection.css'
 
-export function DatabaseConnection() {
+interface DatabaseConnectionProps {
+  onConnectionSuccess?: (connection: any) => void
+}
+
+export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionProps) {
   const [open, setOpen] = useState(false)
-  const [dbType, setDbType] = useState('postgresql')
+  const [dbType, setDbType] = useState('clickhouse')
+  const [saveConnection, setSaveConnection] = useState(true)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [supportedTypes] = useState<string[]>(['clickhouse'])
   const [connectionData, setConnectionData] = useState({
     host: 'localhost',
-    port: '5432',
-    database: '',
-    username: '',
+    port: '8123',
+    database: 'default',
+    username: 'default',
     password: ''
   })
 
+  // Load supported database types on component mount
+  useEffect(() => {
+    const loadSupportedTypes = async () => {
+      try {
+        // TODO: Uncomment when getSupportedTypes is properly typed
+        // const result = await window.api.database.getSupportedTypes()
+        // if (result.success) {
+        //   setSupportedTypes(result.types)
+        // }
+      } catch (error) {
+        console.error('Error loading supported database types:', error)
+      }
+    }
+    loadSupportedTypes()
+  }, [])
+
   const handleConnect = async () => {
     try {
+      setIsConnecting(true)
       const result = await window.api.database.connect({
         type: dbType,
         ...connectionData,
-        port: parseInt(connectionData.port)
+        port: parseInt(connectionData.port),
+        saveConnection
       })
       
       if (result.success) {
         console.log('Connected:', result.message)
         setOpen(false)
+        // Reset form
+        setConnectionData({
+          host: 'localhost',
+          port: '8123',
+          database: 'default',
+          username: 'default',
+          password: ''
+        })
+        // Notify parent component
+        if (onConnectionSuccess && result.connectionId) {
+          // Create a connection object for the parent component
+          const connection = {
+            id: result.connectionId,
+            name: `${dbType} - ${connectionData.host}:${connectionData.port}`,
+            type: dbType,
+            host: connectionData.host,
+            port: parseInt(connectionData.port),
+            database: connectionData.database,
+            username: connectionData.username,
+            createdAt: new Date().toISOString()
+          }
+          onConnectionSuccess(connection)
+        }
+      } else {
+        console.error('Connection failed:', result.message)
+        alert(`Connection failed: ${result.message}`)
       }
     } catch (error) {
       console.error('Connection error:', error)
+      alert('Connection error occurred')
+    } finally {
+      setIsConnecting(false)
     }
+  }
+
+  const getDefaultPort = (type: string) => {
+    switch (type) {
+      case 'clickhouse': return '8123'
+      case 'postgresql': return '5432'
+      case 'mysql': return '3306'
+      case 'sqlite': return ''
+      default: return '5432'
+    }
+  }
+
+  const handleDbTypeChange = (type: string) => {
+    setDbType(type)
+    setConnectionData(prev => ({
+      ...prev,
+      port: getDefaultPort(type)
+    }))
   }
 
   return (
@@ -50,10 +122,11 @@ export function DatabaseConnection() {
               <Select.Root value={dbType} onValueChange={setDbType}>
                 <Select.Trigger id="db-type" className="full-width" />
                 <Select.Content>
-                  <Select.Item value="postgresql">PostgreSQL</Select.Item>
-                  <Select.Item value="mysql">MySQL</Select.Item>
-                  <Select.Item value="sqlite">SQLite</Select.Item>
-                  <Select.Item value="clickhouse">ClickHouse</Select.Item>
+                  {supportedTypes.map(type => (
+                    <Select.Item key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Select.Item>
+                  ))}
                 </Select.Content>
               </Select.Root>
             </Flex>
@@ -97,12 +170,12 @@ export function DatabaseConnection() {
 
           <Flex gap="3" mt="4" justify="end">
             <Dialog.Close>
-              <Button variant="soft" color="gray">
+              <Button variant="soft" color="gray" disabled={isConnecting}>
                 Cancel
               </Button>
             </Dialog.Close>
-            <Button onClick={handleConnect}>
-              Connect
+            <Button onClick={handleConnect} disabled={isConnecting}>
+              {isConnecting ? 'Connecting...' : 'Connect'}
             </Button>
           </Flex>
         </Dialog.Content>

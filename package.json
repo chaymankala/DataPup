@@ -11,7 +11,12 @@
     "dist:win": "npm run build && electron-builder --win",
     "dist:linux": "npm run build && electron-builder --linux"
   },
-  "keywords": ["database", "client", "sql", "electron"],
+  "keywords": [
+    "database",
+    "client",
+    "sql",
+    "electron"
+  ],
   "author": "",
   "license": "MIT",
   "description": "A modern, AI-assisted, cross-platform database client",
@@ -48,6 +53,7 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.11.2",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-scroll-area": "^1.2.9",

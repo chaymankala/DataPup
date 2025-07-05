@@ -1,0 +1,25 @@
+.connection-list {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.connection-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--gray-6);
+}
+
+.connection-card:hover {
+  border-color: var(--blue-6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.connect-btn {
+  flex: 1;
+}
+
+.connection-card .rt-Button {
+  font-size: 12px;
+  padding: 4px 8px;
+} 

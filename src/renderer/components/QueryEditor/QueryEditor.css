@@ -1,0 +1,56 @@
+.query-editor {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.query-input-card {
+  flex-shrink: 0;
+}
+
+.query-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.query-result-card {
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.result-table-container {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--gray-6);
+  border-radius: 4px;
+}
+
+.error-message {
+  padding: 12px;
+  background-color: var(--red-2);
+  border: 1px solid var(--red-6);
+  border-radius: 4px;
+}
+
+.query-editor .rt-Table {
+  width: 100%;
+}
+
+.query-editor .rt-Table th,
+.query-editor .rt-Table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-6);
+}
+
+.query-editor .rt-Table th {
+  background-color: var(--gray-2);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+} 
