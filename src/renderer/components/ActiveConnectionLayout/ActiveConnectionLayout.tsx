@@ -17,6 +17,12 @@ export function ActiveConnectionLayout({
   connectionName,
   onDisconnect
 }: ActiveConnectionLayoutProps) {
+  const handleOpenTableTab = (database: string, tableName: string) => {
+    if (window.openTableTab) {
+      window.openTableTab(database, tableName)
+    }
+  }
+  
   return (
     <Box className="active-connection-layout">
       {/* Header bar */}
@@ -35,14 +41,22 @@ export function ActiveConnectionLayout({
       <PanelGroup direction="horizontal" className="panel-group">
         {/* Left sidebar with database explorer */}
         <Panel defaultSize={20} minSize={15} maxSize={40} className="explorer-panel">
-          <DatabaseExplorer connectionId={connectionId} connectionName={connectionName} />
+          <DatabaseExplorer 
+            connectionId={connectionId} 
+            connectionName={connectionName}
+            onTableDoubleClick={handleOpenTableTab}
+          />
         </Panel>
 
         <PanelResizeHandle className="resize-handle" />
 
         {/* Right side with query workspace */}
         <Panel defaultSize={80} className="workspace-panel">
-          <QueryWorkspace connectionId={connectionId} connectionName={connectionName} />
+          <QueryWorkspace 
+            connectionId={connectionId} 
+            connectionName={connectionName}
+            onOpenTableTab={handleOpenTableTab}
+          />
         </Panel>
       </PanelGroup>
     </Box>

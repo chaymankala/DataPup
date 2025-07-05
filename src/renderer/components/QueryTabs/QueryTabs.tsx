@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import { Box, Flex, Text, IconButton } from '@radix-ui/themes'
 import { Button } from '../ui'
+import { Tab } from '../../types/tabs'
 import './QueryTabs.css'
 
-export interface QueryTab {
-  id: string
-  title: string
-  query: string
-  isDirty: boolean
-}
-
 interface QueryTabsProps {
-  tabs: QueryTab[]
+  tabs: Tab[]
   activeTabId: string
   onSelectTab: (tabId: string) => void
   onNewTab: () => void
@@ -30,7 +24,7 @@ export function QueryTabs({
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
 
-  const handleStartEdit = (tab: QueryTab) => {
+  const handleStartEdit = (tab: Tab) => {
     setEditingTabId(tab.id)
     setEditingTitle(tab.title)
   }
@@ -62,7 +56,7 @@ export function QueryTabs({
               className={`query-tab ${tab.id === activeTabId ? 'active' : ''}`}
               onClick={() => onSelectTab(tab.id)}
             >
-              <Flex align="center" gap="2">
+              <Flex align="center" gap="1" style={{ width: '100%' }}>
                 {editingTabId === tab.id ? (
                   <input
                     type="text"
@@ -75,10 +69,13 @@ export function QueryTabs({
                     autoFocus
                   />
                 ) : (
-                  <Text size="1" className="tab-title" onDoubleClick={() => handleStartEdit(tab)}>
-                    {tab.title}
-                    {tab.isDirty && <span className="dirty-indicator">•</span>}
-                  </Text>
+                  <>
+                    <Text size="1" style={{ flexShrink: 0 }}>{tab.type === 'table' ? '◆' : '▹'}</Text>
+                    <Text size="1" className="tab-title" onDoubleClick={() => handleStartEdit(tab)}>
+                      {tab.title}
+                      {tab.isDirty && <span className="dirty-indicator">•</span>}
+                    </Text>
+                  </>
                 )}
 
                 {tabs.length > 1 && (

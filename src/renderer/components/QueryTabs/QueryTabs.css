@@ -1,9 +1,9 @@
 .query-tabs {
-  height: 36px;
-  background: var(--gray-2);
-  border-bottom: 1px solid var(--gray-4);
-  padding: 0 8px;
+  height: 28px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
 }
 
 .tabs-container {
@@ -11,10 +11,11 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+  margin-right: 4px;
 }
 
 .tabs-container::-webkit-scrollbar {
-  height: 4px;
+  height: 3px;
 }
 
 .tabs-container::-webkit-scrollbar-track {
@@ -29,7 +30,8 @@
 .query-tab {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  height: 24px;
+  padding: 0 8px;
   background: var(--gray-3);
   border: 1px solid var(--gray-4);
   border-bottom: none;
@@ -37,8 +39,14 @@
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  min-width: 100px;
-  max-width: 200px;
+  min-width: 80px;
+  max-width: 160px;
+  font-size: 11px;
+}
+
+.query-tab > div {
+  width: 100%;
+  overflow: hidden;
 }
 
 .query-tab:hover {
@@ -67,28 +75,32 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   user-select: none;
+  min-width: 0;
+  max-width: 100px;
 }
 
 .dirty-indicator {
   color: var(--accent-9);
-  margin-left: 4px;
-  font-size: 16px;
+  margin-left: 2px;
+  font-size: 12px;
   line-height: 1;
 }
 
 .tab-close-button {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: none;
   background: none;
   color: var(--gray-9);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   padding: 0;
   opacity: 0;
   transition: all 0.2s;
   border-radius: 2px;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .query-tab:hover .tab-close-button {
@@ -105,8 +117,8 @@
   background: var(--gray-1);
   border: 1px solid var(--accent-7);
   border-radius: 2px;
-  padding: 2px 4px;
-  font-size: 12px;
+  padding: 1px 4px;
+  font-size: 11px;
   outline: none;
   width: 100%;
   min-width: 50px;
@@ -114,9 +126,11 @@
 
 .new-tab-button {
   margin-left: 4px;
-  width: 24px;
-  height: 24px;
+  margin-right: 4px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1;
+  flex-shrink: 0;
 }

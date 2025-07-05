@@ -12,12 +12,12 @@
 
 .explorer-search {
   width: 100%;
-  padding: 6px 12px;
+  padding: 4px 8px;
   border: 1px solid var(--gray-6);
   border-radius: var(--radius-2);
   background: var(--gray-1);
   color: var(--gray-12);
-  font-size: 14px;
+  font-size: 12px;
   transition: all 0.2s;
 }
 
@@ -84,4 +84,32 @@
 
 .database-item:active {
   background: var(--gray-4);
+}
+
+.column-list {
+  border-left: 1px solid var(--gray-4);
+  margin-left: 8px;
+}
+
+.column-item {
+  cursor: default;
+  border-radius: var(--radius-2);
+  transition: all 0.2s;
+  margin-left: 8px;
+  font-size: 11px;
+}
+
+.column-item:hover {
+  background: var(--gray-3);
+}
+
+.column-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-item.expanded {
+  background: var(--gray-3);
 }
