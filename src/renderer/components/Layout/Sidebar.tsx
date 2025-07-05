@@ -2,7 +2,6 @@ import { Box, Flex, Heading, ScrollArea, Text } from '@radix-ui/themes'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { ThemeSwitcher } from '../ThemeSwitcher'
 import { Separator } from '../ui'
-import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { ConnectionList } from '../ConnectionList/ConnectionList'
 import './Sidebar.css'
 
