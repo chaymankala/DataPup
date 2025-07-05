@@ -3,6 +3,7 @@ import { Box, Flex, Text } from '@radix-ui/themes'
 import { Button } from '../ui'
 import { DatabaseExplorer } from '../DatabaseExplorer/DatabaseExplorer'
 import { QueryWorkspace } from '../QueryWorkspace/QueryWorkspace'
+import { ThemeSwitcher } from '../ThemeSwitcher'
 import './ActiveConnectionLayout.css'
 
 interface ActiveConnectionLayoutProps {
@@ -11,28 +12,34 @@ interface ActiveConnectionLayoutProps {
   onDisconnect?: () => void
 }
 
-export function ActiveConnectionLayout({ connectionId, connectionName, onDisconnect }: ActiveConnectionLayoutProps) {
+export function ActiveConnectionLayout({
+  connectionId,
+  connectionName,
+  onDisconnect
+}: ActiveConnectionLayoutProps) {
   return (
     <Box className="active-connection-layout">
       {/* Header bar */}
       <Flex className="connection-header" justify="between" align="center" p="2">
+        <Text size="2" weight="medium">
+          {connectionName}
+        </Text>
         <Flex align="center" gap="2">
-          <Text size="2" weight="bold">Connected to:</Text>
-          <Text size="2">{connectionName}</Text>
+          <ThemeSwitcher size="1" />
+          <Button size="1" variant="soft" color="red" onClick={onDisconnect}>
+            Disconnect
+          </Button>
         </Flex>
-        <Button size="1" variant="soft" color="red" onClick={onDisconnect}>
-          Disconnect
-        </Button>
       </Flex>
-      
+
       <PanelGroup direction="horizontal" className="panel-group">
         {/* Left sidebar with database explorer */}
         <Panel defaultSize={20} minSize={15} maxSize={40} className="explorer-panel">
           <DatabaseExplorer connectionId={connectionId} connectionName={connectionName} />
         </Panel>
-        
+
         <PanelResizeHandle className="resize-handle" />
-        
+
         {/* Right side with query workspace */}
         <Panel defaultSize={80} className="workspace-panel">
           <QueryWorkspace connectionId={connectionId} connectionName={connectionName} />

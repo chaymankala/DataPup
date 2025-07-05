@@ -1,0 +1,87 @@
+.query-history {
+  background: var(--gray-1);
+  border-left: 1px solid var(--gray-4);
+}
+
+.history-header {
+  border-bottom: 1px solid var(--gray-4);
+  background: var(--gray-2);
+}
+
+.history-search input {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-2);
+  background: var(--gray-1);
+  color: var(--gray-12);
+  font-size: 13px;
+}
+
+.history-search input:focus {
+  outline: none;
+  border-color: var(--accent-8);
+  box-shadow: 0 0 0 1px var(--accent-8);
+}
+
+.history-list {
+  flex: 1;
+  height: 100%;
+}
+
+.history-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border: 1px solid var(--gray-3);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.history-item:hover {
+  background: var(--gray-2);
+  border-color: var(--gray-5);
+}
+
+.history-item.selected {
+  background: var(--accent-2);
+  border-color: var(--accent-6);
+}
+
+.history-item.error {
+  border-color: var(--red-6);
+}
+
+.history-item.error:hover {
+  background: var(--red-2);
+}
+
+.query-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--gray-11);
+  word-break: break-all;
+  padding-right: 20px;
+}
+
+.error-text {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.delete-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.history-item:hover .delete-button {
+  opacity: 1;
+}

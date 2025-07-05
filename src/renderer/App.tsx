@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { MainPanel } from './components/Layout/MainPanel'
+import { PageTransition } from './components/PageTransition'
 import './App.css'
 
 interface Connection {
@@ -25,22 +26,29 @@ function App() {
         const result = await window.api.connections.getAll()
         if (result.success) {
           // Filter out duplicate connections based on Label (name)
-          const uniqueConnections = result.connections.reduce((acc: Connection[], connection: Connection) => {
-            const existingConnection = acc.find(conn => conn.name === connection.name)
-            if (!existingConnection) {
-              acc.push(connection)
-            } else {
-              // If duplicate found, keep the one with the most recent lastUsed timestamp
-              const existingLastUsed = existingConnection.lastUsed ? new Date(existingConnection.lastUsed).getTime() : 0
-              const currentLastUsed = connection.lastUsed ? new Date(connection.lastUsed).getTime() : 0
-              if (currentLastUsed > existingLastUsed) {
-                // Replace the existing connection with the more recent one
-                const index = acc.findIndex(conn => conn.name === connection.name)
-                acc[index] = connection
+          const uniqueConnections = result.connections.reduce(
+            (acc: Connection[], connection: Connection) => {
+              const existingConnection = acc.find((conn) => conn.name === connection.name)
+              if (!existingConnection) {
+                acc.push(connection)
+              } else {
+                // If duplicate found, keep the one with the most recent lastUsed timestamp
+                const existingLastUsed = existingConnection.lastUsed
+                  ? new Date(existingConnection.lastUsed).getTime()
+                  : 0
+                const currentLastUsed = connection.lastUsed
+                  ? new Date(connection.lastUsed).getTime()
+                  : 0
+                if (currentLastUsed > existingLastUsed) {
+                  // Replace the existing connection with the more recent one
+                  const index = acc.findIndex((conn) => conn.name === connection.name)
+                  acc[index] = connection
+                }
               }
-            }
-            return acc
-          }, [])
+              return acc
+            },
+            []
+          )
 
           setSavedConnections(uniqueConnections)
         }
@@ -94,11 +102,9 @@ function App() {
         await window.api.connections.updateLastUsed(fullConnection.id)
 
         // Update the local saved connections list
-        setSavedConnections(prev =>
-          prev.map(conn =>
-            conn.id === fullConnection.id
-              ? { ...conn, lastUsed: new Date().toISOString() }
-              : conn
+        setSavedConnections((prev) =>
+          prev.map((conn) =>
+            conn.id === fullConnection.id ? { ...conn, lastUsed: new Date().toISOString() } : conn
           )
         )
       } else {
@@ -115,13 +121,13 @@ function App() {
     if (activeConnection?.id === connectionId) {
       setActiveConnection(null)
     }
-    setSavedConnections(prev => prev.filter(conn => conn.id !== connectionId))
+    setSavedConnections((prev) => prev.filter((conn) => conn.id !== connectionId))
   }
 
   const handleConnectionSuccess = (connection: Connection) => {
     // Add to saved connections if not already present
-    setSavedConnections(prev => {
-      const exists = prev.find(conn => conn.id === connection.id)
+    setSavedConnections((prev) => {
+      const exists = prev.find((conn) => conn.id === connection.id)
       if (!exists) {
         return [...prev, connection]
       }
@@ -146,14 +152,18 @@ function App() {
 
   return (
     <div className="app-container">
-      <MainPanel
-        activeConnection={activeConnection ? { id: activeConnection.id, name: activeConnection.name } : undefined}
-        onConnectionSuccess={handleConnectionSuccess}
-        savedConnections={savedConnections}
-        onConnectionSelect={handleConnectionSelect}
-        onConnectionDelete={handleConnectionDelete}
-        onDisconnect={handleDisconnect}
-      />
+      <PageTransition transitionKey={activeConnection ? 'active-connection' : 'no-connection'}>
+        <MainPanel
+          activeConnection={
+            activeConnection ? { id: activeConnection.id, name: activeConnection.name } : undefined
+          }
+          onConnectionSuccess={handleConnectionSuccess}
+          savedConnections={savedConnections}
+          onConnectionSelect={handleConnectionSelect}
+          onConnectionDelete={handleConnectionDelete}
+          onDisconnect={handleDisconnect}
+        />
+      </PageTransition>
     </div>
   )
 }

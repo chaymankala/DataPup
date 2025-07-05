@@ -6,10 +6,8 @@ export interface CardProps extends RadixCardProps {
   // We can add custom props here if needed
 }
 
-export const Card = forwardRef<HTMLDivElement, CardProps>(
-  (props, ref) => {
-    return <RadixCard ref={ref} {...props} />
-  }
-)
+export const Card = forwardRef<HTMLDivElement, CardProps>((props, ref) => {
+  return <RadixCard ref={ref} {...props} />
+})
 
 Card.displayName = 'Card'

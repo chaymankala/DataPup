@@ -36,11 +36,11 @@ class SecureStorage {
   constructor() {
     // Use app-specific user data directory
     this.storagePath = join(app.getPath('userData'), 'connections.json')
-    
+
     // Generate a machine-specific encryption key
     // In production, you might want to use the system keychain
     this.encryptionKey = this.generateEncryptionKey()
-    
+
     // Ensure the directory exists
     const dir = join(app.getPath('userData'))
     if (!existsSync(dir)) {
@@ -53,7 +53,7 @@ class SecureStorage {
     const machineId = app.getPath('userData')
     const appName = app.getName()
     const version = app.getVersion()
-    
+
     // Create a deterministic but unique key for this machine/app combination
     return createHash('sha256').update(`${machineId}-${appName}-${version}`).digest('hex')
   }
@@ -69,7 +69,11 @@ class SecureStorage {
   private decrypt(encryptedText: string): string {
     const [ivHex, encrypted] = encryptedText.split(':')
     const iv = Buffer.from(ivHex, 'hex')
-    const decipher = createDecipheriv('aes-256-cbc', Buffer.from(this.encryptionKey.slice(0, 32)), iv)
+    const decipher = createDecipheriv(
+      'aes-256-cbc',
+      Buffer.from(this.encryptionKey.slice(0, 32)),
+      iv
+    )
     let decrypted = decipher.update(encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
     return decrypted
@@ -99,7 +103,7 @@ class SecureStorage {
 
   saveConnection(connection: DatabaseConnection): void {
     const connections = this.loadConnections()
-    
+
     const encryptedConnection: EncryptedConnection = {
       id: connection.id,
       name: connection.name,
@@ -114,7 +118,7 @@ class SecureStorage {
     }
 
     // Check if connection with same ID already exists
-    const existingIndex = connections.findIndex(c => c.id === connection.id)
+    const existingIndex = connections.findIndex((c) => c.id === connection.id)
     if (existingIndex >= 0) {
       connections[existingIndex] = encryptedConnection
     } else {
@@ -126,8 +130,8 @@ class SecureStorage {
 
   getConnections(): DatabaseConnection[] {
     const encryptedConnections = this.loadConnections()
-    
-    return encryptedConnections.map(conn => ({
+
+    return encryptedConnections.map((conn) => ({
       id: conn.id,
       name: conn.name,
       type: conn.type,
@@ -143,14 +147,14 @@ class SecureStorage {
 
   getConnection(id: string): DatabaseConnection | null {
     const connections = this.getConnections()
-    return connections.find(conn => conn.id === id) || null
+    return connections.find((conn) => conn.id === id) || null
   }
 
   deleteConnection(id: string): boolean {
     const connections = this.loadConnections()
     const initialLength = connections.length
-    const filteredConnections = connections.filter(conn => conn.id !== id)
-    
+    const filteredConnections = connections.filter((conn) => conn.id !== id)
+
     if (filteredConnections.length < initialLength) {
       this.saveConnections(filteredConnections)
       return true
@@ -160,8 +164,8 @@ class SecureStorage {
 
   updateLastUsed(id: string): void {
     const connections = this.loadConnections()
-    const connection = connections.find(conn => conn.id === id)
-    
+    const connection = connections.find((conn) => conn.id === id)
+
     if (connection) {
       connection.lastUsed = new Date().toISOString()
       this.saveConnections(connections)
@@ -183,4 +187,4 @@ class SecureStorage {
 }
 
 export { SecureStorage }
-export type { DatabaseConnection, EncryptedConnection } 
+export type { DatabaseConnection, EncryptedConnection }

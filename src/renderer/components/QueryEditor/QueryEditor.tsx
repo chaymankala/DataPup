@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { Button, Flex, Text, TextArea, Card, Table } from '@radix-ui/themes'
+import { useState, useRef } from 'react'
+import { Button, Flex, Text, Card, Box } from '@radix-ui/themes'
+import Editor, { Monaco } from '@monaco-editor/react'
+import { Skeleton } from '../ui'
 import './QueryEditor.css'
 
 interface QueryEditorProps {
@@ -14,20 +16,115 @@ interface QueryResult {
   error?: string
 }
 
+// SQL keywords for autocomplete
+const sqlKeywords = [
+  'SELECT',
+  'FROM',
+  'WHERE',
+  'JOIN',
+  'LEFT',
+  'RIGHT',
+  'INNER',
+  'OUTER',
+  'ON',
+  'GROUP',
+  'BY',
+  'ORDER',
+  'HAVING',
+  'LIMIT',
+  'OFFSET',
+  'INSERT',
+  'INTO',
+  'VALUES',
+  'UPDATE',
+  'SET',
+  'DELETE',
+  'CREATE',
+  'TABLE',
+  'ALTER',
+  'DROP',
+  'INDEX',
+  'VIEW',
+  'PROCEDURE',
+  'FUNCTION',
+  'TRIGGER',
+  'AS',
+  'DISTINCT',
+  'COUNT',
+  'SUM',
+  'AVG',
+  'MIN',
+  'MAX',
+  'CASE',
+  'WHEN',
+  'THEN',
+  'ELSE',
+  'END',
+  'AND',
+  'OR',
+  'NOT',
+  'IN',
+  'EXISTS',
+  'BETWEEN',
+  'LIKE',
+  'IS',
+  'NULL',
+  'ASC',
+  'DESC',
+  'UNION',
+  'ALL',
+  'ANY',
+  'SOME'
+]
+
 export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) {
-  const [query, setQuery] = useState('SELECT * FROM dummy_db.users')
+  const [query, setQuery] = useState('SELECT * FROM users LIMIT 10')
   const [result, setResult] = useState<QueryResult | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [selectedText, setSelectedText] = useState('')
+  const editorRef = useRef<any>(null)
+
+  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+    editorRef.current = editor
+
+    // Configure SQL language settings
+    monaco.languages.registerCompletionItemProvider('sql', {
+      provideCompletionItems: (model, position) => {
+        const suggestions = sqlKeywords.map((keyword) => ({
+          label: keyword,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: keyword,
+          documentation: `SQL keyword: ${keyword}`
+        }))
+        return { suggestions }
+      }
+    })
+
+    // Add keyboard shortcuts
+    editor.addAction({
+      id: 'execute-query',
+      label: 'Execute Query',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+      run: () => handleExecuteQuery()
+    })
+
+    // Track selected text
+    editor.onDidChangeCursorSelection((e: any) => {
+      const selection = editor.getSelection()
+      const text = editor.getModel().getValueInRange(selection)
+      setSelectedText(text)
+    })
+  }
 
   const handleExecuteQuery = async () => {
-    if (!query.trim()) return
+    const queryToExecute = selectedText || query
+    if (!queryToExecute.trim()) return
 
     try {
       setIsExecuting(true)
       setResult(null)
-      
-      const queryResult = await window.api.database.query(connectionId, query.trim())
-      console.log('Query result:', queryResult)
+
+      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
       setResult(queryResult)
     } catch (error) {
       console.error('Query execution error:', error)
@@ -41,155 +138,146 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      handleExecuteQuery()
+  const formatQuery = () => {
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument').run()
     }
-  }
-
-  const formatResult = (data: any[]) => {
-    console.log('Formatting result data:', data)
-    
-    if (!data || data.length === 0) {
-      return <Text color="gray">No data returned</Text>
-    }
-
-    // Handle different data structures
-    let rows = data
-    let columns: string[] = []
-
-    if (Array.isArray(data) && data.length > 0) {
-      const firstRow = data[0]
-      if (typeof firstRow === 'object' && firstRow !== null) {
-        columns = Object.keys(firstRow)
-      } else {
-        // Handle case where data is array of primitive values
-        columns = ['value']
-        rows = data.map(value => ({ value }))
-      }
-    }
-
-    console.log('Columns:', columns)
-    console.log('Rows:', rows)
-    
-    // Simple fallback display if table fails
-    if (columns.length === 0) {
-      return (
-        <div style={{ padding: '16px', border: '1px solid #ccc', borderRadius: '4px' }}>
-          <Text>Raw data (table rendering failed):</Text>
-          <pre style={{ fontSize: '12px', overflow: 'auto', maxHeight: '200px' }}>
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </div>
-      )
-    }
-    
-    return (
-      <div style={{ overflow: 'auto', maxHeight: '400px' }}>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              {columns.map((column) => (
-                <Table.ColumnHeaderCell key={column}>
-                  {column}
-                </Table.ColumnHeaderCell>
-              ))}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {rows.map((row, index) => (
-              <Table.Row key={index}>
-                {columns.map((column) => (
-                  <Table.Cell key={column}>
-                    {row[column] !== null && row[column] !== undefined 
-                      ? String(row[column]) 
-                      : <Text color="gray">null</Text>
-                    }
-                  </Table.Cell>
-                ))}
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </div>
-    )
   }
 
   return (
     <div className="query-editor">
       <Flex direction="column" gap="4" height="100%">
         {/* Header */}
-        <Flex justify="between" align="center">
-          <Text size="3" weight="bold">
-            Query Editor - {connectionName}
-          </Text>
-          <Text size="1" color="gray">
-            Cmd/Ctrl + Enter to execute
-          </Text>
-        </Flex>
-
-        {/* Query Input */}
-        <Card className="query-input-card">
-          <Text size="2" weight="bold" mb="2">
-            SQL Query
-          </Text>
-          <TextArea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter your SQL query here..."
-            className="query-textarea"
-            rows={8}
-          />
-          <Flex justify="end" mt="2">
-            <Button 
-              onClick={handleExecuteQuery} 
-              disabled={isExecuting || !query.trim()}
+        <Flex justify="between" align="center" px="4" pt="4">
+          <Flex align="center" gap="3">
+            <Text size="3" weight="bold">
+              Query Editor
+            </Text>
+            <Text size="2" color="gray">
+              {connectionName}
+            </Text>
+          </Flex>
+          <Flex gap="2" align="center">
+            <Text size="1" color="gray">
+              {selectedText ? 'Execute selected' : 'Cmd/Ctrl + Enter to execute'}
+            </Text>
+            <Button size="1" variant="soft" onClick={formatQuery}>
+              Format
+            </Button>
+            <Button
+              onClick={handleExecuteQuery}
+              disabled={isExecuting || (!query.trim() && !selectedText.trim())}
+              size="2"
             >
-              {isExecuting ? 'Executing...' : 'Execute Query'}
+              {isExecuting ? 'Executing...' : 'Execute'}
             </Button>
           </Flex>
-        </Card>
+        </Flex>
+
+        {/* SQL Editor */}
+        <Box className="editor-container">
+          <Editor
+            height="300px"
+            defaultLanguage="sql"
+            theme="vs-dark"
+            value={query}
+            onChange={(value) => setQuery(value || '')}
+            onMount={handleEditorDidMount}
+            loading={<Skeleton height={300} />}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              formatOnPaste: true,
+              formatOnType: true,
+              automaticLayout: true,
+              suggestOnTriggerCharacters: true,
+              quickSuggestions: {
+                other: true,
+                comments: false,
+                strings: false
+              },
+              parameterHints: {
+                enabled: true
+              }
+            }}
+          />
+        </Box>
 
         {/* Results */}
         {result && (
           <Card className="query-result-card">
-            <Text size="2" weight="bold" mb="2">
-              Results
-            </Text>
-            
+            <Flex justify="between" align="center" mb="3">
+              <Text size="2" weight="bold">
+                Results
+              </Text>
+              {result.success && result.data && (
+                <Text size="1" color="gray">
+                  {result.data.length} rows returned
+                </Text>
+              )}
+            </Flex>
+
             {result.success ? (
-              <div>
-                <Text size="1" color="gray" mb="2">
-                  {result.message}
-                </Text>
-                <div className="result-table-container">
-                  {formatResult(result.data || [])}
-                </div>
-                {/* Debug info */}
-                <details style={{ marginTop: '8px', fontSize: '12px', color: 'gray' }}>
-                  <summary>Debug Info</summary>
-                  <pre style={{ fontSize: '10px', overflow: 'auto', maxHeight: '100px' }}>
-                    {JSON.stringify(result.data, null, 2)}
-                  </pre>
-                </details>
-              </div>
-            ) : (
-              <div className="error-message">
-                <Text color="red" weight="bold">
-                  Error: {result.message}
-                </Text>
-                {result.error && (
-                  <Text size="1" color="red" mt="1">
-                    {result.error}
-                  </Text>
+              <Box className="result-content">
+                {result.data && result.data.length > 0 ? (
+                  <QueryResults data={result.data} />
+                ) : (
+                  <Flex align="center" justify="center" py="8">
+                    <Text color="gray">No data returned</Text>
+                  </Flex>
                 )}
-              </div>
+              </Box>
+            ) : (
+              <Box className="error-message" p="3">
+                <Text color="red" weight="bold" size="2">
+                  Error
+                </Text>
+                <Text color="red" size="1" mt="1">
+                  {result.error || result.message}
+                </Text>
+              </Box>
             )}
           </Card>
         )}
       </Flex>
     </div>
   )
-} 
+}
+
+function QueryResults({ data }: { data: any[] }) {
+  if (!data || data.length === 0) return null
+
+  const columns = Object.keys(data[0])
+
+  return (
+    <Box className="query-results-table">
+      <table>
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr key={index}>
+              {columns.map((column) => (
+                <td key={column}>
+                  {row[column] !== null && row[column] !== undefined ? (
+                    String(row[column])
+                  ) : (
+                    <span className="null-value">NULL</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Box>
+  )
+}

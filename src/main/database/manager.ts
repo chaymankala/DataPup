@@ -1,9 +1,15 @@
-import { DatabaseManagerInterface, DatabaseConfig, ConnectionResult, QueryResult } from './interface'
+import {
+  DatabaseManagerInterface,
+  DatabaseConfig,
+  ConnectionResult,
+  QueryResult
+} from './interface'
 import { DatabaseManagerFactory } from './factory'
 
 class DatabaseManager {
   private factory: DatabaseManagerFactory
-  private activeConnection: { id: string; type: string; manager: DatabaseManagerInterface } | null = null
+  private activeConnection: { id: string; type: string; manager: DatabaseManagerInterface } | null =
+    null
 
   constructor() {
     this.factory = new DatabaseManagerFactory()
@@ -37,7 +43,7 @@ class DatabaseManager {
 
       // Connect using the specific manager
       const result = await manager.connect(config, connectionId)
-      
+
       if (result.success) {
         // Store the single active connection
         this.activeConnection = {
@@ -46,7 +52,7 @@ class DatabaseManager {
           manager: manager
         }
       }
-      
+
       return result
     } catch (error) {
       console.error('Database connection error:', error)
@@ -66,7 +72,7 @@ class DatabaseManager {
 
       // Disconnect using the specific manager
       const result = await this.activeConnection.manager.disconnect(connectionId)
-      
+
       if (result.success) {
         // Clear the active connection
         this.activeConnection = null
@@ -104,7 +110,9 @@ class DatabaseManager {
     }
   }
 
-  async getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }> {
+  async getDatabases(
+    connectionId: string
+  ): Promise<{ success: boolean; databases?: string[]; message: string }> {
     try {
       if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
@@ -123,7 +131,10 @@ class DatabaseManager {
     }
   }
 
-  async getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }> {
+  async getTables(
+    connectionId: string,
+    database?: string
+  ): Promise<{ success: boolean; tables?: string[]; message: string }> {
     try {
       if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
@@ -142,7 +153,11 @@ class DatabaseManager {
     }
   }
 
-  async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
+  async getTableSchema(
+    connectionId: string,
+    tableName: string,
+    database?: string
+  ): Promise<{ success: boolean; schema?: any[]; message: string }> {
     try {
       if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
@@ -167,7 +182,9 @@ class DatabaseManager {
     return this.activeConnection.manager.isConnected(connectionId)
   }
 
-  getConnectionInfo(connectionId: string): { type: string; host: string; port: number; database: string } | null {
+  getConnectionInfo(
+    connectionId: string
+  ): { type: string; host: string; port: number; database: string } | null {
     if (!this.activeConnection || this.activeConnection.id !== connectionId) return null
 
     const info = this.activeConnection.manager.getConnectionInfo(connectionId)
@@ -180,10 +197,10 @@ class DatabaseManager {
 
   getAllConnections(): string[] {
     const allConnections: string[] = []
-    
+
     // Get connections from all database manager instances
     const supportedTypes = this.factory.getSupportedTypes()
-    
+
     for (const dbType of supportedTypes) {
       const manager = this.factory.getManager(dbType)
       if (manager) {
@@ -195,7 +212,7 @@ class DatabaseManager {
         }
       }
     }
-    
+
     return allConnections
   }
 
@@ -211,4 +228,4 @@ class DatabaseManager {
   }
 }
 
-export { DatabaseManager } 
+export { DatabaseManager }

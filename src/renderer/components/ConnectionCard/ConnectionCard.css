@@ -1,0 +1,147 @@
+.connection-card {
+  position: relative;
+  width: 240px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
+  background: var(--card);
+  border: 1px solid var(--gray-a3);
+  overflow: hidden;
+  padding: 12px;
+}
+
+.connection-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-8);
+}
+
+.connection-card.deleting {
+  opacity: 0.5;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+
+.card-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    var(--accent-a4),
+    transparent 40%
+  );
+  pointer-events: none;
+}
+
+.connection-card:hover .card-glow {
+  opacity: 1;
+}
+
+.card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.database-icon {
+  transition: transform 0.3s ease;
+}
+
+.connection-card:hover .database-icon {
+  transform: scale(1.1);
+}
+
+.connection-name {
+  transition: color 0.3s ease;
+}
+
+.connection-card:hover .connection-name {
+  color: var(--accent-11);
+}
+
+.database-type-badge {
+  background: var(--accent-a3);
+  padding: 2px 8px;
+  border-radius: var(--radius-2);
+  transition: all 0.3s ease;
+}
+
+.connection-card:hover .database-type-badge {
+  background: var(--accent-a4);
+}
+
+.connection-details {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-footer {
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.connection-card:hover .card-footer {
+  opacity: 1;
+}
+
+.last-used {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.clock-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.delete-button {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.connection-card:hover .delete-button {
+  opacity: 0.7;
+}
+
+.delete-button:hover {
+  opacity: 1 !important;
+}
+
+/* Animation for new cards */
+@keyframes cardEntry {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.connection-card {
+  animation: cardEntry 0.4s ease-out;
+}
+
+/* Mouse tracking for glow effect */
+.connection-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: var(--radius-3);
+  background: radial-gradient(
+    800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    var(--accent-a2),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.connection-card:hover::before {
+  opacity: 1;
+}

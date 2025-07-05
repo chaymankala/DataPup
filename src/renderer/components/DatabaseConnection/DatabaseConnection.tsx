@@ -9,7 +9,11 @@ interface DatabaseConnectionProps {
   inline?: boolean
 }
 
-export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = false }: DatabaseConnectionProps) {
+export function DatabaseConnection({
+  onConnectionSuccess,
+  onCancel,
+  inline = false
+}: DatabaseConnectionProps) {
   const [open, setOpen] = useState(false)
   const [dbType, setDbType] = useState('clickhouse')
   const [saveConnection, setSaveConnection] = useState(true)
@@ -68,7 +72,8 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
           // Create a connection object for the parent component
           const connection = {
             id: result.connectionId,
-            name: connectionData.label || `${dbType} - ${connectionData.host}:${connectionData.port}`,
+            name:
+              connectionData.label || `${dbType} - ${connectionData.host}:${connectionData.port}`,
             type: dbType,
             host: connectionData.host,
             port: parseInt(connectionData.port),
@@ -95,17 +100,22 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
 
   const getDefaultPort = (type: string) => {
     switch (type) {
-      case 'clickhouse': return '8123'
-      case 'postgresql': return '5432'
-      case 'mysql': return '3306'
-      case 'sqlite': return ''
-      default: return '5432'
+      case 'clickhouse':
+        return '8123'
+      case 'postgresql':
+        return '5432'
+      case 'mysql':
+        return '3306'
+      case 'sqlite':
+        return ''
+      default:
+        return '5432'
     }
   }
 
   const handleDbTypeChange = (type: string) => {
     setDbType(type)
-    setConnectionData(prev => ({
+    setConnectionData((prev) => ({
       ...prev,
       port: getDefaultPort(type)
     }))
@@ -124,7 +134,9 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
     return (
       <Card style={{ padding: '24px' }}>
         <Flex direction="column" gap="4">
-          <Text size="4" weight="medium">Connect to Database</Text>
+          <Text size="4" weight="medium">
+            Connect to Database
+          </Text>
 
           <Flex direction="column" gap="3">
             <Flex direction="column" gap="1">
@@ -132,7 +144,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="label"
                 value={connectionData.label}
-                onChange={(e) => setConnectionData({...connectionData, label: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, label: e.target.value })}
                 placeholder="My Database Connection"
               />
             </Flex>
@@ -142,7 +154,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <Select.Root value={dbType} onValueChange={setDbType}>
                 <Select.Trigger id="db-type" className="full-width" />
                 <Select.Content>
-                  {supportedTypes.map(type => (
+                  {supportedTypes.map((type) => (
                     <Select.Item key={type} value={type}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </Select.Item>
@@ -156,7 +168,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="host"
                 value={connectionData.host}
-                onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, host: e.target.value })}
                 placeholder="localhost"
               />
             </Flex>
@@ -166,7 +178,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="port"
                 value={connectionData.port}
-                onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, port: e.target.value })}
                 placeholder="5432"
               />
             </Flex>
@@ -176,7 +188,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="database"
                 value={connectionData.database}
-                onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, database: e.target.value })}
                 placeholder="my_database"
               />
             </Flex>
@@ -186,7 +198,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="username"
                 value={connectionData.username}
-                onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, username: e.target.value })}
                 placeholder="username"
               />
             </Flex>
@@ -197,7 +209,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
                 id="password"
                 type="password"
                 value={connectionData.password}
-                onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, password: e.target.value })}
                 placeholder="password"
               />
             </Flex>
@@ -249,7 +261,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="label"
                 value={connectionData.label}
-                onChange={(e) => setConnectionData({...connectionData, label: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, label: e.target.value })}
                 placeholder="My Database Connection"
               />
             </Flex>
@@ -259,7 +271,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <Select.Root value={dbType} onValueChange={setDbType}>
                 <Select.Trigger id="db-type" className="full-width" />
                 <Select.Content>
-                  {supportedTypes.map(type => (
+                  {supportedTypes.map((type) => (
                     <Select.Item key={type} value={type}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </Select.Item>
@@ -273,7 +285,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="host"
                 value={connectionData.host}
-                onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, host: e.target.value })}
                 placeholder="localhost"
               />
             </Flex>
@@ -283,7 +295,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="port"
                 value={connectionData.port}
-                onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, port: e.target.value })}
                 placeholder="5432"
               />
             </Flex>
@@ -293,7 +305,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="database"
                 value={connectionData.database}
-                onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, database: e.target.value })}
                 placeholder="my_database"
               />
             </Flex>
@@ -303,7 +315,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
               <TextField.Root
                 id="username"
                 value={connectionData.username}
-                onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, username: e.target.value })}
                 placeholder="username"
               />
             </Flex>
@@ -314,7 +326,7 @@ export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = fal
                 id="password"
                 type="password"
                 value={connectionData.password}
-                onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
+                onChange={(e) => setConnectionData({ ...connectionData, password: e.target.value })}
                 placeholder="password"
               />
             </Flex>
