@@ -81,59 +81,41 @@ export function ConnectionCard({ connection, onSelect, onDelete }: ConnectionCar
     >
       <Box className="card-glow" />
 
-      <Flex direction="column" gap="3" className="card-content">
+      <Flex direction="column" gap="2" className="card-content">
         <Flex justify="between" align="center">
           <Flex align="center" gap="2">
-            <Text size="4" className="database-icon">
+            <Text size="3" className="database-icon">
               {getDatabaseIcon(connection.type)}
             </Text>
-            <Text size="3" weight="medium" className="connection-name">
+            <Text size="2" weight="medium" className="connection-name">
               {connection.name}
             </Text>
           </Flex>
-          <Box className="database-type-badge">
-            <Text size="1">{connection.type}</Text>
-          </Box>
-        </Flex>
-
-        <Flex direction="column" gap="1" className="connection-details">
-          <Flex align="center" gap="1">
-            <Box className="detail-icon">📍</Box>
-            <Text size="2" color="gray">
-              {connection.host}:{connection.port}
-            </Text>
-          </Flex>
-          <Flex align="center" gap="1">
-            <Box className="detail-icon">💾</Box>
-            <Text size="2" color="gray">
-              {connection.database}
-            </Text>
-          </Flex>
-          <Flex align="center" gap="1">
-            <Box className="detail-icon">👤</Box>
-            <Text size="2" color="gray">
-              {connection.username}
-            </Text>
-          </Flex>
-        </Flex>
-
-        <Flex justify="between" align="center" className="card-footer">
-          <Text size="1" color="gray" className="last-used">
-            <Box as="span" className="clock-icon">
-              🕐
-            </Box>
-            {formatLastUsed(connection.lastUsed || connection.createdAt)}
-          </Text>
           <Button
             size="1"
-            variant="soft"
-            color="red"
+            variant="ghost"
+            color="gray"
             className="delete-button"
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? '...' : 'Delete'}
+            ×
           </Button>
+        </Flex>
+
+        <Box className="connection-details">
+          <Text size="1" color="gray">
+            {connection.host}:{connection.port}/{connection.database}
+          </Text>
+        </Box>
+
+        <Flex justify="between" align="center" className="card-footer">
+          <Text size="1" color="gray">
+            @{connection.username}
+          </Text>
+          <Text size="1" color="gray">
+            {formatLastUsed(connection.lastUsed || connection.createdAt)}
+          </Text>
         </Flex>
       </Flex>
     </Card>

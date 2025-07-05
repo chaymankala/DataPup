@@ -1,13 +1,13 @@
 .connection-card {
   position: relative;
-  min-width: 280px;
-  max-width: 320px;
+  width: 240px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(0);
   background: var(--card);
   border: 1px solid var(--gray-a3);
   overflow: hidden;
+  padding: 12px;
 }
 
 .connection-card:hover {
@@ -72,14 +72,9 @@
 }
 
 .connection-details {
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--gray-a3);
-  border-bottom: 1px solid var(--gray-a3);
-}
-
-.detail-icon {
-  font-size: 12px;
-  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-footer {
@@ -104,13 +99,15 @@
 
 .delete-button {
   opacity: 0;
-  transform: translateX(10px);
-  transition: all 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .connection-card:hover .delete-button {
-  opacity: 1;
-  transform: translateX(0);
+  opacity: 0.7;
+}
+
+.delete-button:hover {
+  opacity: 1 !important;
 }
 
 /* Animation for new cards */

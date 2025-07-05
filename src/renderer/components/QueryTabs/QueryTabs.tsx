@@ -1,0 +1,106 @@
+import { useState } from 'react'
+import { Box, Flex, Text, IconButton } from '@radix-ui/themes'
+import { Button } from '../ui'
+import './QueryTabs.css'
+
+export interface QueryTab {
+  id: string
+  title: string
+  query: string
+  isDirty: boolean
+}
+
+interface QueryTabsProps {
+  tabs: QueryTab[]
+  activeTabId: string
+  onSelectTab: (tabId: string) => void
+  onNewTab: () => void
+  onCloseTab: (tabId: string) => void
+  onUpdateTabTitle: (tabId: string, title: string) => void
+}
+
+export function QueryTabs({
+  tabs,
+  activeTabId,
+  onSelectTab,
+  onNewTab,
+  onCloseTab,
+  onUpdateTabTitle
+}: QueryTabsProps) {
+  const [editingTabId, setEditingTabId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+
+  const handleStartEdit = (tab: QueryTab) => {
+    setEditingTabId(tab.id)
+    setEditingTitle(tab.title)
+  }
+
+  const handleFinishEdit = () => {
+    if (editingTabId && editingTitle.trim()) {
+      onUpdateTabTitle(editingTabId, editingTitle.trim())
+    }
+    setEditingTabId(null)
+    setEditingTitle('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFinishEdit()
+    } else if (e.key === 'Escape') {
+      setEditingTabId(null)
+      setEditingTitle('')
+    }
+  }
+
+  return (
+    <Flex className="query-tabs" align="center">
+      <Box className="tabs-container">
+        <Flex gap="1" align="center">
+          {tabs.map((tab) => (
+            <Box
+              key={tab.id}
+              className={`query-tab ${tab.id === activeTabId ? 'active' : ''}`}
+              onClick={() => onSelectTab(tab.id)}
+            >
+              <Flex align="center" gap="2">
+                {editingTabId === tab.id ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={handleFinishEdit}
+                    onKeyDown={handleKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                    className="tab-title-input"
+                    autoFocus
+                  />
+                ) : (
+                  <Text size="1" className="tab-title" onDoubleClick={() => handleStartEdit(tab)}>
+                    {tab.title}
+                    {tab.isDirty && <span className="dirty-indicator">•</span>}
+                  </Text>
+                )}
+
+                {tabs.length > 1 && (
+                  <button
+                    className="tab-close-button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCloseTab(tab.id)
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </Flex>
+            </Box>
+          ))}
+        </Flex>
+      </Box>
+
+      <Button size="1" variant="ghost" onClick={onNewTab} className="new-tab-button">
+        +
+      </Button>
+    </Flex>
+  )
+}

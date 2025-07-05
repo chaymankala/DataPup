@@ -1,0 +1,122 @@
+.query-tabs {
+  height: 36px;
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  padding: 0 8px;
+  overflow: hidden;
+}
+
+.tabs-container {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.tabs-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-container::-webkit-scrollbar-thumb {
+  background: var(--gray-6);
+  border-radius: 2px;
+}
+
+.query-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--gray-3);
+  border: 1px solid var(--gray-4);
+  border-bottom: none;
+  border-radius: var(--radius-2) var(--radius-2) 0 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  min-width: 100px;
+  max-width: 200px;
+}
+
+.query-tab:hover {
+  background: var(--gray-4);
+}
+
+.query-tab.active {
+  background: var(--gray-1);
+  border-color: var(--gray-4);
+  z-index: 1;
+}
+
+.query-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gray-1);
+}
+
+.tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dirty-indicator {
+  color: var(--accent-9);
+  margin-left: 4px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tab-close-button {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  color: var(--gray-9);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.query-tab:hover .tab-close-button {
+  opacity: 0.7;
+}
+
+.tab-close-button:hover {
+  opacity: 1;
+  background: var(--gray-5);
+  color: var(--gray-12);
+}
+
+.tab-title-input {
+  background: var(--gray-1);
+  border: 1px solid var(--accent-7);
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  min-width: 50px;
+}
+
+.new-tab-button {
+  margin-left: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}

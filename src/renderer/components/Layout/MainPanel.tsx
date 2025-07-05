@@ -93,80 +93,72 @@ export function MainPanel({
       <Box className="main-panel">
         <Flex direction="column" height="100%">
           {/* Header */}
-          <Flex justify="between" align="center" p="6">
-            {/* Top Left - Title and Icon */}
-            <Flex align="center" gap="3">
-              <Text size="6">🐶</Text>
-              <Heading size="6" weight="bold">
+          <Flex justify="between" align="center" p="4">
+            <Flex align="center" gap="2">
+              <Text size="5">🐶</Text>
+              <Heading size="5" weight="bold">
                 Data-Pup
               </Heading>
             </Flex>
-
-            {/* Top Right - Theme Switcher */}
             <ThemeSwitcher />
           </Flex>
 
           {/* Main Content */}
-          <Flex direction="column" height="100%" justify="center" align="center" gap="8">
-            {/* New Connection Section - Centered */}
-            <Flex direction="column" gap="4" align="center">
-              <Text size="4" weight="medium">
-                New Connection
-              </Text>
-
-              {showConnectionForm ? (
-                <Box style={{ maxWidth: '600px' }}>
+          <Box flex="1" p="6">
+            {showConnectionForm ? (
+              <Flex justify="center">
+                <Box style={{ maxWidth: '600px', width: '100%' }}>
                   <DatabaseConnection
                     onConnectionSuccess={handleConnectionSuccess}
                     onCancel={handleCancelConnection}
                     inline={true}
                   />
                 </Box>
-              ) : (
-                <Button size="4" onClick={handleNewConnection} style={{ width: 'fit-content' }}>
-                  + New Connection
+              </Flex>
+            ) : sortedConnections.length > 0 || isLoadingConnections ? (
+              <Flex direction="column" gap="4">
+                <Flex justify="between" align="center" mb="2">
+                  <Text size="3" weight="medium">
+                    Connections
+                  </Text>
+                  <Button size="2" onClick={handleNewConnection}>
+                    + New Connection
+                  </Button>
+                </Flex>
+
+                {isLoadingConnections ? (
+                  <Flex gap="4" wrap="wrap">
+                    {[1, 2, 3].map((i) => (
+                      <ConnectionCardSkeleton key={i} />
+                    ))}
+                  </Flex>
+                ) : (
+                  <Flex gap="4" wrap="wrap">
+                    {sortedConnections.map((connection) => (
+                      <ConnectionCard
+                        key={connection.id}
+                        connection={connection}
+                        onSelect={handleConnectionSelect}
+                        onDelete={handleConnectionDelete}
+                      />
+                    ))}
+                  </Flex>
+                )}
+              </Flex>
+            ) : (
+              <Flex direction="column" align="center" justify="center" height="100%" gap="4">
+                <Text size="6" color="gray">
+                  🗄️
+                </Text>
+                <Text size="3" color="gray">
+                  No connections yet
+                </Text>
+                <Button size="3" onClick={handleNewConnection}>
+                  Create your first connection
                 </Button>
-              )}
-            </Flex>
-
-            {/* Saved Connections */}
-            <Flex direction="column" gap="4" style={{ width: '100%', maxWidth: '800px' }}>
-              <Text size="4" weight="medium" style={{ textAlign: 'left', width: '100%' }}>
-                Saved Connections
-              </Text>
-
-              {isLoadingConnections ? (
-                <Flex gap="4" wrap="wrap" justify="center">
-                  {[1, 2, 3].map((i) => (
-                    <ConnectionCardSkeleton key={i} />
-                  ))}
-                </Flex>
-              ) : sortedConnections.length > 0 ? (
-                <Flex gap="4" wrap="wrap" justify="center">
-                  {sortedConnections.map((connection) => (
-                    <ConnectionCard
-                      key={connection.id}
-                      connection={connection}
-                      onSelect={handleConnectionSelect}
-                      onDelete={handleConnectionDelete}
-                    />
-                  ))}
-                </Flex>
-              ) : (
-                <Flex direction="column" align="center" gap="3" py="8">
-                  <Text size="6" color="gray">
-                    🗄️
-                  </Text>
-                  <Text size="3" color="gray">
-                    No saved connections
-                  </Text>
-                  <Text size="2" color="gray">
-                    Create your first connection to get started
-                  </Text>
-                </Flex>
-              )}
-            </Flex>
-          </Flex>
+              </Flex>
+            )}
+          </Box>
         </Flex>
       </Box>
     )
