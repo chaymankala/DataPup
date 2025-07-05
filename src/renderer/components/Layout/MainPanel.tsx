@@ -16,6 +16,7 @@ interface MainPanelProps {
   savedConnections?: any[]
   onConnectionSelect?: (connection: any) => void
   onConnectionDelete?: (connectionId: string) => void
+  onDisconnect?: () => void
 }
 
 interface SavedConnection {
@@ -30,12 +31,13 @@ interface SavedConnection {
   createdAt: string
 }
 
-export function MainPanel({ 
-  activeConnection, 
+export function MainPanel({
+  activeConnection,
   onConnectionSuccess,
   savedConnections = [],
   onConnectionSelect,
-  onConnectionDelete
+  onConnectionDelete,
+  onDisconnect
 }: MainPanelProps) {
   const [showConnectionForm, setShowConnectionForm] = useState(false)
 
@@ -61,11 +63,26 @@ export function MainPanel({
     setShowConnectionForm(false)
   }
 
+  const handleConnectionSelect = (connection: any) => {
+    console.log('Connection:', connection)
+
+    // Trigger database connection for the selected saved connection
+    if (onConnectionSelect) {
+      onConnectionSelect(connection)
+    }
+  }
+
+  const handleConnectionDelete = (connectionId: string) => {
+    if (onConnectionDelete) {
+      onConnectionDelete(connectionId)
+    }
+  }
+
   const formatLastUsed = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-    
+
     if (diffInHours < 1) return 'Just now'
     if (diffInHours < 24) return `${diffInHours}h ago`
     const diffInDays = Math.floor(diffInHours / 24)
@@ -107,10 +124,10 @@ export function MainPanel({
               <Text size="4" weight="medium">
                 New Connection
               </Text>
-              
+
               {showConnectionForm ? (
                 <Box style={{ maxWidth: '600px' }}>
-                  <DatabaseConnection 
+                  <DatabaseConnection
                     onConnectionSuccess={handleConnectionSuccess}
                     onCancel={handleCancelConnection}
                     inline={true}
@@ -128,14 +145,14 @@ export function MainPanel({
               <Text size="4" weight="medium" style={{ textAlign: 'left', width: '100%' }}>
                 Saved Connections
               </Text>
-              
+
               {sortedConnections.length > 0 ? (
                 <Flex gap="4" wrap="wrap" justify="center">
                   {sortedConnections.map((connection) => (
-                    <Card 
-                      key={connection.id} 
-                      style={{ 
-                        minWidth: '280px', 
+                    <Card
+                      key={connection.id}
+                      style={{
+                        minWidth: '280px',
                         maxWidth: '320px',
                         cursor: 'pointer',
                         transition: 'transform 0.2s ease, box-shadow 0.2s ease'
@@ -148,7 +165,7 @@ export function MainPanel({
                         e.currentTarget.style.transform = 'translateY(0)'
                         e.currentTarget.style.boxShadow = 'none'
                       }}
-                      onClick={() => onConnectionSelect?.(connection)}
+                      onClick={() => handleConnectionSelect(connection)}
                     >
                       <Flex direction="column" gap="3">
                         <Flex justify="between" align="center">
@@ -158,15 +175,15 @@ export function MainPanel({
                               {connection.name}
                             </Text>
                           </Flex>
-                          <Text size="1" color="gray" style={{ 
-                            backgroundColor: 'var(--gray-3)', 
-                            padding: '2px 6px', 
-                            borderRadius: '4px' 
+                          <Text size="1" color="gray" style={{
+                            backgroundColor: 'var(--gray-3)',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
                           }}>
                             {connection.type}
                           </Text>
                         </Flex>
-                        
+
                         <Flex direction="column" gap="1">
                           <Text size="2" color="gray">
                             {connection.host}:{connection.port}
@@ -183,13 +200,13 @@ export function MainPanel({
                           <Text size="1" color="gray">
                             Last used {formatLastUsed(connection.lastUsed || connection.createdAt)}
                           </Text>
-                          <Button 
-                            size="1" 
-                            variant="soft" 
+                          <Button
+                            size="1"
+                            variant="soft"
                             color="red"
                             onClick={(e) => {
                               e.stopPropagation()
-                              onConnectionDelete?.(connection.id)
+                              handleConnectionDelete(connection.id)
                             }}
                           >
                             Delete
@@ -215,9 +232,10 @@ export function MainPanel({
 
   return (
     <Box className="main-panel">
-      <ActiveConnectionLayout 
+      <ActiveConnectionLayout
         connectionId={activeConnection.id}
         connectionName={activeConnection.name}
+        onDisconnect={onDisconnect}
       />
     </Box>
   )
