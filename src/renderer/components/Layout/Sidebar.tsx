@@ -1,4 +1,5 @@
 import { Box, Flex, Heading, ScrollArea, Text } from '@radix-ui/themes'
+import { Logo } from '../ui'
 import { ThemeSwitcher } from '../ThemeSwitcher'
 import { ConnectionList } from '../ConnectionList/ConnectionList'
 import './Sidebar.css'
@@ -13,9 +14,12 @@ export function Sidebar({ onConnectionSelect, onConnectionDelete }: SidebarProps
     <Box className="sidebar">
       <Flex direction="column" gap="4" p="4" height="100%">
         <Flex justify="between" align="center">
-          <Heading size="4" weight="bold">
-            🐶 Data-Pup
-          </Heading>
+          <Flex align="center" gap="2">
+            <Logo size={24} />
+            <Heading size="4" weight="bold">
+              Data-Pup
+            </Heading>
+          </Flex>
           <ThemeSwitcher />
         </Flex>
 

@@ -6,12 +6,17 @@ import { DatabaseManager } from './database/manager'
 import { DatabaseConfig } from './database/interface'
 
 function createWindow(): void {
+  const iconPath = is.dev
+    ? join(__dirname, '../../build/icons/icon.svg')
+    : join(process.resourcesPath, 'icons/icon.svg')
+
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
     autoHideMenuBar: true,
     title: 'DataPup',
+    icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -39,7 +44,21 @@ const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
 app.whenReady().then(() => {
+  // Set the app name for macOS menu bar
+  app.setName('DataPup')
   electronApp.setAppUserModelId('com.datapup')
+
+  // Set dock icon for macOS
+  if (process.platform === 'darwin') {
+    const dockIconPath = is.dev
+      ? join(__dirname, '../../build/icons/icon.png')
+      : join(process.resourcesPath, 'icons/icon.png')
+    
+    // Check if the icon file exists before setting
+    if (require('fs').existsSync(dockIconPath)) {
+      app.dock.setIcon(dockIconPath)
+    }
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

@@ -1,5 +1,5 @@
 import { Box, Flex, Text, Button, ScrollArea, Heading } from '@radix-ui/themes'
-import { Card } from '../ui'
+import { Card, Logo } from '../ui'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { QueryEditor } from '../QueryEditor/QueryEditor'
 import { ThemeSwitcher } from '../ThemeSwitcher'
@@ -95,7 +95,7 @@ export function MainPanel({
           {/* Header */}
           <Flex justify="between" align="center" p="4">
             <Flex align="center" gap="2">
-              <Text size="5">🐶</Text>
+              <Logo size={32} />
               <Heading size="5" weight="bold">
                 DataPup
               </Heading>
