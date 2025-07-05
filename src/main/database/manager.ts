@@ -3,7 +3,7 @@ import { DatabaseManagerFactory } from './factory'
 
 class DatabaseManager {
   private factory: DatabaseManagerFactory
-  private activeConnections: Map<string, { type: string; manager: DatabaseManagerInterface }> = new Map()
+  private activeConnection: { id: string; type: string; manager: DatabaseManagerInterface } | null = null
 
   constructor() {
     this.factory = new DatabaseManagerFactory()
@@ -30,15 +30,21 @@ class DatabaseManager {
         }
       }
 
+      // Disconnect any existing connection first
+      if (this.activeConnection) {
+        await this.disconnect(this.activeConnection.id)
+      }
+
       // Connect using the specific manager
       const result = await manager.connect(config, connectionId)
       
       if (result.success) {
-        // Store the connection mapping
-        this.activeConnections.set(connectionId, {
+        // Store the single active connection
+        this.activeConnection = {
+          id: connectionId,
           type: config.type,
           manager: manager
-        })
+        }
       }
       
       return result
@@ -54,17 +60,16 @@ class DatabaseManager {
 
   async disconnect(connectionId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const connection = this.activeConnections.get(connectionId)
-      if (!connection) {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return { success: false, message: 'Connection not found' }
       }
 
       // Disconnect using the specific manager
-      const result = await connection.manager.disconnect(connectionId)
+      const result = await this.activeConnection.manager.disconnect(connectionId)
       
       if (result.success) {
-        // Remove from active connections
-        this.activeConnections.delete(connectionId)
+        // Clear the active connection
+        this.activeConnection = null
       }
 
       return result
@@ -79,8 +84,7 @@ class DatabaseManager {
 
   async query(connectionId: string, sql: string): Promise<QueryResult> {
     try {
-      const connection = this.activeConnections.get(connectionId)
-      if (!connection) {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
           success: false,
           message: 'Connection not found. Please connect first.',
@@ -89,7 +93,7 @@ class DatabaseManager {
       }
 
       // Execute query using the specific manager
-      return await connection.manager.query(connectionId, sql)
+      return await this.activeConnection.manager.query(connectionId, sql)
     } catch (error) {
       console.error('Database query error:', error)
       return {
@@ -102,15 +106,14 @@ class DatabaseManager {
 
   async getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }> {
     try {
-      const connection = this.activeConnections.get(connectionId)
-      if (!connection) {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
           success: false,
           message: 'Connection not found. Please connect first.'
         }
       }
 
-      return await connection.manager.getDatabases(connectionId)
+      return await this.activeConnection.manager.getDatabases(connectionId)
     } catch (error) {
       console.error('Error getting databases:', error)
       return {
@@ -122,15 +125,14 @@ class DatabaseManager {
 
   async getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }> {
     try {
-      const connection = this.activeConnections.get(connectionId)
-      if (!connection) {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
           success: false,
           message: 'Connection not found. Please connect first.'
         }
       }
 
-      return await connection.manager.getTables(connectionId, database)
+      return await this.activeConnection.manager.getTables(connectionId, database)
     } catch (error) {
       console.error('Error getting tables:', error)
       return {
@@ -142,15 +144,14 @@ class DatabaseManager {
 
   async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
     try {
-      const connection = this.activeConnections.get(connectionId)
-      if (!connection) {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
         return {
           success: false,
           message: 'Connection not found. Please connect first.'
         }
       }
 
-      return await connection.manager.getTableSchema(connectionId, tableName, database)
+      return await this.activeConnection.manager.getTableSchema(connectionId, tableName, database)
     } catch (error) {
       console.error('Error getting table schema:', error)
       return {
@@ -161,32 +162,31 @@ class DatabaseManager {
   }
 
   isConnected(connectionId: string): boolean {
-    const connection = this.activeConnections.get(connectionId)
-    if (!connection) return false
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) return false
 
-    return connection.manager.isConnected(connectionId)
+    return this.activeConnection.manager.isConnected(connectionId)
   }
 
   getConnectionInfo(connectionId: string): { type: string; host: string; port: number; database: string } | null {
-    const connection = this.activeConnections.get(connectionId)
-    if (!connection) return null
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) return null
 
-    const info = connection.manager.getConnectionInfo(connectionId)
-    return info ? { type: connection.type, ...info } : null
+    const info = this.activeConnection.manager.getConnectionInfo(connectionId)
+    return info ? { type: this.activeConnection.type, ...info } : null
   }
 
-  getAllConnections(): string[] {
-    return Array.from(this.activeConnections.keys())
+  getActiveConnection(): string | null {
+    return this.activeConnection ? this.activeConnection.id : null
   }
 
   getSupportedDatabaseTypes(): string[] {
     return this.factory.getSupportedTypes()
   }
 
-  // Clean up all connections
+  // Clean up the active connection
   async cleanup(): Promise<void> {
-    const disconnectPromises = Array.from(this.activeConnections.keys()).map(id => this.disconnect(id))
-    await Promise.allSettled(disconnectPromises)
+    if (this.activeConnection) {
+      await this.disconnect(this.activeConnection.id)
+    }
   }
 }
 
