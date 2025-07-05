@@ -94,10 +94,13 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```
 src/
-├── main/        # Electron main process code
-├── preload/     # Preload scripts
-└── renderer/    # React application
-    └── components/  # React components
+├── main/           # Electron main process code
+├── preload/        # Preload scripts
+└── renderer/       # React application
+    ├── components/ # React components
+    ├── App.tsx     # Main App component
+    ├── main.tsx    # React entry point
+    └── index.html  # HTML template
 ```
 
 ## Where to Get Help

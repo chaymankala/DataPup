@@ -54,15 +54,16 @@ data-pup/
 │   │   └── database/   # Database connection logic
 │   ├── preload/        # Preload scripts for IPC
 │   └── renderer/       # React application
-│       ├── src/
-│       │   ├── components/
-│       │   │   ├── Layout/         # App layout components
-│       │   │   ├── DatabaseConnection/  # Connection dialog
-│       │   │   └── ui/            # Reusable UI components
-│       │   └── App.tsx
-│       └── index.html
+│       ├── components/
+│       │   ├── Layout/             # App layout components
+│       │   ├── DatabaseConnection/ # Connection dialog
+│       │   └── ui/                 # Reusable UI components
+│       ├── App.tsx     # Main App component
+│       ├── main.tsx    # React entry point
+│       └── index.html  # HTML template
 ├── electron.vite.config.ts
-└── package.json
+├── package.json
+└── README.md
 ```
 
 ## Architecture
