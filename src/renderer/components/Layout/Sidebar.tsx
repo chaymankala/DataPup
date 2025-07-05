@@ -1,14 +1,19 @@
-import { Box, Button, Flex, Heading, ScrollArea, Separator, Text } from '@radix-ui/themes'
+import { Box, Flex, Heading, ScrollArea, Text } from '@radix-ui/themes'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
+import { ThemeSwitcher } from '../ThemeSwitcher'
+import { Separator } from '../ui'
 import './Sidebar.css'
 
 export function Sidebar() {
   return (
     <Box className="sidebar">
       <Flex direction="column" gap="4" p="4">
-        <Heading size="4" weight="bold">
-          🐶 Data-Pup
-        </Heading>
+        <Flex justify="between" align="center">
+          <Heading size="4" weight="bold">
+            🐶 Data-Pup
+          </Heading>
+          <ThemeSwitcher />
+        </Flex>
         
         <DatabaseConnection />
         
