@@ -1,0 +1,58 @@
+.active-connection-layout {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.connection-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  flex-shrink: 0;
+}
+
+.panel-group {
+  flex: 1;
+  height: 100%;
+}
+
+.explorer-panel {
+  background: var(--gray-2);
+  border-right: 1px solid var(--gray-4);
+  overflow: hidden;
+}
+
+.workspace-panel {
+  background: var(--gray-1);
+  overflow: hidden;
+}
+
+.resize-handle {
+  width: 5px;
+  background: var(--gray-4);
+  cursor: col-resize;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background: var(--gray-6);
+}
+
+.resize-handle:active {
+  background: var(--accent-9);
+}
+
+/* Add a visual indicator on the resize handle */
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 20px;
+  background: var(--gray-6);
+  opacity: 0.5;
+}

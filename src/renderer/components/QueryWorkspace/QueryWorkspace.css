@@ -1,0 +1,61 @@
+.query-workspace {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.workspace-panels {
+  height: 100%;
+}
+
+.editor-panel {
+  overflow: hidden;
+  background: var(--gray-1);
+}
+
+.results-panel {
+  background: var(--gray-2);
+  border-top: 1px solid var(--gray-4);
+  overflow: hidden;
+}
+
+.result-table-container {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+}
+
+.error-message {
+  padding: 16px;
+  background: var(--red-2);
+  border: 1px solid var(--red-5);
+  border-radius: var(--radius-2);
+}
+
+.resize-handle-horizontal {
+  height: 5px;
+  background: var(--gray-4);
+  cursor: row-resize;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.resize-handle-horizontal:hover {
+  background: var(--gray-6);
+}
+
+.resize-handle-horizontal:active {
+  background: var(--accent-9);
+}
+
+/* Add a visual indicator on the horizontal resize handle */
+.resize-handle-horizontal::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 1px;
+  width: 20px;
+  background: var(--gray-6);
+  opacity: 0.5;
+}

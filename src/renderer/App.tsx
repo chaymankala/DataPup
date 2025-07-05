@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Box } from '@radix-ui/themes'
 import { MainPanel } from './components/Layout/MainPanel'
+import { ActiveConnectionLayout } from './components/ActiveConnectionLayout'
 import './App.css'
 
 interface Connection {
@@ -41,6 +43,32 @@ function App() {
     setActiveConnection(connection)
   }
 
+  const handleDisconnect = async () => {
+    if (activeConnection) {
+      try {
+        // Call the disconnect API
+        await window.api.database.disconnect(activeConnection.id)
+        setActiveConnection(null)
+      } catch (error) {
+        console.error('Error disconnecting:', error)
+      }
+    }
+  }
+
+  // If there's an active connection, show only the ActiveConnectionLayout
+  if (activeConnection) {
+    return (
+      <Box className="app-container">
+        <ActiveConnectionLayout 
+          connectionId={activeConnection.id}
+          connectionName={activeConnection.name}
+          onDisconnect={handleDisconnect}
+        />
+      </Box>
+    )
+  }
+
+  // Otherwise, show the connection selection view
   return (
     <div className="app-container">
       <MainPanel 

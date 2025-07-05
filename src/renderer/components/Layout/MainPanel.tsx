@@ -3,6 +3,7 @@ import { Card } from '../ui'
 import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { QueryEditor } from '../QueryEditor/QueryEditor'
 import { ThemeSwitcher } from '../ThemeSwitcher'
+import { ActiveConnectionLayout } from '../ActiveConnectionLayout'
 import { useState } from 'react'
 import './MainPanel.css'
 
@@ -214,7 +215,7 @@ export function MainPanel({
 
   return (
     <Box className="main-panel">
-      <QueryEditor 
+      <ActiveConnectionLayout 
         connectionId={activeConnection.id}
         connectionName={activeConnection.name}
       />
