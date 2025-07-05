@@ -3,6 +3,7 @@
   overflow: hidden;
   display: flex;
   align-items: center;
+  padding-right: 4px;
 }
 
 .tabs-container {
@@ -125,9 +126,11 @@
 
 .new-tab-button {
   margin-left: 4px;
+  margin-right: 4px;
   width: 20px;
   height: 20px;
   padding: 0;
   font-size: 14px;
   line-height: 1;
+  flex-shrink: 0;
 }
