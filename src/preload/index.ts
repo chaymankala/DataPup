@@ -5,8 +5,20 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   database: {
     connect: (config: any) => ipcRenderer.invoke('db:connect', config),
-    disconnect: () => ipcRenderer.invoke('db:disconnect'),
-    query: (sql: string) => ipcRenderer.invoke('db:query', sql)
+    disconnect: (connectionId?: string) => ipcRenderer.invoke('db:disconnect', connectionId),
+    query: (connectionId: string, sql: string) => ipcRenderer.invoke('db:query', connectionId, sql),
+    getDatabases: (connectionId: string) => ipcRenderer.invoke('db:getDatabases', connectionId),
+    getTables: (connectionId: string, database?: string) => ipcRenderer.invoke('db:getTables', connectionId, database),
+    getTableSchema: (connectionId: string, tableName: string, database?: string) => ipcRenderer.invoke('db:getTableSchema', connectionId, tableName, database),
+    isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
+    getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
+    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')
+  },
+  connections: {
+    getAll: () => ipcRenderer.invoke('connections:getAll'),
+    getById: (id: string) => ipcRenderer.invoke('connections:getById', id),
+    delete: (id: string) => ipcRenderer.invoke('connections:delete', id),
+    updateLastUsed: (id: string) => ipcRenderer.invoke('connections:updateLastUsed', id)
   }
 }
 
