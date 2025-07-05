@@ -43,6 +43,11 @@
   font-size: 11px;
 }
 
+.query-tab > div {
+  width: 100%;
+  overflow: hidden;
+}
+
 .query-tab:hover {
   background: var(--gray-4);
 }
@@ -69,6 +74,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   user-select: none;
+  min-width: 0;
+  max-width: 100px;
 }
 
 .dirty-indicator {
@@ -92,6 +99,7 @@
   transition: all 0.2s;
   border-radius: 2px;
   margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .query-tab:hover .tab-close-button {

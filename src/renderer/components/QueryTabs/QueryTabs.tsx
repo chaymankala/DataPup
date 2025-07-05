@@ -56,7 +56,7 @@ export function QueryTabs({
               className={`query-tab ${tab.id === activeTabId ? 'active' : ''}`}
               onClick={() => onSelectTab(tab.id)}
             >
-              <Flex align="center" gap="2">
+              <Flex align="center" gap="1" style={{ width: '100%' }}>
                 {editingTabId === tab.id ? (
                   <input
                     type="text"
@@ -69,13 +69,13 @@ export function QueryTabs({
                     autoFocus
                   />
                 ) : (
-                  <Flex align="center" gap="1">
-                    <Text size="1">{tab.type === 'table' ? '◆' : '▹'}</Text>
+                  <>
+                    <Text size="1" style={{ flexShrink: 0 }}>{tab.type === 'table' ? '◆' : '▹'}</Text>
                     <Text size="1" className="tab-title" onDoubleClick={() => handleStartEdit(tab)}>
                       {tab.title}
                       {tab.isDirty && <span className="dirty-indicator">•</span>}
                     </Text>
-                  </Flex>
+                  </>
                 )}
 
                 {tabs.length > 1 && (
