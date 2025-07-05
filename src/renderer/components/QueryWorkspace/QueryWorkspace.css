@@ -2,6 +2,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  background: var(--gray-1);
 }
 
 .workspace-panels {
@@ -10,96 +11,154 @@
 
 .editor-panel {
   overflow: hidden;
-  background: var(--gray-1);
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  min-height: 40px;
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  padding: 1px;
 }
 
 .results-panel {
-  background: var(--gray-2);
-  border-top: 1px solid var(--gray-4);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.results-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  min-height: 40px;
+}
+
+.results-content {
+  overflow: auto;
+  background: var(--gray-1);
 }
 
 .result-table-container {
+  height: 100%;
   overflow: auto;
-  max-height: calc(100vh - 300px);
 }
 
 .result-table-container table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .result-table-container th {
-  background: var(--gray-3);
-  padding: 8px 12px;
+  background: var(--gray-2);
+  padding: 6px 12px;
   text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid var(--gray-5);
+  font-weight: 500;
+  border-bottom: 1px solid var(--gray-4);
   position: sticky;
   top: 0;
   z-index: 1;
+  white-space: nowrap;
 }
 
 .result-table-container td {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--gray-3);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .result-table-container tr:hover td {
   background: var(--gray-2);
 }
 
+.result-table-container tr:nth-child(even) td {
+  background: var(--gray-1);
+}
+
+.result-table-container tr:nth-child(even):hover td {
+  background: var(--gray-2);
+}
+
 .error-message {
-  padding: 16px;
+  padding: 12px 16px;
   background: var(--red-2);
-  border: 1px solid var(--red-5);
+  border: 1px solid var(--red-4);
   border-radius: var(--radius-2);
+  max-width: 600px;
+  text-align: center;
 }
 
 /* Monaco Editor Theme Overrides */
-.editor-panel .monaco-editor {
-  border: 1px solid var(--gray-4);
-  border-radius: var(--radius-2);
+.editor-container .monaco-editor {
+  border: none;
 }
 
-.editor-panel .monaco-editor .margin {
+.editor-container .monaco-editor .margin {
   background: var(--gray-2) !important;
 }
 
-.editor-panel .monaco-editor .monaco-editor-background {
+.editor-container .monaco-editor .monaco-editor-background {
   background: var(--gray-1) !important;
 }
 
-.editor-panel .monaco-editor .line-numbers {
-  color: var(--gray-8) !important;
+.editor-container .monaco-editor .line-numbers {
+  color: var(--gray-9) !important;
+  font-size: 11px;
 }
 
 .resize-handle-horizontal {
-  height: 5px;
+  height: 1px;
   background: var(--gray-4);
   cursor: row-resize;
   position: relative;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
 }
 
 .resize-handle-horizontal:hover {
-  background: var(--gray-6);
+  background: var(--accent-9);
+  height: 3px;
+  margin: -1px 0;
 }
 
 .resize-handle-horizontal:active {
   background: var(--accent-9);
+  height: 3px;
 }
 
-/* Add a visual indicator on the horizontal resize handle */
-.resize-handle-horizontal::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  height: 1px;
-  width: 20px;
-  background: var(--gray-6);
-  opacity: 0.5;
+/* Spinner animation */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--gray-6);
+  border-radius: 50%;
+  border-top-color: var(--accent-9);
+  animation: spin 0.8s linear infinite;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Export buttons hover effect */
+.results-header button:hover {
+  background: var(--gray-3);
+}
+
+/* Badge styling */
+.editor-header [data-accent-color] {
+  font-size: 10px;
+  padding: 2px 6px;
 }

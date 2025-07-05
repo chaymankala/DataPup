@@ -2,7 +2,11 @@ import { DropdownMenu, Button, Flex, Text, Badge, Box } from '@radix-ui/themes'
 import { useTheme } from '../../hooks/useTheme'
 import { Tooltip } from '../ui'
 
-export function ThemeSwitcher() {
+interface ThemeSwitcherProps {
+  size?: '1' | '2' | '3'
+}
+
+export function ThemeSwitcher({ size = '2' }: ThemeSwitcherProps = {}) {
   const { theme, setTheme, themes } = useTheme()
 
   const getThemeIcon = (appearance: string) => {
@@ -13,10 +17,10 @@ export function ThemeSwitcher() {
     <DropdownMenu.Root>
       <Tooltip content="Change theme">
         <DropdownMenu.Trigger>
-          <Button variant="soft" size="2">
-            <Flex align="center" gap="2">
-              <Text size="2">{getThemeIcon(theme.appearance)}</Text>
-              <Text size="2">{theme.name}</Text>
+          <Button variant="soft" size={size}>
+            <Flex align="center" gap="1">
+              <Text size={size}>{getThemeIcon(theme.appearance)}</Text>
+              <Text size={size}>{theme.name}</Text>
             </Flex>
           </Button>
         </DropdownMenu.Trigger>

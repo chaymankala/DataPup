@@ -128,15 +128,6 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
   return (
     <Flex direction="column" className="database-explorer">
       <Box className="explorer-header" p="3">
-        <Flex justify="between" align="center" mb="2">
-          <Text size="2" weight="bold">
-            Database Explorer
-          </Text>
-          <Badge size="1" variant="soft">
-            {connectionName}
-          </Badge>
-        </Flex>
-
         <input
           type="text"
           placeholder="Search objects..."

@@ -2,7 +2,8 @@ import { useState, useRef } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Box, Button, Flex, Text, Table } from '@radix-ui/themes'
 import Editor, { Monaco } from '@monaco-editor/react'
-import { Skeleton } from '../ui'
+import { Skeleton, Badge } from '../ui'
+import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import './QueryWorkspace.css'
 
 interface QueryWorkspaceProps {
@@ -165,11 +166,15 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
     }
 
     return (
-      <Table.Root>
+      <Table.Root size="1">
         <Table.Header>
           <Table.Row>
             {columns.map((column) => (
-              <Table.ColumnHeaderCell key={column}>{column}</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell key={column}>
+                <Text size="1" weight="medium">
+                  {column}
+                </Text>
+              </Table.ColumnHeaderCell>
             ))}
           </Table.Row>
         </Table.Header>
@@ -178,11 +183,13 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
             <Table.Row key={index}>
               {columns.map((column) => (
                 <Table.Cell key={column}>
-                  {row[column] !== null && row[column] !== undefined ? (
-                    String(row[column])
-                  ) : (
-                    <Text color="gray">null</Text>
-                  )}
+                  <Text size="1">
+                    {row[column] !== null && row[column] !== undefined ? (
+                      String(row[column])
+                    ) : (
+                      <Text size="1" color="gray">null</Text>
+                    )}
+                  </Text>
                 </Table.Cell>
               ))}
             </Table.Row>
@@ -196,36 +203,38 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
     <Box className="query-workspace">
       <PanelGroup direction="vertical" className="workspace-panels">
         {/* Top panel: Query editor */}
-        <Panel defaultSize={40} minSize={20} className="editor-panel">
-          <Flex direction="column" height="100%" p="3">
-            <Flex justify="between" align="center" mb="3">
-              <Flex align="center" gap="3">
-                <Text size="3" weight="bold">
-                  Query Editor
-                </Text>
-                <Text size="2" color="gray">
-                  {connectionName}
-                </Text>
+        <Panel defaultSize={50} minSize={30} className="editor-panel">
+          <Flex direction="column" height="100%">
+            <Flex justify="between" align="center" p="2" className="editor-header">
+              <Flex align="center" gap="2">
+                {selectedText && (
+                  <Badge size="1" variant="soft">
+                    Selection
+                  </Badge>
+                )}
               </Flex>
               <Flex gap="2" align="center">
-                <Text size="1" color="gray">
-                  {selectedText ? 'Execute selected' : 'Cmd/Ctrl + Enter to execute'}
-                </Text>
-                <Button size="1" variant="soft" onClick={formatQuery}>
+                <Button size="1" variant="ghost" onClick={formatQuery}>
                   Format
                 </Button>
                 <Button
                   onClick={handleExecuteQuery}
                   disabled={isExecuting || (!query.trim() && !selectedText.trim())}
-                  variant="solid"
-                  size="2"
+                  size="1"
                 >
-                  {isExecuting ? 'Executing...' : 'Execute'}
+                  {isExecuting ? (
+                    <>
+                      <Box className="spinner" />
+                      Running...
+                    </>
+                  ) : (
+                    <>Run<Text size="1" color="gray" ml="1">⌘↵</Text></>
+                  )}
                 </Button>
               </Flex>
             </Flex>
 
-            <Box style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box className="editor-container">
               <Editor
                 height="100%"
                 defaultLanguage="sql"
@@ -236,7 +245,7 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
                 loading={<Skeleton height="100%" />}
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 14,
+                  fontSize: 13,
                   lineNumbers: 'on',
                   scrollBeyondLastLine: false,
                   wordWrap: 'on',
@@ -251,7 +260,9 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
                   },
                   parameterHints: {
                     enabled: true
-                  }
+                  },
+                  padding: { top: 12, bottom: 12 },
+                  lineNumbersMinChars: 3
                 }}
               />
             </Box>
@@ -261,42 +272,68 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
         <PanelResizeHandle className="resize-handle-horizontal" />
 
         {/* Bottom panel: Results */}
-        <Panel defaultSize={60} minSize={20} className="results-panel">
-          <Box p="3" style={{ height: '100%', overflow: 'auto' }}>
-            <Flex justify="between" align="center" mb="3">
-              <Text size="3" weight="bold">
+        <Panel defaultSize={50} minSize={20} className="results-panel">
+          <Flex direction="column" height="100%">
+            <Flex justify="between" align="center" p="2" className="results-header">
+              <Text size="2" weight="medium">
                 Results
               </Text>
               {result?.success && result.data && (
-                <Text size="1" color="gray">
-                  {result.data.length} rows returned
-                </Text>
+                <Flex align="center" gap="3">
+                  <Text size="1" color="gray">
+                    {result.data.length} rows
+                  </Text>
+                  <Flex gap="1">
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      onClick={() => exportToCSV(result.data || [], 'query-results.csv')}
+                      disabled={!result.data || result.data.length === 0}
+                    >
+                      CSV
+                    </Button>
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      onClick={() => exportToJSON(result.data || [], 'query-results.json')}
+                      disabled={!result.data || result.data.length === 0}
+                    >
+                      JSON
+                    </Button>
+                  </Flex>
+                </Flex>
               )}
             </Flex>
 
-            {result ? (
-              result.success ? (
-                <Box>
-                  <Box className="result-table-container">{formatResult(result.data || [])}</Box>
-                </Box>
+            <Box className="results-content" flex="1">
+              {result ? (
+                result.success ? (
+                  <Box className="result-table-container">
+                    {formatResult(result.data || [])}
+                  </Box>
+                ) : (
+                  <Flex align="center" justify="center" height="100%" p="4">
+                    <Box className="error-message">
+                      <Text size="2" color="red" weight="medium">
+                        {result.message}
+                      </Text>
+                      {result.error && (
+                        <Text size="1" color="red" mt="1" style={{ display: 'block' }}>
+                          {result.error}
+                        </Text>
+                      )}
+                    </Box>
+                  </Flex>
+                )
               ) : (
-                <Box className="error-message">
-                  <Text color="red" weight="bold">
-                    Error: {result.message}
+                <Flex align="center" justify="center" height="100%">
+                  <Text color="gray" size="1">
+                    Execute a query to see results
                   </Text>
-                  {result.error && (
-                    <Text size="1" color="red" mt="1" style={{ display: 'block' }}>
-                      {result.error}
-                    </Text>
-                  )}
-                </Box>
-              )
-            ) : (
-              <Text color="gray" size="2">
-                Execute a query to see results here
-              </Text>
-            )}
-          </Box>
+                </Flex>
+              )}
+            </Box>
+          </Flex>
         </Panel>
       </PanelGroup>
     </Box>

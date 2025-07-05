@@ -3,6 +3,7 @@ import { Box, Flex, Text } from '@radix-ui/themes'
 import { Button } from '../ui'
 import { DatabaseExplorer } from '../DatabaseExplorer/DatabaseExplorer'
 import { QueryWorkspace } from '../QueryWorkspace/QueryWorkspace'
+import { ThemeSwitcher } from '../ThemeSwitcher'
 import './ActiveConnectionLayout.css'
 
 interface ActiveConnectionLayoutProps {
@@ -20,15 +21,15 @@ export function ActiveConnectionLayout({
     <Box className="active-connection-layout">
       {/* Header bar */}
       <Flex className="connection-header" justify="between" align="center" p="2">
+        <Text size="2" weight="medium">
+          {connectionName}
+        </Text>
         <Flex align="center" gap="2">
-          <Text size="2" weight="bold">
-            Connected to:
-          </Text>
-          <Text size="2">{connectionName}</Text>
+          <ThemeSwitcher size="1" />
+          <Button size="1" variant="soft" color="red" onClick={onDisconnect}>
+            Disconnect
+          </Button>
         </Flex>
-        <Button size="1" variant="soft" color="red" onClick={onDisconnect}>
-          Disconnect
-        </Button>
       </Flex>
 
       <PanelGroup direction="horizontal" className="panel-group">
