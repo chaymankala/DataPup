@@ -34,6 +34,9 @@ export type { SeparatorProps } from './Separator'
 export { Skeleton } from './Skeleton'
 export type { SkeletonProps } from './Skeleton'
 
+// Logo
+export { Logo } from './Logo'
+
 // Re-export commonly used Radix components that don't need wrapping
 export {
   Flex,

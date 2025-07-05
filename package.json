@@ -27,20 +27,31 @@
   "build": {
     "appId": "com.datapup.app",
     "productName": "DataPup",
+    "appName": "DataPup",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "out/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "build/icons",
+        "to": "icons"
+      }
+    ],
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icons/icon.icns"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icons/icon.ico"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "build/icons/icon.png"
     }
   },
   "devDependencies": {
@@ -62,6 +73,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "prettier": "^3.6.2",
+    "sharp": "^0.34.2",
     "typescript": "^5.8.3",
     "vite": "^6.0.0"
   },
