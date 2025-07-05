@@ -207,9 +207,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               </Button>
             </Flex>
           </Flex>
-          <Box p="1" pt="0">
-            {filters.map((filter) => (
-              <Flex key={filter.id} gap="1" align="center" mb="1">
+          <Box px="1" py="1">
+            {filters.map((filter, index) => (
+              <Flex key={filter.id} gap="1" align="center" mb={index < filters.length - 1 ? "1" : "0"}>
                 <Select.Root
                   value={filter.column}
                   onValueChange={(value) => updateFilter(filter.id, { column: value })}
