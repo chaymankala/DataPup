@@ -1,0 +1,28 @@
+.database-explorer {
+  height: 100%;
+  overflow: hidden;
+}
+
+.explorer-header {
+  border-bottom: 1px solid var(--gray-4);
+  background: var(--gray-2);
+}
+
+.explorer-content {
+  flex: 1;
+  height: 100%;
+}
+
+.database-item {
+  cursor: pointer;
+  border-radius: var(--radius-2);
+  transition: background-color 0.2s;
+}
+
+.database-item:hover {
+  background: var(--gray-3);
+}
+
+.database-item:active {
+  background: var(--gray-4);
+}

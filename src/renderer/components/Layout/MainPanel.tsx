@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from '@radix-ui/themes'
-import { QueryEditor } from '../QueryEditor/QueryEditor'
+import { ActiveConnectionLayout } from '../ActiveConnectionLayout'
 import './MainPanel.css'
 
 interface MainPanelProps {
@@ -24,7 +24,7 @@ export function MainPanel({ activeConnection }: MainPanelProps) {
 
   return (
     <Box className="main-panel">
-      <QueryEditor 
+      <ActiveConnectionLayout 
         connectionId={activeConnection.id}
         connectionName={activeConnection.name}
       />
