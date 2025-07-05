@@ -1,7 +1,5 @@
-import { useState } from 'react'
-import { Box } from '@radix-ui/themes'
+import { useState, useEffect } from 'react'
 import { MainPanel } from './components/Layout/MainPanel'
-import { ActiveConnectionLayout } from './components/ActiveConnectionLayout'
 import './App.css'
 
 interface Connection {
@@ -20,8 +18,97 @@ function App() {
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null)
   const [savedConnections, setSavedConnections] = useState<Connection[]>([])
 
-  const handleConnectionSelect = (connection: Connection) => {
-    setActiveConnection(connection)
+  // Load saved connections from secure storage on app start
+  useEffect(() => {
+    const loadSavedConnections = async () => {
+      try {
+        const result = await window.api.connections.getAll()
+        if (result.success) {
+          // Filter out duplicate connections based on Label (name)
+          const uniqueConnections = result.connections.reduce((acc: Connection[], connection: Connection) => {
+            const existingConnection = acc.find(conn => conn.name === connection.name)
+            if (!existingConnection) {
+              acc.push(connection)
+            } else {
+              // If duplicate found, keep the one with the most recent lastUsed timestamp
+              const existingLastUsed = existingConnection.lastUsed ? new Date(existingConnection.lastUsed).getTime() : 0
+              const currentLastUsed = connection.lastUsed ? new Date(connection.lastUsed).getTime() : 0
+              if (currentLastUsed > existingLastUsed) {
+                // Replace the existing connection with the more recent one
+                const index = acc.findIndex(conn => conn.name === connection.name)
+                acc[index] = connection
+              }
+            }
+            return acc
+          }, [])
+
+          setSavedConnections(uniqueConnections)
+        }
+      } catch (error) {
+        console.error('Error loading saved connections:', error)
+      }
+    }
+
+    loadSavedConnections()
+  }, [])
+
+  const handleConnectionSelect = async (connection: Connection) => {
+    try {
+      // Retrieve the full connection details including password from secure storage
+      const fullConnectionResult = await window.api.connections.getById(connection.id)
+
+      if (!fullConnectionResult.success || !fullConnectionResult.connection) {
+        console.error('Failed to retrieve connection details')
+        alert('Failed to retrieve connection details. Please try creating a new connection.')
+        return
+      }
+
+      const fullConnection = fullConnectionResult.connection
+
+      // Attempt to connect to the database using the complete saved connection details
+      const result = await window.api.database.connect({
+        type: fullConnection.type,
+        host: fullConnection.host,
+        port: fullConnection.port,
+        database: fullConnection.database,
+        username: fullConnection.username,
+        password: fullConnection.password, // Now we have the actual password
+        saveConnection: false // Don't save again since it's already saved
+      })
+
+      console.log('Connection:', fullConnection)
+      console.log('Connection result:', result)
+
+      if (result.success) {
+        console.log('Connected to saved connection:', fullConnection.name)
+
+        // Update the connection with the new connection ID from the backend
+        const updatedConnection = {
+          ...fullConnection,
+          id: result.connectionId || fullConnection.id
+        }
+
+        setActiveConnection(updatedConnection)
+
+        // Update the lastUsed timestamp
+        await window.api.connections.updateLastUsed(fullConnection.id)
+
+        // Update the local saved connections list
+        setSavedConnections(prev =>
+          prev.map(conn =>
+            conn.id === fullConnection.id
+              ? { ...conn, lastUsed: new Date().toISOString() }
+              : conn
+          )
+        )
+      } else {
+        console.error('Connection failed:', result.message)
+        alert(`Connection failed: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Connection error:', error)
+      alert('Connection error occurred')
+    }
   }
 
   const handleConnectionDelete = (connectionId: string) => {
@@ -51,32 +138,21 @@ function App() {
         setActiveConnection(null)
       } catch (error) {
         console.error('Error disconnecting:', error)
+        // Even if disconnect fails, we should still go back to landing page
+        setActiveConnection(null)
       }
     }
   }
 
-  // If there's an active connection, show only the ActiveConnectionLayout
-  if (activeConnection) {
-    return (
-      <Box className="app-container">
-        <ActiveConnectionLayout 
-          connectionId={activeConnection.id}
-          connectionName={activeConnection.name}
-          onDisconnect={handleDisconnect}
-        />
-      </Box>
-    )
-  }
-
-  // Otherwise, show the connection selection view
   return (
     <div className="app-container">
-      <MainPanel 
+      <MainPanel
         activeConnection={activeConnection ? { id: activeConnection.id, name: activeConnection.name } : undefined}
         onConnectionSuccess={handleConnectionSuccess}
         savedConnections={savedConnections}
         onConnectionSelect={handleConnectionSelect}
         onConnectionDelete={handleConnectionDelete}
+        onDisconnect={handleDisconnect}
       />
     </div>
   )
