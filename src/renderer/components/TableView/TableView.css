@@ -1,0 +1,92 @@
+.table-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.filters-section {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  min-height: fit-content;
+}
+
+.filter-select {
+  min-width: 120px;
+}
+
+.filter-input {
+  flex: 1;
+  max-width: 200px;
+}
+
+.results-section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.results-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  min-height: 40px;
+}
+
+.results-content {
+  flex: 1;
+  overflow: auto;
+  background: var(--gray-1);
+}
+
+.result-table-container {
+  height: 100%;
+  overflow: auto;
+}
+
+.result-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.result-table-container th {
+  background: var(--gray-2);
+  padding: 6px 12px;
+  text-align: left;
+  font-weight: 500;
+  border-bottom: 1px solid var(--gray-4);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.result-table-container td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--gray-3);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-table-container tr:hover td {
+  background: var(--gray-2);
+}
+
+.result-table-container tr:nth-child(even) td {
+  background: var(--gray-1);
+}
+
+.result-table-container tr:nth-child(even):hover td {
+  background: var(--gray-2);
+}
+
+.error-message {
+  padding: 12px 16px;
+  background: var(--red-2);
+  border: 1px solid var(--red-4);
+  border-radius: var(--radius-2);
+  max-width: 600px;
+  text-align: center;
+}

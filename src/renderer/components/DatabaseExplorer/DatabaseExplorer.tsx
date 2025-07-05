@@ -6,6 +6,7 @@ import './DatabaseExplorer.css'
 interface DatabaseExplorerProps {
   connectionId: string
   connectionName: string
+  onTableDoubleClick?: (database: string, tableName: string) => void
 }
 
 interface DatabaseObject {
@@ -74,7 +75,7 @@ const getObjectColor = (type: DatabaseObject['type']) => {
   }
 }
 
-export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplorerProps) {
+export function DatabaseExplorer({ connectionId, connectionName, onTableDoubleClick }: DatabaseExplorerProps) {
   const [databases, setDatabases] = useState<Database[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -290,6 +291,11 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
                           className={`object-item ${obj.expanded ? 'expanded' : ''}`}
                           p="1"
                           onClick={() => obj.type === 'table' && toggleTable(db.name, obj.name)}
+                          onDoubleClick={() => {
+                            if (obj.type === 'table' && onTableDoubleClick) {
+                              onTableDoubleClick(db.name, obj.name)
+                            }
+                          }}
                           style={{ cursor: obj.type === 'table' ? 'pointer' : 'default' }}
                         >
                           {obj.type === 'table' && (

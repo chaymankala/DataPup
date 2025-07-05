@@ -5,6 +5,11 @@
   background: var(--gray-1);
 }
 
+.tabs-section {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+}
+
 .workspace-panels {
   height: 100%;
 }
