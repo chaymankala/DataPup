@@ -1,6 +1,6 @@
-import { Button, Input, Label } from '../ui'
 import { useState, useEffect } from 'react'
-import { Button, Dialog, Flex, Select, Text, TextField, Checkbox } from '@radix-ui/themes'
+import { Button, Input, Label, Dialog, Flex, Select, Text } from '../ui'
+import { TextField, Checkbox } from '@radix-ui/themes'
 import './DatabaseConnection.css'
 
 interface DatabaseConnectionProps {
@@ -131,41 +131,56 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
               </Select.Root>
             </Flex>
 
-            <Input
-              label="Host"
-              value={connectionData.host}
-              onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
-              placeholder="localhost"
-            />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="host">Host</Label>
+              <TextField.Root
+                id="host"
+                value={connectionData.host}
+                onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
+                placeholder="localhost"
+              />
+            </Flex>
 
-            <Input
-              label="Port"
-              value={connectionData.port}
-              onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
-              placeholder="5432"
-            />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="port">Port</Label>
+              <TextField.Root
+                id="port"
+                value={connectionData.port}
+                onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
+                placeholder="5432"
+              />
+            </Flex>
 
-            <Input
-              label="Database"
-              value={connectionData.database}
-              onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
-              placeholder="my_database"
-            />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="database">Database</Label>
+              <TextField.Root
+                id="database"
+                value={connectionData.database}
+                onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
+                placeholder="my_database"
+              />
+            </Flex>
 
-            <Input
-              label="Username"
-              value={connectionData.username}
-              onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
-              placeholder="username"
-            />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="username">Username</Label>
+              <TextField.Root
+                id="username"
+                value={connectionData.username}
+                onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
+                placeholder="username"
+              />
+            </Flex>
 
-            <Input
-              label="Password"
-              type="password"
-              value={connectionData.password}
-              onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
-              placeholder="password"
-            />
+            <Flex direction="column" gap="1">
+              <Label htmlFor="password">Password</Label>
+              <TextField.Root
+                id="password"
+                type="password"
+                value={connectionData.password}
+                onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
+                placeholder="password"
+              />
+            </Flex>
           </Flex>
 
           <Flex gap="3" mt="4" justify="end">
