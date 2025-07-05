@@ -6,14 +6,32 @@ import './DatabaseExplorer.css'
 interface DatabaseExplorerProps {
   connectionId: string
   connectionName: string
+  onTableDoubleClick?: (database: string, tableName: string) => void
 }
 
 interface DatabaseObject {
   name: string
   type: 'table' | 'view' | 'function' | 'procedure' | 'trigger'
   schema?: string
-  columns?: number
-  rows?: number
+  columns?: Column[]
+  indexes?: Index[]
+  expanded?: boolean
+  loading?: boolean
+}
+
+interface Column {
+  name: string
+  type: string
+  nullable?: boolean
+  default?: string
+  primary?: boolean
+}
+
+interface Index {
+  name: string
+  columns: string[]
+  unique: boolean
+  primary: boolean
 }
 
 interface Database {
@@ -26,7 +44,7 @@ interface Database {
 const getObjectIcon = (type: DatabaseObject['type']) => {
   switch (type) {
     case 'table':
-      return '📊'
+      return '▦'
     case 'view':
       return '👁️'
     case 'function':
@@ -57,7 +75,7 @@ const getObjectColor = (type: DatabaseObject['type']) => {
   }
 }
 
-export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplorerProps) {
+export function DatabaseExplorer({ connectionId, connectionName, onTableDoubleClick }: DatabaseExplorerProps) {
   const [databases, setDatabases] = useState<Database[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -94,27 +112,119 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
       // Load database objects
       setDatabases((prev) => prev.map((d) => (d.name === dbName ? { ...d, loading: true } : d)))
 
-      // Simulate loading database objects
-      setTimeout(() => {
-        const mockObjects: DatabaseObject[] = [
-          { name: 'users', type: 'table', columns: 8, rows: 1250 },
-          { name: 'products', type: 'table', columns: 12, rows: 450 },
-          { name: 'orders', type: 'table', columns: 15, rows: 3200 },
-          { name: 'active_users_view', type: 'view' },
-          { name: 'calculate_total', type: 'function' },
-          { name: 'update_inventory', type: 'procedure' },
-          { name: 'audit_trigger', type: 'trigger' }
-        ]
+      try {
+        const result = await window.api.database.getTables(connectionId, dbName)
+        if (result.success && result.tables) {
+          const objects: DatabaseObject[] = result.tables.map((tableName: string) => ({
+            name: tableName,
+            type: 'table' as const,
+            expanded: false
+          }))
 
-        setDatabases((prev) =>
-          prev.map((d) =>
-            d.name === dbName ? { ...d, expanded: true, objects: mockObjects, loading: false } : d
+          setDatabases((prev) =>
+            prev.map((d) =>
+              d.name === dbName ? { ...d, expanded: true, objects, loading: false } : d
+            )
           )
+        } else {
+          console.error('Failed to load tables:', result.message)
+          setDatabases((prev) =>
+            prev.map((d) => (d.name === dbName ? { ...d, loading: false } : d))
+          )
+        }
+      } catch (error) {
+        console.error('Error loading tables:', error)
+        setDatabases((prev) =>
+          prev.map((d) => (d.name === dbName ? { ...d, loading: false } : d))
         )
-      }, 800)
+      }
     } else {
       setDatabases((prev) =>
         prev.map((d) => (d.name === dbName ? { ...d, expanded: !d.expanded } : d))
+      )
+    }
+  }
+
+  const toggleTable = async (dbName: string, tableName: string) => {
+    const db = databases.find((d) => d.name === dbName)
+    if (!db || !db.objects) return
+
+    const tableIndex = db.objects.findIndex((obj) => obj.name === tableName)
+    if (tableIndex === -1) return
+
+    const table = db.objects[tableIndex]
+    
+    if (!table.expanded && !table.columns) {
+      // Load table schema
+      setDatabases((prev) =>
+        prev.map((d) => {
+          if (d.name === dbName) {
+            const newObjects = [...d.objects!]
+            newObjects[tableIndex] = { ...table, loading: true }
+            return { ...d, objects: newObjects }
+          }
+          return d
+        })
+      )
+
+      try {
+        const result = await window.api.database.getTableSchema(connectionId, tableName, dbName)
+        if (result.success && result.schema) {
+          const columns: Column[] = result.schema.map((col: any) => ({
+            name: col.name,
+            type: col.type,
+            nullable: col.nullable,
+            default: col.default_expression || col.default,
+            primary: col.is_primary_key || false
+          }))
+
+          setDatabases((prev) =>
+            prev.map((d) => {
+              if (d.name === dbName) {
+                const newObjects = [...d.objects!]
+                newObjects[tableIndex] = { ...table, columns, expanded: true, loading: false }
+                return { ...d, objects: newObjects }
+              }
+              return d
+            })
+          )
+        } else {
+          console.error('Failed to load table schema:', result.message)
+          setDatabases((prev) =>
+            prev.map((d) => {
+              if (d.name === dbName) {
+                const newObjects = [...d.objects!]
+                newObjects[tableIndex] = { ...table, loading: false }
+                return { ...d, objects: newObjects }
+              }
+              return d
+            })
+          )
+        }
+      } catch (error) {
+        console.error('Error loading table schema:', error)
+        setDatabases((prev) =>
+          prev.map((d) => {
+            if (d.name === dbName) {
+              const newObjects = [...d.objects!]
+              newObjects[tableIndex] = { ...table, loading: false }
+              return { ...d, objects: newObjects }
+            }
+            return d
+          })
+        )
+      }
+    } else {
+      // Toggle expanded state
+      setDatabases((prev) =>
+        prev.map((d) => {
+          if (d.name === dbName) {
+            const newObjects = [...d.objects!]
+            newObjects[tableIndex] = { ...table, expanded: !table.expanded }
+            return { ...d, objects: newObjects }
+          }
+          return d
+        })
       )
     }
   }
@@ -127,7 +237,7 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
 
   return (
     <Flex direction="column" className="database-explorer">
-      <Box className="explorer-header" p="3">
+      <Box className="explorer-header" p="2">
         <input
           type="text"
           placeholder="Search objects..."
@@ -158,10 +268,7 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
                   <Text size="1" className="expand-icon">
                     {db.expanded ? '▼' : '▶'}
                   </Text>
-                  <Text size="2">🗄️ {db.name}</Text>
-                  <Badge size="1" color="gray">
-                    database
-                  </Badge>
+                  <Text size="1">🗄️ {db.name}</Text>
                 </Flex>
 
                 {db.loading && (
@@ -177,31 +284,77 @@ export function DatabaseExplorer({ connectionId, connectionName }: DatabaseExplo
                 {db.expanded && db.objects && (
                   <Box className="object-list" pl="4">
                     {db.objects.map((obj) => (
-                      <Flex
-                        key={`${db.name}.${obj.name}`}
-                        align="center"
-                        gap="2"
-                        className="object-item"
-                        p="2"
-                      >
-                        <Text size="2">{getObjectIcon(obj.type)}</Text>
-                        <Text size="2" className="object-name">
-                          {obj.name}
-                        </Text>
-                        <Badge size="1" color={getObjectColor(obj.type) as any}>
-                          {obj.type}
-                        </Badge>
-                        {obj.columns && (
-                          <Text size="1" color="gray" ml="auto">
-                            {obj.columns} cols
+                      <Box key={`${db.name}.${obj.name}`}>
+                        <Flex
+                          align="center"
+                          gap="2"
+                          className={`object-item ${obj.expanded ? 'expanded' : ''}`}
+                          p="1"
+                          onClick={() => obj.type === 'table' && toggleTable(db.name, obj.name)}
+                          onDoubleClick={() => {
+                            if (obj.type === 'table' && onTableDoubleClick) {
+                              onTableDoubleClick(db.name, obj.name)
+                            }
+                          }}
+                          style={{ cursor: obj.type === 'table' ? 'pointer' : 'default' }}
+                        >
+                          {obj.type === 'table' && (
+                            <Text size="1" className="expand-icon">
+                              {obj.expanded ? '▼' : '▶'}
+                            </Text>
+                          )}
+                          <Text size="1">{getObjectIcon(obj.type)}</Text>
+                          <Text size="1" className="object-name">
+                            {obj.name}
                           </Text>
+                          {obj.type !== 'table' && (
+                            <Badge size="1" color={getObjectColor(obj.type) as any}>
+                              {obj.type}
+                            </Badge>
+                          )}
+                        </Flex>
+
+                        {obj.loading && (
+                          <Box pl="6" py="1">
+                            <Flex direction="column" gap="1">
+                              <Skeleton height={20} width="60%" />
+                              <Skeleton height={20} width="80%" />
+                            </Flex>
+                          </Box>
                         )}
-                        {obj.rows && (
-                          <Text size="1" color="gray">
-                            {obj.rows.toLocaleString()} rows
-                          </Text>
+
+                        {obj.expanded && obj.columns && (
+                          <Box className="column-list" pl="6">
+                            {obj.columns.map((col) => (
+                              <Flex
+                                key={`${db.name}.${obj.name}.${col.name}`}
+                                align="center"
+                                gap="2"
+                                className="column-item"
+                                p="1"
+                              >
+                                <Text size="1">◦</Text>
+                                <Text size="1" className="column-name">
+                                  {col.name}
+                                </Text>
+                                <Text size="1" color="gray">
+                                  {col.type}
+                                </Text>
+                                {col.primary && (
+                                  <Badge size="1" color="amber">
+                                    PK
+                                  </Badge>
+                                )}
+                                {col.nullable === false && (
+                                  <Badge size="1" color="red">
+                                    NOT NULL
+                                  </Badge>
+                                )}
+                              </Flex>
+                            ))}
+                          </Box>
                         )}
-                      </Flex>
+                      </Box>
                     ))}
                   </Box>
                 )}
