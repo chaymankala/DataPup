@@ -97,7 +97,7 @@ export function MainPanel({
             <Flex align="center" gap="2">
               <Text size="5">🐶</Text>
               <Heading size="5" weight="bold">
-                Data-Pup
+                DataPup
               </Heading>
             </Flex>
             <ThemeSwitcher />
