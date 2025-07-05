@@ -1,7 +1,5 @@
 import { Box, Flex, Heading, ScrollArea, Text } from '@radix-ui/themes'
-import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { ThemeSwitcher } from '../ThemeSwitcher'
-import { Separator } from '../ui'
 import { ConnectionList } from '../ConnectionList/ConnectionList'
 import './Sidebar.css'
 
@@ -13,17 +11,13 @@ interface SidebarProps {
 export function Sidebar({ onConnectionSelect, onConnectionDelete }: SidebarProps) {
   return (
     <Box className="sidebar">
-      <Flex direction="column" gap="4" p="4">
+      <Flex direction="column" gap="4" p="4" height="100%">
         <Flex justify="between" align="center">
           <Heading size="4" weight="bold">
             🐶 Data-Pup
           </Heading>
           <ThemeSwitcher />
         </Flex>
-        
-        <DatabaseConnection onConnectionSuccess={onConnectionSelect} />
-        
-        <Separator size="4" />
         
         <Box style={{ flex: 1, minHeight: 0 }}>
           <Text size="2" weight="medium" color="gray" mb="2">
@@ -34,19 +28,6 @@ export function Sidebar({ onConnectionSelect, onConnectionDelete }: SidebarProps
               onConnectionSelect={onConnectionSelect}
               onConnectionDelete={onConnectionDelete}
             />
-          </ScrollArea>
-        </Box>
-        
-        <Separator size="4" />
-        
-        <Box>
-          <Text size="2" weight="medium" color="gray">
-            Saved Queries
-          </Text>
-          <ScrollArea className="queries-list">
-            <Text size="1" color="gray">
-              No saved queries
-            </Text>
           </ScrollArea>
         </Box>
       </Flex>

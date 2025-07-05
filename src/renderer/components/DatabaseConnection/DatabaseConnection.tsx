@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Button, Input, Label, Dialog, Flex, Select, Text } from '../ui'
+import { Button, Input, Label, Dialog, Flex, Select, Text, Card } from '../ui'
 import { TextField, Checkbox } from '@radix-ui/themes'
 import './DatabaseConnection.css'
 
 interface DatabaseConnectionProps {
   onConnectionSuccess?: (connection: any) => void
+  onCancel?: () => void
+  inline?: boolean
 }
 
-export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionProps) {
+export function DatabaseConnection({ onConnectionSuccess, onCancel, inline = false }: DatabaseConnectionProps) {
   const [open, setOpen] = useState(false)
   const [dbType, setDbType] = useState('clickhouse')
   const [saveConnection, setSaveConnection] = useState(true)
@@ -103,6 +105,102 @@ export function DatabaseConnection({ onConnectionSuccess }: DatabaseConnectionPr
     }))
   }
 
+  const handleCancel = () => {
+    if (inline && onCancel) {
+      onCancel()
+    } else {
+      setOpen(false)
+    }
+  }
+
+  // Inline form mode
+  if (inline) {
+    return (
+      <Card style={{ padding: '24px' }}>
+        <Flex direction="column" gap="4">
+          <Text size="4" weight="medium">Connect to Database</Text>
+          
+          <Flex direction="column" gap="3">
+            <Flex direction="column" gap="1">
+              <Label htmlFor="db-type">Database Type</Label>
+              <Select.Root value={dbType} onValueChange={setDbType}>
+                <Select.Trigger id="db-type" className="full-width" />
+                <Select.Content>
+                  {supportedTypes.map(type => (
+                    <Select.Item key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Label htmlFor="host">Host</Label>
+              <TextField.Root
+                id="host"
+                value={connectionData.host}
+                onChange={(e) => setConnectionData({...connectionData, host: e.target.value})}
+                placeholder="localhost"
+              />
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Label htmlFor="port">Port</Label>
+              <TextField.Root
+                id="port"
+                value={connectionData.port}
+                onChange={(e) => setConnectionData({...connectionData, port: e.target.value})}
+                placeholder="5432"
+              />
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Label htmlFor="database">Database</Label>
+              <TextField.Root
+                id="database"
+                value={connectionData.database}
+                onChange={(e) => setConnectionData({...connectionData, database: e.target.value})}
+                placeholder="my_database"
+              />
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Label htmlFor="username">Username</Label>
+              <TextField.Root
+                id="username"
+                value={connectionData.username}
+                onChange={(e) => setConnectionData({...connectionData, username: e.target.value})}
+                placeholder="username"
+              />
+            </Flex>
+
+            <Flex direction="column" gap="1">
+              <Label htmlFor="password">Password</Label>
+              <TextField.Root
+                id="password"
+                type="password"
+                value={connectionData.password}
+                onChange={(e) => setConnectionData({...connectionData, password: e.target.value})}
+                placeholder="password"
+              />
+            </Flex>
+          </Flex>
+
+          <Flex gap="3" justify="end">
+            <Button variant="soft" color="gray" onClick={handleCancel} disabled={isConnecting}>
+              Cancel
+            </Button>
+            <Button onClick={handleConnect} disabled={isConnecting}>
+              {isConnecting ? 'Connecting...' : 'Connect'}
+            </Button>
+          </Flex>
+        </Flex>
+      </Card>
+    )
+  }
+
+  // Dialog mode (original behavior)
   return (
     <>
       <Button size="1" onClick={() => setOpen(true)}>

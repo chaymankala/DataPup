@@ -1,12 +1,13 @@
 .sidebar {
-  width: 280px;
+  width: 20%;
   height: 100%;
   background: var(--gray-2);
   border-right: 1px solid var(--gray-4);
+  min-width: 200px;
+  max-width: 300px;
 }
 
-.connections-list,
-.queries-list {
-  height: 150px;
+.connections-list {
+  height: calc(100vh - 200px);
   margin-top: 8px;
 }
