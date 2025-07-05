@@ -80,7 +80,7 @@ const sqlKeywords = [
 ]
 
 export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceProps) {
-  const [query, setQuery] = useState('SELECT * FROM users LIMIT 10')
+  const [query, setQuery] = useState('')
   const [result, setResult] = useState<QueryResult | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const [selectedText, setSelectedText] = useState('')
@@ -88,6 +88,35 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor
+
+    // Define a custom theme that works well with both light and dark backgrounds
+    monaco.editor.defineTheme('data-pup', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: '0000FF', fontStyle: 'bold' },
+        { token: 'string', foreground: 'A31515' },
+        { token: 'string.sql', foreground: 'A31515' },
+        { token: 'number', foreground: '098658' },
+        { token: 'comment', foreground: '008000', fontStyle: 'italic' },
+        { token: 'operator', foreground: '000000' },
+        { token: 'delimiter', foreground: '000000' },
+        { token: 'identifier', foreground: '001080' },
+        { token: '', foreground: '000000' } // default text
+      ],
+      colors: {
+        'editor.foreground': '#000000',
+        'editor.background': '#00000000', // transparent
+        'editor.selectionBackground': '#ADD6FF',
+        'editor.lineHighlightBackground': '#00000000', // transparent - no highlight
+        'editor.lineHighlightBorder': '#00000000', // transparent - no border
+        'editorCursor.foreground': '#000000',
+        'editorWhitespace.foreground': '#CCCCCC'
+      }
+    })
+
+    // Apply our custom theme
+    monaco.editor.setTheme('data-pup')
 
     // Configure SQL language settings
     monaco.languages.registerCompletionItemProvider('sql', {
@@ -106,8 +135,15 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
     editor.addAction({
       id: 'execute-query',
       label: 'Execute Query',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-      run: () => handleExecuteQuery()
+      keybindings: [
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE
+      ],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.5,
+      run: () => {
+        handleExecuteQuery()
+      }
     })
 
     // Track selected text
@@ -119,8 +155,18 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
   }
 
   const handleExecuteQuery = async () => {
-    const queryToExecute = selectedText || query
-    if (!queryToExecute.trim()) return
+    let queryToExecute = ''
+    
+    // If there's selected text, use only that
+    if (selectedText && selectedText.trim()) {
+      queryToExecute = selectedText.trim()
+    } else {
+      // Otherwise use the full editor content
+      const currentQuery = editorRef.current?.getValue() || query
+      queryToExecute = currentQuery.trim()
+    }
+    
+    if (!queryToExecute) return
 
     try {
       setIsExecuting(true)
@@ -238,7 +284,7 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
               <Editor
                 height="100%"
                 defaultLanguage="sql"
-                theme="vs-dark"
+                theme="data-pup"
                 value={query}
                 onChange={(value) => setQuery(value || '')}
                 onMount={handleEditorDidMount}
@@ -262,7 +308,9 @@ export function QueryWorkspace({ connectionId, connectionName }: QueryWorkspaceP
                     enabled: true
                   },
                   padding: { top: 12, bottom: 12 },
-                  lineNumbersMinChars: 3
+                  lineNumbersMinChars: 3,
+                  renderLineHighlight: 'none',
+                  renderLineHighlightOnlyWhenFocus: false
                 }}
               />
             </Box>
