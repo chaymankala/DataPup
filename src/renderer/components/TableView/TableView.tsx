@@ -195,20 +195,31 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     <Box className="table-view">
       <Flex direction="column" height="100%">
         {/* Filters Section */}
-        <Box className="filters-section" p="2">
-          <Flex direction="column" gap="2">
+        <Box className="filters-section">
+          <Flex justify="between" align="center" p="1" className="filter-header">
+            <Text size="1" weight="medium">Filters</Text>
+            <Flex gap="1">
+              <Button size="1" variant="outline" onClick={addFilter} disabled={isLoadingSchema}>
+                + Filter
+              </Button>
+              <Button size="1" onClick={executeQuery} disabled={isLoading}>
+                Apply
+              </Button>
+            </Flex>
+          </Flex>
+          <Box p="1" pt="0">
             {filters.map((filter) => (
-              <Flex key={filter.id} gap="2" align="center">
+              <Flex key={filter.id} gap="1" align="center" mb="1">
                 <Select.Root
                   value={filter.column}
                   onValueChange={(value) => updateFilter(filter.id, { column: value })}
                   disabled={isLoadingSchema}
                 >
-                  <Select.Trigger placeholder="Select column" className="filter-select" />
+                  <Select.Trigger placeholder="Select column" className="filter-select" size="1" />
                   <Select.Content>
                     {columns.map((col) => (
                       <Select.Item key={col.name} value={col.name}>
-                        {col.name}
+                        <Text size="1">{col.name}</Text>
                       </Select.Item>
                     ))}
                   </Select.Content>
@@ -218,11 +229,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                   value={filter.operator}
                   onValueChange={(value) => updateFilter(filter.id, { operator: value as any })}
                 >
-                  <Select.Trigger className="filter-select" />
+                  <Select.Trigger className="filter-select" size="1" />
                   <Select.Content>
                     {OPERATORS.map((op) => (
                       <Select.Item key={op.value} value={op.value}>
-                        {op.label}
+                        <Text size="1">{op.label}</Text>
                       </Select.Item>
                     ))}
                   </Select.Content>
@@ -234,6 +245,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
                     placeholder="Value"
                     className="filter-input"
+                    size="1"
                   />
                 )}
 
@@ -242,21 +254,13 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                   variant="ghost"
                   color="red"
                   onClick={() => removeFilter(filter.id)}
+                  style={{ padding: '0 4px', minWidth: '20px', height: '20px' }}
                 >
                   ×
                 </Button>
               </Flex>
             ))}
-
-            <Flex gap="2">
-              <Button size="1" variant="outline" onClick={addFilter} disabled={isLoadingSchema}>
-                + Add Filter
-              </Button>
-              <Button size="1" onClick={executeQuery} disabled={isLoading}>
-                Apply Filters
-              </Button>
-            </Flex>
-          </Flex>
+          </Box>
         </Box>
 
         {/* Results Section */}

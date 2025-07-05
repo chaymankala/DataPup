@@ -11,13 +11,28 @@
   min-height: fit-content;
 }
 
+.filter-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+  min-height: 32px;
+}
+
+.filters-section > div:last-child {
+  max-height: 88px;
+  overflow-y: auto;
+}
+
 .filter-select {
-  min-width: 120px;
+  min-width: 100px;
+  height: 24px;
+  font-size: 11px;
 }
 
 .filter-input {
   flex: 1;
-  max-width: 200px;
+  max-width: 150px;
+  height: 24px;
+  font-size: 11px;
 }
 
 .results-section {
