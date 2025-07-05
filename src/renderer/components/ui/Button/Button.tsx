@@ -6,10 +6,8 @@ export interface ButtonProps extends RadixButtonProps {
   // We can add custom props here if needed
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (props, ref) => {
-    return <RadixButton ref={ref} {...props} />
-  }
-)
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
+  return <RadixButton ref={ref} {...props} />
+})
 
 Button.displayName = 'Button'

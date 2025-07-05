@@ -6,10 +6,8 @@ export interface SeparatorProps extends RadixSeparatorProps {
   // We can add custom props here if needed
 }
 
-export const Separator = forwardRef<HTMLDivElement, SeparatorProps>(
-  (props, ref) => {
-    return <RadixSeparator ref={ref} {...props} />
-  }
-)
+export const Separator = forwardRef<HTMLDivElement, SeparatorProps>((props, ref) => {
+  return <RadixSeparator ref={ref} {...props} />
+})
 
 Separator.displayName = 'Separator'

@@ -18,13 +18,13 @@ export function Sidebar({ onConnectionSelect, onConnectionDelete }: SidebarProps
           </Heading>
           <ThemeSwitcher />
         </Flex>
-        
+
         <Box style={{ flex: 1, minHeight: 0 }}>
           <Text size="2" weight="medium" color="gray" mb="2">
             Saved Connections
           </Text>
           <ScrollArea className="connections-list">
-            <ConnectionList 
+            <ConnectionList
               onConnectionSelect={onConnectionSelect}
               onConnectionDelete={onConnectionDelete}
             />

@@ -26,4 +26,4 @@ class DatabaseManagerFactory {
   }
 }
 
-export { DatabaseManagerFactory } 
+export { DatabaseManagerFactory }

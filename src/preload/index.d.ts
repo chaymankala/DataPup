@@ -5,12 +5,28 @@ declare global {
     electron: ElectronAPI
     api: {
       database: {
-        connect: (config: any) => Promise<{ success: boolean; message: string; connectionId?: string; error?: string }>
-        disconnect: (connectionId?: string) => Promise<{ success: boolean; message: string; error?: string }>
-        query: (connectionId: string, sql: string) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
-        getDatabases: (connectionId: string) => Promise<{ success: boolean; databases?: string[]; message: string; error?: string }>
-        getTables: (connectionId: string, database?: string) => Promise<{ success: boolean; tables?: string[]; message: string; error?: string }>
-        getTableSchema: (connectionId: string, tableName: string, database?: string) => Promise<{ success: boolean; schema?: any[]; message: string; error?: string }>
+        connect: (
+          config: any
+        ) => Promise<{ success: boolean; message: string; connectionId?: string; error?: string }>
+        disconnect: (
+          connectionId?: string
+        ) => Promise<{ success: boolean; message: string; error?: string }>
+        query: (
+          connectionId: string,
+          sql: string
+        ) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
+        getDatabases: (
+          connectionId: string
+        ) => Promise<{ success: boolean; databases?: string[]; message: string; error?: string }>
+        getTables: (
+          connectionId: string,
+          database?: string
+        ) => Promise<{ success: boolean; tables?: string[]; message: string; error?: string }>
+        getTableSchema: (
+          connectionId: string,
+          tableName: string,
+          database?: string
+        ) => Promise<{ success: boolean; schema?: any[]; message: string; error?: string }>
         isConnected: (connectionId: string) => Promise<{ success: boolean; isConnected: boolean }>
         getSupportedTypes: () => Promise<{ success: boolean; types: string[] }>
         getAllConnections: () => Promise<{ success: boolean; connections: string[] }>

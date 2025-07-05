@@ -4,7 +4,8 @@ import { DatabaseConnection } from '../DatabaseConnection/DatabaseConnection'
 import { QueryEditor } from '../QueryEditor/QueryEditor'
 import { ThemeSwitcher } from '../ThemeSwitcher'
 import { ActiveConnectionLayout } from '../ActiveConnectionLayout'
-import { useState } from 'react'
+import { ConnectionCard, ConnectionCardSkeleton } from '../ConnectionCard'
+import { useState, useEffect } from 'react'
 import './MainPanel.css'
 
 interface MainPanelProps {
@@ -40,6 +41,15 @@ export function MainPanel({
   onDisconnect
 }: MainPanelProps) {
   const [showConnectionForm, setShowConnectionForm] = useState(false)
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true)
+
+  // Simulate loading state for demo
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoadingConnections(false)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Sort connections by last used (most recent first)
   const sortedConnections = [...savedConnections].sort((a, b) => {
@@ -75,27 +85,6 @@ export function MainPanel({
   const handleConnectionDelete = (connectionId: string) => {
     if (onConnectionDelete) {
       onConnectionDelete(connectionId)
-    }
-  }
-
-  const formatLastUsed = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-
-    if (diffInHours < 1) return 'Just now'
-    if (diffInHours < 24) return `${diffInHours}h ago`
-    const diffInDays = Math.floor(diffInHours / 24)
-    return `${diffInDays}d ago`
-  }
-
-  const getDatabaseIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'clickhouse': return '🔍'
-      case 'postgresql': return '🐘'
-      case 'mysql': return '🐬'
-      case 'sqlite': return '💾'
-      default: return '🗄️'
     }
   }
 
@@ -146,81 +135,34 @@ export function MainPanel({
                 Saved Connections
               </Text>
 
-              {sortedConnections.length > 0 ? (
+              {isLoadingConnections ? (
+                <Flex gap="4" wrap="wrap" justify="center">
+                  {[1, 2, 3].map((i) => (
+                    <ConnectionCardSkeleton key={i} />
+                  ))}
+                </Flex>
+              ) : sortedConnections.length > 0 ? (
                 <Flex gap="4" wrap="wrap" justify="center">
                   {sortedConnections.map((connection) => (
-                    <Card
+                    <ConnectionCard
                       key={connection.id}
-                      style={{
-                        minWidth: '280px',
-                        maxWidth: '320px',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                      onClick={() => handleConnectionSelect(connection)}
-                    >
-                      <Flex direction="column" gap="3">
-                        <Flex justify="between" align="center">
-                          <Flex align="center" gap="2">
-                            <Text size="4">{getDatabaseIcon(connection.type)}</Text>
-                            <Text size="3" weight="medium">
-                              {connection.name}
-                            </Text>
-                          </Flex>
-                          <Text size="1" color="gray" style={{
-                            backgroundColor: 'var(--gray-3)',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            {connection.type}
-                          </Text>
-                        </Flex>
-
-                        <Flex direction="column" gap="1">
-                          <Text size="2" color="gray">
-                            {connection.host}:{connection.port}
-                          </Text>
-                          <Text size="2" color="gray">
-                            Database: {connection.database}
-                          </Text>
-                          <Text size="2" color="gray">
-                            User: {connection.username}
-                          </Text>
-                        </Flex>
-
-                        <Flex justify="between" align="center">
-                          <Text size="1" color="gray">
-                            Last used {formatLastUsed(connection.lastUsed || connection.createdAt)}
-                          </Text>
-                          <Button
-                            size="1"
-                            variant="soft"
-                            color="red"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleConnectionDelete(connection.id)
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Flex>
-                      </Flex>
-                    </Card>
+                      connection={connection}
+                      onSelect={handleConnectionSelect}
+                      onDelete={handleConnectionDelete}
+                    />
                   ))}
                 </Flex>
               ) : (
                 <Flex direction="column" align="center" gap="3" py="8">
-                  <Text size="6" color="gray">🗄️</Text>
-                  <Text size="3" color="gray">No saved connections</Text>
-                  <Text size="2" color="gray">Create your first connection to get started</Text>
+                  <Text size="6" color="gray">
+                    🗄️
+                  </Text>
+                  <Text size="3" color="gray">
+                    No saved connections
+                  </Text>
+                  <Text size="2" color="gray">
+                    Create your first connection to get started
+                  </Text>
                 </Flex>
               )}
             </Flex>

@@ -27,19 +27,28 @@ export interface DatabaseManagerInterface {
   connect(config: DatabaseConfig, connectionId: string): Promise<ConnectionResult>
   disconnect(connectionId: string): Promise<{ success: boolean; message: string }>
   isConnected(connectionId: string): boolean
-  
+
   // Query execution
   query(connectionId: string, sql: string): Promise<QueryResult>
-  
+
   // Metadata operations
-  getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }>
-  getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }>
-  getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }>
-  
+  getDatabases(
+    connectionId: string
+  ): Promise<{ success: boolean; databases?: string[]; message: string }>
+  getTables(
+    connectionId: string,
+    database?: string
+  ): Promise<{ success: boolean; tables?: string[]; message: string }>
+  getTableSchema(
+    connectionId: string,
+    tableName: string,
+    database?: string
+  ): Promise<{ success: boolean; schema?: any[]; message: string }>
+
   // Connection info
   getConnectionInfo(connectionId: string): { host: string; port: number; database: string } | null
   getAllConnections(): string[]
-  
+
   // Cleanup
   cleanup(): Promise<void>
-} 
+}

@@ -24,16 +24,15 @@ export function ThemeSwitcher() {
 
       <DropdownMenu.Content align="end" sideOffset={5}>
         <DropdownMenu.Label>
-          <Text size="2" weight="medium">Choose Theme</Text>
+          <Text size="2" weight="medium">
+            Choose Theme
+          </Text>
         </DropdownMenu.Label>
-        
+
         <DropdownMenu.Separator />
 
         {themes.map((t) => (
-          <DropdownMenu.Item
-            key={t.id}
-            onSelect={() => setTheme(t.id)}
-          >
+          <DropdownMenu.Item key={t.id} onSelect={() => setTheme(t.id)}>
             <Text size="2">
               {getThemeIcon(t.appearance)} {t.name}
               {t.id === theme.id && ' ✓'}

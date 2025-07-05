@@ -62,7 +62,7 @@ ipcMain.handle('db:connect', async (_, connectionConfig) => {
   try {
     // Generate a unique ID for the connection
     const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     // Create connection object
     const connection: DatabaseConnection = {
       id: connectionId,
@@ -81,27 +81,27 @@ ipcMain.handle('db:connect', async (_, connectionConfig) => {
     if (connectionConfig.saveConnection !== false) {
       secureStorage.saveConnection(connection)
     }
-    
+
     // Connect to the actual database
     const dbResult = await databaseManager.connect(connectionConfig as DatabaseConfig, connectionId)
-    
+
     if (dbResult.success) {
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: dbResult.message,
         connectionId: connectionId
       }
     } else {
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: dbResult.message,
         error: dbResult.error
       }
     }
   } catch (error) {
     console.error('Connection error:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Connection failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
@@ -120,8 +120,8 @@ ipcMain.handle('db:disconnect', async (_, connectionId?: string) => {
     }
   } catch (error) {
     console.error('Disconnection error:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Failed to disconnect',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
@@ -136,8 +136,8 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string) => {
     return result
   } catch (error) {
     console.error('Query execution error:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Query execution failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
@@ -192,8 +192,8 @@ ipcMain.handle('db:getDatabases', async (_, connectionId: string) => {
     return result
   } catch (error) {
     console.error('Error getting databases:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Failed to get databases',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
@@ -206,27 +206,30 @@ ipcMain.handle('db:getTables', async (_, connectionId: string, database?: string
     return result
   } catch (error) {
     console.error('Error getting tables:', error)
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: 'Failed to get tables',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 })
 
-ipcMain.handle('db:getTableSchema', async (_, connectionId: string, tableName: string, database?: string) => {
-  try {
-    const result = await databaseManager.getTableSchema(connectionId, tableName, database)
-    return result
-  } catch (error) {
-    console.error('Error getting table schema:', error)
-    return { 
-      success: false, 
-      message: 'Failed to get table schema',
-      error: error instanceof Error ? error.message : 'Unknown error'
+ipcMain.handle(
+  'db:getTableSchema',
+  async (_, connectionId: string, tableName: string, database?: string) => {
+    try {
+      const result = await databaseManager.getTableSchema(connectionId, tableName, database)
+      return result
+    } catch (error) {
+      console.error('Error getting table schema:', error)
+      return {
+        success: false,
+        message: 'Failed to get table schema',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
     }
   }
-})
+)
 
 ipcMain.handle('db:isConnected', async (_, connectionId: string) => {
   try {

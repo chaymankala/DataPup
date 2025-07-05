@@ -24,11 +24,55 @@
   max-height: calc(100vh - 300px);
 }
 
+.result-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.result-table-container th {
+  background: var(--gray-3);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--gray-5);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.result-table-container td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-3);
+}
+
+.result-table-container tr:hover td {
+  background: var(--gray-2);
+}
+
 .error-message {
   padding: 16px;
   background: var(--red-2);
   border: 1px solid var(--red-5);
   border-radius: var(--radius-2);
+}
+
+/* Monaco Editor Theme Overrides */
+.editor-panel .monaco-editor {
+  border: 1px solid var(--gray-4);
+  border-radius: var(--radius-2);
+}
+
+.editor-panel .monaco-editor .margin {
+  background: var(--gray-2) !important;
+}
+
+.editor-panel .monaco-editor .monaco-editor-background {
+  background: var(--gray-1) !important;
+}
+
+.editor-panel .monaco-editor .line-numbers {
+  color: var(--gray-8) !important;
 }
 
 .resize-handle-horizontal {

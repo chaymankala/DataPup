@@ -12,7 +12,11 @@ export const Label = forwardRef<HTMLLabelElement, LabelProps>(
     return (
       <Text ref={ref} as="label" size="2" weight="medium" {...props}>
         {children}
-        {required && <Text color="red" ml="1">*</Text>}
+        {required && (
+          <Text color="red" ml="1">
+            *
+          </Text>
+        )}
       </Text>
     )
   }

@@ -8,8 +8,10 @@ const api = {
     disconnect: (connectionId?: string) => ipcRenderer.invoke('db:disconnect', connectionId),
     query: (connectionId: string, sql: string) => ipcRenderer.invoke('db:query', connectionId, sql),
     getDatabases: (connectionId: string) => ipcRenderer.invoke('db:getDatabases', connectionId),
-    getTables: (connectionId: string, database?: string) => ipcRenderer.invoke('db:getTables', connectionId, database),
-    getTableSchema: (connectionId: string, tableName: string, database?: string) => ipcRenderer.invoke('db:getTableSchema', connectionId, tableName, database),
+    getTables: (connectionId: string, database?: string) =>
+      ipcRenderer.invoke('db:getTables', connectionId, database),
+    getTableSchema: (connectionId: string, tableName: string, database?: string) =>
+      ipcRenderer.invoke('db:getTableSchema', connectionId, tableName, database),
     isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
     getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
     getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')

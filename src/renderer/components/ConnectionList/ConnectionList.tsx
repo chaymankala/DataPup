@@ -47,7 +47,7 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
     try {
       // Check if connection is still active
       const isConnected = await window.api.database.isConnected(connection.id)
-      
+
       if (isConnected.isConnected) {
         // Connection is already active, just select it
         if (onConnectionSelect) {
@@ -64,13 +64,13 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
           password: '', // We don't store passwords in the list, user will need to re-enter
           saveConnection: false
         })
-        
+
         if (result.success) {
           // Update last used timestamp
           await window.api.connections.updateLastUsed(connection.id)
           // Reload connections to update timestamps
           loadConnections()
-          
+
           if (onConnectionSelect) {
             // Create a new connection object with the new connection ID
             const updatedConnection = {
@@ -100,14 +100,14 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
     try {
       // First disconnect if connected
       await window.api.database.disconnect(connectionToDelete)
-      
+
       // Then delete from storage
       const result = await window.api.connections.delete(connectionToDelete)
-      
+
       if (result.success) {
         // Reload connections
         loadConnections()
-        
+
         if (onConnectionDelete) {
           onConnectionDelete(connectionToDelete)
         }
@@ -130,18 +130,25 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
 
   const getTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'clickhouse': return 'blue'
-      case 'postgresql': return 'green'
-      case 'mysql': return 'orange'
-      case 'sqlite': return 'purple'
-      default: return 'gray'
+      case 'clickhouse':
+        return 'blue'
+      case 'postgresql':
+        return 'green'
+      case 'mysql':
+        return 'orange'
+      case 'sqlite':
+        return 'purple'
+      default:
+        return 'gray'
     }
   }
 
   if (loading) {
     return (
       <div className="connection-list">
-        <Text size="2" color="gray">Loading connections...</Text>
+        <Text size="2" color="gray">
+          Loading connections...
+        </Text>
       </div>
     )
   }
@@ -149,15 +156,19 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
   if (connections.length === 0) {
     return (
       <div className="connection-list">
-        <Text size="2" color="gray">No saved connections</Text>
+        <Text size="2" color="gray">
+          No saved connections
+        </Text>
       </div>
     )
   }
 
   return (
     <div className="connection-list">
-      <Text size="3" weight="bold" mb="3">Saved Connections</Text>
-      
+      <Text size="3" weight="bold" mb="3">
+        Saved Connections
+      </Text>
+
       <Flex direction="column" gap="2">
         {connections.map((connection) => (
           <Card key={connection.id} className="connection-card">
@@ -166,36 +177,34 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
                 <Text size="2" weight="bold" truncate>
                   {connection.name}
                 </Text>
-                <Badge color={getTypeColor(connection.type)}>
-                  {connection.type}
-                </Badge>
+                <Badge color={getTypeColor(connection.type)}>{connection.type}</Badge>
               </Flex>
-              
+
               <Text size="1" color="gray">
                 {connection.host}:{connection.port} / {connection.database}
               </Text>
-              
+
               <Text size="1" color="gray">
                 Created: {formatDate(connection.createdAt)}
               </Text>
-              
+
               {connection.lastUsed && (
                 <Text size="1" color="gray">
                   Last used: {formatDate(connection.lastUsed)}
                 </Text>
               )}
-              
+
               <Flex gap="2" mt="2">
-                <Button 
-                  size="1" 
+                <Button
+                  size="1"
                   onClick={() => handleConnectionClick(connection)}
                   className="connect-btn"
                 >
                   Connect
                 </Button>
-                <Button 
-                  size="1" 
-                  variant="soft" 
+                <Button
+                  size="1"
+                  variant="soft"
                   color="red"
                   onClick={() => handleDeleteClick(connection.id)}
                 >
@@ -214,7 +223,7 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
           <Dialog.Description size="2" mb="4">
             Are you sure you want to delete this connection? This action cannot be undone.
           </Dialog.Description>
-          
+
           <Flex gap="3" justify="end">
             <Dialog.Close>
               <Button variant="soft" color="gray">
@@ -229,4 +238,4 @@ export function ConnectionList({ onConnectionSelect, onConnectionDelete }: Conne
       </Dialog.Root>
     </div>
   )
-} 
+}

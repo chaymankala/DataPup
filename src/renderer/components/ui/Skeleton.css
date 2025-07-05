@@ -1,0 +1,54 @@
+.skeleton {
+  background: var(--gray-a3);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-text {
+  border-radius: var(--radius-1);
+}
+
+.skeleton-rectangular {
+  border-radius: var(--radius-2);
+}
+
+.skeleton-circular {
+  border-radius: 50%;
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 2s ease-in-out infinite;
+}
+
+.skeleton-wave {
+  background: linear-gradient(
+    90deg,
+    var(--gray-a3) 0%,
+    var(--gray-a2) 20%,
+    var(--gray-a3) 40%,
+    var(--gray-a3) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes skeleton-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

@@ -30,11 +30,15 @@ export type { SwitchProps } from './Switch'
 export { Separator } from './Separator'
 export type { SeparatorProps } from './Separator'
 
+// Skeleton
+export { Skeleton } from './Skeleton'
+export type { SkeletonProps } from './Skeleton'
+
 // Re-export commonly used Radix components that don't need wrapping
-export { 
-  Flex, 
-  Box, 
-  Grid, 
+export {
+  Flex,
+  Box,
+  Grid,
   Container,
   Text,
   Heading,

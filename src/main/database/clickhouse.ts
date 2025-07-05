@@ -1,4 +1,9 @@
-import { DatabaseManagerInterface, DatabaseConfig, ConnectionResult, QueryResult } from './interface'
+import {
+  DatabaseManagerInterface,
+  DatabaseConfig,
+  ConnectionResult,
+  QueryResult
+} from './interface'
 
 interface ClickHouseConfig {
   host: string
@@ -33,11 +38,11 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
       // Import createClient from @clickhouse/client dynamically
       const { createClient } = await import('@clickhouse/client')
-      
+
       // Create ClickHouse client configuration
       const protocol = config.secure ? 'https' : 'http'
       const url = `${protocol}://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`
-      
+
       const clientConfig = {
         url: url,
         request_timeout: config.timeout || 30000,
@@ -52,10 +57,10 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
       // Create and test the connection
       const client = createClient(clientConfig)
-      
+
       // Test the connection by executing a simple query
       await client.query({ query: 'SELECT 1 as test' })
-      
+
       // Store the connection
       const connection: ClickHouseConnection = {
         id: connectionId,
@@ -72,18 +77,17 @@ class ClickHouseManager implements DatabaseManagerInterface {
         isConnected: true,
         lastUsed: new Date()
       }
-      
+
       this.connections.set(connectionId, connection)
-      
-      return { 
-        success: true, 
-        message: `Connected to ClickHouse at ${config.host}:${config.port}` 
+
+      return {
+        success: true,
+        message: `Connected to ClickHouse at ${config.host}:${config.port}`
       }
-      
     } catch (error) {
       console.error('ClickHouse connection error:', error)
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: 'Failed to connect to ClickHouse',
         error: error instanceof Error ? error.message : 'Unknown error'
       }
@@ -104,14 +108,13 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
       // Remove from connections map
       this.connections.delete(connectionId)
-      
+
       return { success: true, message: 'Disconnected from ClickHouse' }
-      
     } catch (error) {
       console.error('ClickHouse disconnection error:', error)
-      return { 
-        success: false, 
-        message: 'Failed to disconnect from ClickHouse' 
+      return {
+        success: false,
+        message: 'Failed to disconnect from ClickHouse'
       }
     }
   }
@@ -120,9 +123,9 @@ class ClickHouseManager implements DatabaseManagerInterface {
     try {
       const connection = this.connections.get(connectionId)
       if (!connection || !connection.isConnected) {
-        return { 
-          success: false, 
-          message: 'Not connected to ClickHouse. Please connect first.' 
+        return {
+          success: false,
+          message: 'Not connected to ClickHouse. Please connect first.'
         }
       }
 
@@ -132,12 +135,12 @@ class ClickHouseManager implements DatabaseManagerInterface {
       // Execute the query with correct format
       console.log('Executing ClickHouse query:', sql)
       const result = await connection.client.query({ query: sql })
-      
+
       // Convert result to plain JavaScript object for IPC serialization
       const rawData = await result.json()
       console.log('ClickHouse raw result:', rawData)
       console.log('ClickHouse result type:', typeof rawData)
-      
+
       // Extract the actual data rows from the ClickHouse response
       let data = []
       if (rawData && typeof rawData === 'object') {
@@ -147,16 +150,15 @@ class ClickHouseManager implements DatabaseManagerInterface {
           data = rawData
         }
       }
-      
+
       console.log('Extracted data:', data)
       console.log('Data length:', data.length)
-      
+
       return {
         success: true,
         data: data,
         message: `Query executed successfully. Returned ${data.length} rows.`
       }
-      
     } catch (error) {
       console.error('ClickHouse query error:', error)
       return {
@@ -167,7 +169,9 @@ class ClickHouseManager implements DatabaseManagerInterface {
     }
   }
 
-  async getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }> {
+  async getDatabases(
+    connectionId: string
+  ): Promise<{ success: boolean; databases?: string[]; message: string }> {
     try {
       const result = await this.query(connectionId, 'SHOW DATABASES')
       if (result.success && result.data) {
@@ -188,7 +192,10 @@ class ClickHouseManager implements DatabaseManagerInterface {
     }
   }
 
-  async getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }> {
+  async getTables(
+    connectionId: string,
+    database?: string
+  ): Promise<{ success: boolean; tables?: string[]; message: string }> {
     try {
       const dbClause = database ? `FROM ${database}` : ''
       const result = await this.query(connectionId, `SHOW TABLES ${dbClause}`)
@@ -210,7 +217,11 @@ class ClickHouseManager implements DatabaseManagerInterface {
     }
   }
 
-  async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
+  async getTableSchema(
+    connectionId: string,
+    tableName: string,
+    database?: string
+  ): Promise<{ success: boolean; schema?: any[]; message: string }> {
     try {
       const fullTableName = database ? `${database}.${tableName}` : tableName
       const result = await this.query(connectionId, `DESCRIBE ${fullTableName}`)
@@ -254,10 +265,10 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
   // Clean up all connections
   async cleanup(): Promise<void> {
-    const disconnectPromises = Array.from(this.connections.keys()).map(id => this.disconnect(id))
+    const disconnectPromises = Array.from(this.connections.keys()).map((id) => this.disconnect(id))
     await Promise.allSettled(disconnectPromises)
   }
 }
 
 export { ClickHouseManager }
-export type { ClickHouseConfig, ClickHouseConnection } 
+export type { ClickHouseConfig, ClickHouseConnection }

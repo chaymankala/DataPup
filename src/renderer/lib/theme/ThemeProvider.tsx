@@ -17,21 +17,21 @@ export function ThemeProvider({ children, defaultThemeId }: ThemeProviderProps) 
     // Try to load from localStorage
     const savedThemeId = localStorage.getItem(THEME_STORAGE_KEY)
     if (savedThemeId) {
-      const savedTheme = themes.find(t => t.id === savedThemeId)
+      const savedTheme = themes.find((t) => t.id === savedThemeId)
       if (savedTheme) return savedTheme
     }
-    
+
     // Try to use provided default
     if (defaultThemeId) {
-      const providedTheme = themes.find(t => t.id === defaultThemeId)
+      const providedTheme = themes.find((t) => t.id === defaultThemeId)
       if (providedTheme) return providedTheme
     }
-    
+
     // Fall back to system preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return themes.find(t => t.id === 'light') || defaultTheme
+      return themes.find((t) => t.id === 'light') || defaultTheme
     }
-    
+
     return defaultTheme
   })
 
@@ -41,7 +41,7 @@ export function ThemeProvider({ children, defaultThemeId }: ThemeProviderProps) 
   }, [currentTheme])
 
   const setTheme = (themeId: string) => {
-    const theme = themes.find(t => t.id === themeId)
+    const theme = themes.find((t) => t.id === themeId)
     if (theme) {
       setCurrentTheme(theme)
     }

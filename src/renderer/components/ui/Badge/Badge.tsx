@@ -6,10 +6,8 @@ export interface BadgeProps extends RadixBadgeProps {
   // We can add custom props here if needed
 }
 
-export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  (props, ref) => {
-    return <RadixBadge ref={ref} {...props} />
-  }
-)
+export const Badge = forwardRef<HTMLSpanElement, BadgeProps>((props, ref) => {
+  return <RadixBadge ref={ref} {...props} />
+})
 
 Badge.displayName = 'Badge'

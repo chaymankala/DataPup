@@ -9,20 +9,15 @@ export interface TooltipProps {
   delayDuration?: number
 }
 
-export function Tooltip({ 
-  content, 
-  children, 
+export function Tooltip({
+  content,
+  children,
   side = 'top',
   align = 'center',
-  delayDuration = 200 
+  delayDuration = 200
 }: TooltipProps) {
   return (
-    <RadixTooltip 
-      content={content}
-      side={side}
-      align={align}
-      delayDuration={delayDuration}
-    >
+    <RadixTooltip content={content} side={side} align={align} delayDuration={delayDuration}>
       {children}
     </RadixTooltip>
   )
