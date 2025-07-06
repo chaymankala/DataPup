@@ -6,8 +6,9 @@ import { Skeleton, Badge } from '../ui'
 import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
+import { NaturalLanguageQueryInput } from '../NaturalLanguageQueryInput'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
-import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
+import { Tab, QueryTab, TableTab, NaturalLanguageQueryTab, QueryExecutionResult } from '../../types/tabs'
 import './QueryWorkspace.css'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -98,7 +99,7 @@ export function QueryWorkspace({
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
-  
+
   const activeTab = tabs.find(tab => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
@@ -136,12 +137,18 @@ export function QueryWorkspace({
 
     // Configure SQL language settings
     monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: () => {
+      provideCompletionItems: (model, position) => {
         const suggestions = sqlKeywords.map((keyword) => ({
           label: keyword,
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: keyword,
-          documentation: `SQL keyword: ${keyword}`
+          documentation: `SQL keyword: ${keyword}`,
+          range: {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column
+          }
         }))
         return { suggestions }
       }
@@ -179,7 +186,7 @@ export function QueryWorkspace({
       query: '',
       isDirty: false
     }
-    setTabs([...tabs, newTab])
+    setTabs(prev => [...prev, newTab])
     setActiveTabId(newTab.id)
   }, [tabs])
 
@@ -216,30 +223,38 @@ export function QueryWorkspace({
     [tabs]
   )
 
-  const handleUpdateTabContent = useCallback(
-    (tabId: string, updates: Partial<Tab>) => {
-      setTabs(tabs.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)))
-    },
-    [tabs]
-  )
+  const handleUpdateTabContent = useCallback((tabId: string, updates: any) => {
+    setTabs(prev => prev.map(tab =>
+      tab.id === tabId ? { ...tab, ...updates } : tab
+    ))
+  }, [])
 
   // Open table tab from database explorer
-  const openTableTab = useCallback(
-    (database: string, tableName: string) => {
-      const newTab: TableTab = {
-        id: Date.now().toString(),
-        type: 'table',
-        title: `${database}.${tableName}`,
-        database,
-        tableName,
-        filters: [],
-        isDirty: false
-      }
-      setTabs([...tabs, newTab])
-      setActiveTabId(newTab.id)
-    },
-    [tabs]
-  )
+  const openTableTab = useCallback((database: string, tableName: string) => {
+    const newTab: TableTab = {
+      id: Date.now().toString(),
+      type: 'table',
+      title: `${database}.${tableName}`,
+      database,
+      tableName,
+      filters: [],
+      isDirty: false
+    }
+    setTabs(prev => [...prev, newTab])
+    setActiveTabId(newTab.id)
+  }, [])
+
+  // Open natural language query tab
+  const openNaturalLanguageQueryTab = useCallback(() => {
+    const newTab: NaturalLanguageQueryTab = {
+      id: Date.now().toString(),
+      type: 'natural-language-query',
+      title: 'Natural Language Query',
+      isDirty: false
+    }
+    setTabs(prev => [...prev, newTab])
+    setActiveTabId(newTab.id)
+  }, [])
 
   // Expose openTableTab to parent component
   React.useEffect(() => {
@@ -250,9 +265,9 @@ export function QueryWorkspace({
 
   const handleExecuteQuery = async () => {
     if (!activeTab || activeTab.type !== 'query') return
-    
+
     let queryToExecute = ''
-    
+
     // If there's selected text, use only that
     if (selectedText && selectedText.trim()) {
       queryToExecute = selectedText.trim()
@@ -261,27 +276,23 @@ export function QueryWorkspace({
       const currentQuery = editorRef.current?.getValue() || activeTab.query
       queryToExecute = currentQuery.trim()
     }
-    
+
     if (!queryToExecute) return
 
     try {
       setIsExecuting(true)
       const startTime = Date.now()
 
-      const sessionId = uuidv4()
-      const queryResult = await window.api.database.query(
-        connectionId,
-        queryToExecute.trim(),
-        sessionId
-      )
+      const sessionId = uuidv4();
+      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
       const executionTime = Date.now() - startTime
-      
+
       const result: QueryExecutionResult = {
         ...queryResult,
         executionTime,
         rowCount: queryResult.data?.length || 0
       }
-      
+
       setResults({ ...results, [activeTab.id]: result })
     } catch (error) {
       console.error('Query execution error:', error)
@@ -368,6 +379,7 @@ export function QueryWorkspace({
             activeTabId={activeTabId}
             onSelectTab={handleSelectTab}
             onNewTab={handleNewTab}
+            onNewNaturalLanguageTab={openNaturalLanguageQueryTab}
             onCloseTab={handleCloseTab}
             onUpdateTabTitle={handleUpdateTabTitle}
           />
@@ -475,7 +487,7 @@ export function QueryWorkspace({
                               selectedText: selectedText || undefined,
                               results: activeResult?.success ? activeResult.data : undefined,
                               error: activeResult?.error,
-                              filters: activeTab.type === 'table' ? activeTab.filters : undefined
+                              filters: activeTab.type === 'table' ? (activeTab as any).filters : undefined
                             }}
                             onExecuteQuery={handleExecuteQuery}
                             onClose={() => setShowAIPanel(false)}
@@ -511,7 +523,7 @@ export function QueryWorkspace({
                       </>
                     )}
                   </Flex>
-                  
+
                   {activeResult?.success && activeResult.data && activeResult.data.length > 0 && (
                     <Flex gap="1">
                       <Button
@@ -532,7 +544,7 @@ export function QueryWorkspace({
                   )}
                 </Flex>
 
-                <Box className="results-content" flex="1">
+                <Box className="results-content" style={{ flex: 1 }}>
                   {activeResult ? (
                     activeResult.success ? (
                       <Box className="result-table-container">
@@ -564,12 +576,35 @@ export function QueryWorkspace({
             </Panel>
           </PanelGroup>
         ) : activeTab && activeTab.type === 'table' ? (
-          <Box flex="1" style={{ overflow: 'hidden' }}>
+          <Box style={{ flex: 1, overflow: 'hidden' }}>
             <TableView
               connectionId={connectionId}
               database={activeTab.database}
               tableName={activeTab.tableName}
               onFiltersChange={(filters) => handleUpdateTabContent(activeTab.id, { filters })}
+            />
+          </Box>
+        ) : activeTab && activeTab.type === 'natural-language-query' ? (
+          <Box style={{ flex: 1, overflow: 'hidden' }}>
+            <NaturalLanguageQueryInput
+              connectionId={connectionId}
+              connectionName={connectionName}
+              onQueryGenerated={(sql, explanation) => {
+                // Create a new query tab with the generated SQL
+                const newTab: QueryTab = {
+                  id: Date.now().toString(),
+                  type: 'query',
+                  title: 'Generated Query',
+                  query: sql,
+                  isDirty: false
+                }
+                setTabs(prev => [...prev, newTab])
+                setActiveTabId(newTab.id)
+              }}
+              onQueryExecuted={(result) => {
+                // Store the result for the current tab
+                setResults(prev => ({ ...prev, [activeTab.id]: result }))
+              }}
             />
           </Box>
         ) : null}

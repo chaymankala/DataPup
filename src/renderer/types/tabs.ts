@@ -16,6 +16,10 @@ export interface TableTab extends BaseTab {
   filters: TableFilter[]
 }
 
+export interface NaturalLanguageQueryTab extends BaseTab {
+  type: 'natural-language-query'
+}
+
 export interface TableFilter {
   id: string
   column: string
@@ -34,7 +38,7 @@ export interface TableFilter {
   value: string
 }
 
-export type Tab = QueryTab | TableTab
+export type Tab = QueryTab | TableTab | NaturalLanguageQueryTab
 
 export interface QueryExecutionResult {
   success: boolean

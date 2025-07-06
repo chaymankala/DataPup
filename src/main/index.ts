@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SecureStorage, DatabaseConnection } from './secureStorage'
 import { DatabaseManager } from './database/manager'
 import { DatabaseConfig } from './database/interface'
+import { NaturalLanguageQueryProcessor } from './services/naturalLanguageQueryProcessor'
 
 function createWindow(): void {
   const iconPath = is.dev
@@ -43,13 +44,16 @@ function createWindow(): void {
 const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
+// Initialize natural language query processor
+const naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager)
+
 app.whenReady().then(() => {
   // Set the app name for macOS menu bar
   app.setName('DataPup')
   electronApp.setAppUserModelId('com.datapup')
 
-  // Set dock icon for macOS
-  if (process.platform === 'darwin') {
+    // Set dock icon for macOS
+  if (process.platform === 'darwin' && app.dock) {
     const dockIconPath = is.dev
       ? join(__dirname, '../../build/icons/icon.png')
       : join(process.resourcesPath, 'icons/icon.png')
@@ -278,5 +282,73 @@ ipcMain.handle('db:getAllConnections', async () => {
   } catch (error) {
     console.error('Error getting all connections:', error)
     return { success: false, connections: [] }
+  }
+})
+
+// IPC handlers for natural language queries
+ipcMain.handle('nlq:process', async (_, request) => {
+  try {
+    console.log('Processing natural language query:', request.naturalLanguageQuery)
+    const result = await naturalLanguageQueryProcessor.processNaturalLanguageQuery(request)
+    console.log('Natural language query result:', result)
+    return result
+  } catch (error) {
+    console.error('Natural language query error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+})
+
+ipcMain.handle('nlq:generateSQL', async (_, request) => {
+  try {
+    console.log('Generating SQL from natural language:', request.naturalLanguageQuery)
+    const result = await naturalLanguageQueryProcessor.generateSQLOnly(request)
+    console.log('SQL generation result:', result)
+    return result
+  } catch (error) {
+    console.error('SQL generation error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+})
+
+ipcMain.handle('nlq:getSchema', async (_, connectionId: string, database?: string) => {
+  try {
+    const schema = await naturalLanguageQueryProcessor.getDatabaseSchema(connectionId, database)
+    if (schema) {
+      return {
+        success: true,
+        schema,
+        formattedSchema: naturalLanguageQueryProcessor.formatSchemaForDisplay(schema)
+      }
+    } else {
+      return {
+        success: false,
+        error: 'Failed to retrieve database schema'
+      }
+    }
+  } catch (error) {
+    console.error('Schema retrieval error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+})
+
+ipcMain.handle('nlq:validateQuery', async (_, sql: string, connectionId: string) => {
+  try {
+    const result = await naturalLanguageQueryProcessor.validateGeneratedQuery(sql, connectionId)
+    return result
+  } catch (error) {
+    console.error('Query validation error:', error)
+    return {
+      isValid: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
   }
 })

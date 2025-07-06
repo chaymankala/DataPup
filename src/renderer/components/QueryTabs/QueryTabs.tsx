@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Flex, Text, IconButton } from '@radix-ui/themes'
+import { Box, Flex, Text, IconButton, DropdownMenu } from '@radix-ui/themes'
 import { Button } from '../ui'
 import { Tab } from '../../types/tabs'
 import './QueryTabs.css'
@@ -9,6 +9,7 @@ interface QueryTabsProps {
   activeTabId: string
   onSelectTab: (tabId: string) => void
   onNewTab: () => void
+  onNewNaturalLanguageTab?: () => void
   onCloseTab: (tabId: string) => void
   onUpdateTabTitle: (tabId: string, title: string) => void
 }
@@ -18,6 +19,7 @@ export function QueryTabs({
   activeTabId,
   onSelectTab,
   onNewTab,
+  onNewNaturalLanguageTab,
   onCloseTab,
   onUpdateTabTitle
 }: QueryTabsProps) {
@@ -97,9 +99,27 @@ export function QueryTabs({
         </Flex>
       </Box>
 
-      <Button size="1" variant="ghost" onClick={onNewTab} className="new-tab-button">
-        +
-      </Button>
+      {onNewNaturalLanguageTab ? (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <Button size="1" variant="ghost" className="new-tab-button">
+              +
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onClick={onNewTab}>
+              SQL Query
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={onNewNaturalLanguageTab}>
+              Natural Language Query
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      ) : (
+        <Button size="1" variant="ghost" onClick={onNewTab} className="new-tab-button">
+          +
+        </Button>
+      )}
     </Flex>
   )
 }
