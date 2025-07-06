@@ -53,7 +53,7 @@ app.whenReady().then(() => {
     const dockIconPath = is.dev
       ? join(__dirname, '../../build/icons/icon.png')
       : join(process.resourcesPath, 'icons/icon.png')
-    
+
     // Check if the icon file exists before setting
     if (require('fs').existsSync(dockIconPath)) {
       app.dock.setIcon(dockIconPath)

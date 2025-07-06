@@ -22,7 +22,7 @@ export function ActiveConnectionLayout({
       window.openTableTab(database, tableName)
     }
   }
-  
+
   return (
     <Box className="active-connection-layout">
       {/* Header bar */}
@@ -41,8 +41,8 @@ export function ActiveConnectionLayout({
       <PanelGroup direction="horizontal" className="panel-group">
         {/* Left sidebar with database explorer */}
         <Panel defaultSize={20} minSize={15} maxSize={40} className="explorer-panel">
-          <DatabaseExplorer 
-            connectionId={connectionId} 
+          <DatabaseExplorer
+            connectionId={connectionId}
             connectionName={connectionName}
             onTableDoubleClick={handleOpenTableTab}
           />
@@ -52,8 +52,8 @@ export function ActiveConnectionLayout({
 
         {/* Right side with query workspace */}
         <Panel defaultSize={80} className="workspace-panel">
-          <QueryWorkspace 
-            connectionId={connectionId} 
+          <QueryWorkspace
+            connectionId={connectionId}
             connectionName={connectionName}
             onOpenTableTab={handleOpenTableTab}
           />

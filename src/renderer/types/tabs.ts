@@ -19,7 +19,18 @@ export interface TableTab extends BaseTab {
 export interface TableFilter {
   id: string
   column: string
-  operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'LIKE' | 'IN' | 'NOT IN' | 'IS NULL' | 'IS NOT NULL'
+  operator:
+    | '='
+    | '!='
+    | '>'
+    | '<'
+    | '>='
+    | '<='
+    | 'LIKE'
+    | 'IN'
+    | 'NOT IN'
+    | 'IS NULL'
+    | 'IS NOT NULL'
   value: string
 }
 

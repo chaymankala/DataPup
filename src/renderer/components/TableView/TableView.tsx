@@ -4,7 +4,7 @@ import { Skeleton } from '../ui'
 import { TableFilter } from '../../types/tabs'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import './TableView.css'
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 
 interface TableViewProps {
   connectionId: string
@@ -59,7 +59,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const loadTableSchema = async () => {
     try {
       setIsLoadingSchema(true)
-      const schemaResult = await window.api.database.getTableSchema(connectionId, tableName, database)
+      const schemaResult = await window.api.database.getTableSchema(
+        connectionId,
+        tableName,
+        database
+      )
       if (schemaResult.success && schemaResult.schema) {
         const cols: Column[] = schemaResult.schema.map((col: any) => ({
           name: col.name,
@@ -77,12 +81,15 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const buildQuery = () => {
     let query = `SELECT * FROM ${database}.${tableName}`
 
-    const validFilters = filters.filter(f =>
-      f.column && f.operator && (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
+    const validFilters = filters.filter(
+      (f) =>
+        f.column &&
+        f.operator &&
+        (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
     )
 
     if (validFilters.length > 0) {
-      const whereClauses = validFilters.map(filter => {
+      const whereClauses = validFilters.map((filter) => {
         if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
           return `${filter.column} ${filter.operator}`
         } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
@@ -106,7 +113,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       const startTime = Date.now()
       const query = buildQuery()
 
-      const sessionId = uuidv4();
+      const sessionId = uuidv4()
       const queryResult = await window.api.database.query(connectionId, query, sessionId)
       const executionTime = Date.now() - startTime
 
@@ -139,15 +146,13 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   }
 
   const updateFilter = (id: string, updates: Partial<TableFilter>) => {
-    const newFilters = filters.map(f =>
-      f.id === id ? { ...f, ...updates } : f
-    )
+    const newFilters = filters.map((f) => (f.id === id ? { ...f, ...updates } : f))
     setFilters(newFilters)
     onFiltersChange(newFilters)
   }
 
   const removeFilter = (id: string) => {
-    const newFilters = filters.filter(f => f.id !== id)
+    const newFilters = filters.filter((f) => f.id !== id)
     setFilters(newFilters)
     onFiltersChange(newFilters)
   }
@@ -181,7 +186,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     {row[column] !== null && row[column] !== undefined ? (
                       String(row[column])
                     ) : (
-                      <Text size="1" color="gray">null</Text>
+                      <Text size="1" color="gray">
+                        null
+                      </Text>
                     )}
                   </Text>
                 </Table.Cell>
@@ -199,7 +206,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         {/* Filters Section */}
         <Box className="filters-section">
           <Flex justify="between" align="center" p="1" className="filter-header">
-            <Text size="1" weight="medium">Filters</Text>
+            <Text size="1" weight="medium">
+              Filters
+            </Text>
             <Flex gap="1">
               <Button size="1" variant="outline" onClick={addFilter} disabled={isLoadingSchema}>
                 + Filter
@@ -211,7 +220,12 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           </Flex>
           <Box px="1" py="1">
             {filters.map((filter, index) => (
-              <Flex key={filter.id} gap="1" align="center" mb={index < filters.length - 1 ? "1" : "0"}>
+              <Flex
+                key={filter.id}
+                gap="1"
+                align="center"
+                mb={index < filters.length - 1 ? '1' : '0'}
+              >
                 <Select.Root
                   value={filter.column}
                   onValueChange={(value) => updateFilter(filter.id, { column: value })}
@@ -315,9 +329,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               </Flex>
             ) : result ? (
               result.success ? (
-                <Box className="result-table-container">
-                  {formatResult(result.data || [])}
-                </Box>
+                <Box className="result-table-container">{formatResult(result.data || [])}</Box>
               ) : (
                 <Flex align="center" justify="center" height="100%" p="4">
                   <Box className="error-message">

@@ -75,7 +75,11 @@ const getObjectColor = (type: DatabaseObject['type']) => {
   }
 }
 
-export function DatabaseExplorer({ connectionId, connectionName, onTableDoubleClick }: DatabaseExplorerProps) {
+export function DatabaseExplorer({
+  connectionId,
+  connectionName,
+  onTableDoubleClick
+}: DatabaseExplorerProps) {
   const [databases, setDatabases] = useState<Database[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -134,9 +138,7 @@ export function DatabaseExplorer({ connectionId, connectionName, onTableDoubleCl
         }
       } catch (error) {
         console.error('Error loading tables:', error)
-        setDatabases((prev) =>
-          prev.map((d) => (d.name === dbName ? { ...d, loading: false } : d))
-        )
+        setDatabases((prev) => prev.map((d) => (d.name === dbName ? { ...d, loading: false } : d)))
       }
     } else {
       setDatabases((prev) =>
@@ -153,7 +155,7 @@ export function DatabaseExplorer({ connectionId, connectionName, onTableDoubleCl
     if (tableIndex === -1) return
 
     const table = db.objects[tableIndex]
-    
+
     if (!table.expanded && !table.columns) {
       // Load table schema
       setDatabases((prev) =>

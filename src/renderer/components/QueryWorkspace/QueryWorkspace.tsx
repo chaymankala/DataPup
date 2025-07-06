@@ -5,10 +5,11 @@ import Editor, { Monaco } from '@monaco-editor/react'
 import { Skeleton, Badge } from '../ui'
 import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
+import { AIAssistant } from '../AIAssistant'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
 import './QueryWorkspace.css'
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 
 interface QueryWorkspaceProps {
   connectionId: string
@@ -77,7 +78,11 @@ const sqlKeywords = [
   'SOME'
 ]
 
-export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }: QueryWorkspaceProps) {
+export function QueryWorkspace({
+  connectionId,
+  connectionName,
+  onOpenTableTab
+}: QueryWorkspaceProps) {
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: '1',
@@ -91,9 +96,10 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
   const [results, setResults] = useState<Record<string, QueryExecutionResult>>({})
   const [isExecuting, setIsExecuting] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
 
-  const activeTab = tabs.find(tab => tab.id === activeTabId)
+  const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
@@ -177,55 +183,63 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
     setActiveTabId(newTab.id)
   }, [tabs])
 
-  const handleCloseTab = useCallback((tabId: string) => {
-    if (tabs.length === 1) return // Keep at least one tab
+  const handleCloseTab = useCallback(
+    (tabId: string) => {
+      if (tabs.length === 1) return // Keep at least one tab
 
-    const tabIndex = tabs.findIndex(t => t.id === tabId)
-    const newTabs = tabs.filter(t => t.id !== tabId)
-    setTabs(newTabs)
+      const tabIndex = tabs.findIndex((t) => t.id === tabId)
+      const newTabs = tabs.filter((t) => t.id !== tabId)
+      setTabs(newTabs)
 
-    // Update active tab if needed
-    if (activeTabId === tabId) {
-      const newActiveTab = tabIndex > 0 ? newTabs[tabIndex - 1] : newTabs[0]
-      setActiveTabId(newActiveTab.id)
-    }
+      // Update active tab if needed
+      if (activeTabId === tabId) {
+        const newActiveTab = tabIndex > 0 ? newTabs[tabIndex - 1] : newTabs[0]
+        setActiveTabId(newActiveTab.id)
+      }
 
-    // Clean up results
-    const newResults = { ...results }
-    delete newResults[tabId]
-    setResults(newResults)
-  }, [tabs, activeTabId, results])
+      // Clean up results
+      const newResults = { ...results }
+      delete newResults[tabId]
+      setResults(newResults)
+    },
+    [tabs, activeTabId, results]
+  )
 
   const handleSelectTab = useCallback((tabId: string) => {
     setActiveTabId(tabId)
   }, [])
 
-  const handleUpdateTabTitle = useCallback((tabId: string, title: string) => {
-    setTabs(tabs.map(tab =>
-      tab.id === tabId ? { ...tab, title } : tab
-    ))
-  }, [tabs])
+  const handleUpdateTabTitle = useCallback(
+    (tabId: string, title: string) => {
+      setTabs(tabs.map((tab) => (tab.id === tabId ? { ...tab, title } : tab)))
+    },
+    [tabs]
+  )
 
-  const handleUpdateTabContent = useCallback((tabId: string, updates: Partial<Tab>) => {
-    setTabs(tabs.map(tab =>
-      tab.id === tabId ? { ...tab, ...updates } : tab
-    ))
-  }, [tabs])
+  const handleUpdateTabContent = useCallback(
+    (tabId: string, updates: Partial<Tab>) => {
+      setTabs(tabs.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)))
+    },
+    [tabs]
+  )
 
   // Open table tab from database explorer
-  const openTableTab = useCallback((database: string, tableName: string) => {
-    const newTab: TableTab = {
-      id: Date.now().toString(),
-      type: 'table',
-      title: `${database}.${tableName}`,
-      database,
-      tableName,
-      filters: [],
-      isDirty: false
-    }
-    setTabs([...tabs, newTab])
-    setActiveTabId(newTab.id)
-  }, [tabs])
+  const openTableTab = useCallback(
+    (database: string, tableName: string) => {
+      const newTab: TableTab = {
+        id: Date.now().toString(),
+        type: 'table',
+        title: `${database}.${tableName}`,
+        database,
+        tableName,
+        filters: [],
+        isDirty: false
+      }
+      setTabs([...tabs, newTab])
+      setActiveTabId(newTab.id)
+    },
+    [tabs]
+  )
 
   // Expose openTableTab to parent component
   React.useEffect(() => {
@@ -254,8 +268,12 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
       setIsExecuting(true)
       const startTime = Date.now()
 
-      const sessionId = uuidv4();
-      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim(), sessionId)
+      const sessionId = uuidv4()
+      const queryResult = await window.api.database.query(
+        connectionId,
+        queryToExecute.trim(),
+        sessionId
+      )
       const executionTime = Date.now() - startTime
 
       const result: QueryExecutionResult = {
@@ -326,7 +344,9 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
                     {row[column] !== null && row[column] !== undefined ? (
                       String(row[column])
                     ) : (
-                      <Text size="1" color="gray">null</Text>
+                      <Text size="1" color="gray">
+                        null
+                      </Text>
                     )}
                   </Text>
                 </Table.Cell>
@@ -368,6 +388,14 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
                     )}
                   </Flex>
                   <Flex gap="2" align="center">
+                    <Button
+                      size="1"
+                      variant={showAIPanel ? 'solid' : 'ghost'}
+                      onClick={() => setShowAIPanel(!showAIPanel)}
+                      style={{ minWidth: '60px' }}
+                    >
+                      ✨ AI
+                    </Button>
                     <Button size="1" variant="ghost" onClick={formatQuery}>
                       Format
                     </Button>
@@ -382,53 +410,85 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
                           Running...
                         </>
                       ) : (
-                        <>Run<Text size="1" color="gray" ml="1">⌘↵</Text></>
+                        <>
+                          Run
+                          <Text size="1" color="gray" ml="1">
+                            ⌘↵
+                          </Text>
+                        </>
                       )}
                     </Button>
                   </Flex>
                 </Flex>
 
                 <Box className="editor-container">
-                  <Editor
-                    height="100%"
-                    defaultLanguage="sql"
-                    theme="data-pup"
-                    value={activeTab.query}
-                    onChange={(value) => handleUpdateTabContent(activeTab.id, {
-                      query: value || '',
-                      isDirty: true
-                    })}
-                    onMount={handleEditorDidMount}
-                    loading={<Skeleton height="100%" />}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 13,
-                      lineNumbers: 'on',
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                      formatOnPaste: true,
-                      formatOnType: true,
-                      automaticLayout: true,
-                      suggestOnTriggerCharacters: true,
-                      quickSuggestions: {
-                        other: true,
-                        comments: false,
-                        strings: false
-                      },
-                      parameterHints: {
-                        enabled: true
-                      },
-                      padding: { top: 12, bottom: 12 },
-                      lineNumbersMinChars: 3,
-                      renderLineHighlight: 'none',
-                      renderLineHighlightOnlyWhenFocus: false
-                    }}
-                  />
+                  <PanelGroup direction="horizontal">
+                    <Panel defaultSize={showAIPanel ? 70 : 100} minSize={50}>
+                      <Editor
+                        height="100%"
+                        defaultLanguage="sql"
+                        theme="data-pup"
+                        value={activeTab.query}
+                        onChange={(value) =>
+                          handleUpdateTabContent(activeTab.id, {
+                            query: value || '',
+                            isDirty: true
+                          })
+                        }
+                        onMount={handleEditorDidMount}
+                        loading={<Skeleton height="100%" />}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: 'on',
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                          formatOnPaste: true,
+                          formatOnType: true,
+                          automaticLayout: true,
+                          suggestOnTriggerCharacters: true,
+                          quickSuggestions: {
+                            other: true,
+                            comments: false,
+                            strings: false
+                          },
+                          parameterHints: {
+                            enabled: true
+                          },
+                          padding: { top: 12, bottom: 12 },
+                          lineNumbersMinChars: 3,
+                          renderLineHighlight: 'none',
+                          renderLineHighlightOnlyWhenFocus: false
+                        }}
+                      />
+                    </Panel>
+                    {showAIPanel && (
+                      <>
+                        <PanelResizeHandle className="resize-handle-vertical" />
+                        <Panel defaultSize={30} minSize={20} maxSize={50}>
+                          <AIAssistant
+                            context={{
+                              query:
+                                activeTab.type === 'query'
+                                  ? editorRef.current?.getValue() || activeTab.query
+                                  : undefined,
+                              selectedText: selectedText || undefined,
+                              results: activeResult?.success ? activeResult.data : undefined,
+                              error: activeResult?.error,
+                              filters: activeTab.type === 'table' ? activeTab.filters : undefined
+                            }}
+                            onExecuteQuery={handleExecuteQuery}
+                            onClose={() => setShowAIPanel(false)}
+                          />
+                        </Panel>
+                      </>
+                    )}
+                  </PanelGroup>
                 </Box>
               </Flex>
             </Panel>
 
-        <PanelResizeHandle className="resize-handle-horizontal" />
+            <PanelResizeHandle className="resize-handle-horizontal" />
 
             {/* Bottom panel: Results */}
             <Panel defaultSize={50} minSize={20} className="results-panel">
@@ -509,9 +569,7 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
               connectionId={connectionId}
               database={activeTab.database}
               tableName={activeTab.tableName}
-              onFiltersChange={(filters) =>
-                handleUpdateTabContent(activeTab.id, { filters })
-              }
+              onFiltersChange={(filters) => handleUpdateTabContent(activeTab.id, { filters })}
             />
           </Box>
         ) : null}
