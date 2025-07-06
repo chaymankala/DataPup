@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Box, Flex, Text, Button, ScrollArea, TextArea, Card } from '@radix-ui/themes'
+import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
 import './AIAssistant.css'
 
 interface Message {
@@ -27,20 +27,24 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [provider, setProvider] = useState(
+    () => localStorage.getItem('datapup-ai-provider') || 'openai'
+  )
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Check for API key on mount
+  // Check for API key on mount and when provider changes
   useEffect(() => {
-    const savedKey = localStorage.getItem('datapup-ai-api-key')
+    const savedKey = localStorage.getItem(`datapup-ai-api-key-${provider}`)
     if (savedKey) {
       setApiKey(savedKey)
+      setShowApiKeySetup(false)
     } else {
       setShowApiKeySetup(true)
     }
-  }, [])
+  }, [provider])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -68,8 +72,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content:
-          'This is a placeholder response. The actual AI integration will be implemented by your collaborator.',
+        content: `This is a placeholder response from ${
+          provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'
+        }. The actual AI integration will be implemented by your collaborator.`,
         timestamp: new Date()
       }
       setMessages((prev) => [...prev, assistantMessage])
@@ -85,9 +90,14 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   }
 
   const handleApiKeySubmit = (key: string) => {
-    localStorage.setItem('datapup-ai-api-key', key)
+    localStorage.setItem(`datapup-ai-api-key-${provider}`, key)
     setApiKey(key)
     setShowApiKeySetup(false)
+  }
+
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider)
+    localStorage.setItem('datapup-ai-provider', newProvider)
   }
 
   if (showApiKeySetup) {
@@ -106,9 +116,24 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         <Box className="ai-setup" p="4">
           <Card>
             <Flex direction="column" gap="3">
-              <Text size="2">To use the AI assistant, please configure your API key.</Text>
+              <Flex align="center" gap="2">
+                <Text size="2">Select AI Provider:</Text>
+                <Select.Root value={provider} onValueChange={handleProviderChange}>
+                  <Select.Trigger size="2" />
+                  <Select.Content>
+                    <Select.Item value="openai">OpenAI</Select.Item>
+                    <Select.Item value="claude">Claude</Select.Item>
+                    <Select.Item value="gemini">Gemini</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </Flex>
+              <Text size="2">
+                Enter your{' '}
+                {provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API
+                key:
+              </Text>
               <TextArea
-                placeholder="Enter your OpenAI API key..."
+                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API key...`}
                 size="2"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -155,11 +180,21 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             </Text>
           )}
         </Flex>
-        {onClose && (
-          <Button size="1" variant="ghost" onClick={onClose}>
-            ×
-          </Button>
-        )}
+        <Flex align="center" gap="2">
+          <Select.Root value={provider} onValueChange={handleProviderChange}>
+            <Select.Trigger size="1" />
+            <Select.Content>
+              <Select.Item value="openai">OpenAI</Select.Item>
+              <Select.Item value="claude">Claude</Select.Item>
+              <Select.Item value="gemini">Gemini</Select.Item>
+            </Select.Content>
+          </Select.Root>
+          {onClose && (
+            <Button size="1" variant="ghost" onClick={onClose}>
+              ×
+            </Button>
+          )}
+        </Flex>
       </Flex>
 
       <ScrollArea className="ai-messages" ref={scrollAreaRef}>
