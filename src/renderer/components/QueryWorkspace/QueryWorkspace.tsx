@@ -324,14 +324,14 @@ export function QueryWorkspace({
     }
   }
 
-  const formatResult = (data: any[], message?: string) => {
+  const formatResult = (data: any[], result?: QueryExecutionResult) => {
     if (!data || data.length === 0) {
       // Check if this is a successful DDL/DML command
-      if (message && message.toLowerCase().includes('command executed successfully')) {
+      if (result?.isDDL || result?.isDML) {
         return (
           <Flex align="center" justify="center" height="100%" p="4">
             <Text color="green" size="2" weight="medium">
-              ✓ {message}
+              ✓ {result.message}
             </Text>
           </Flex>
         )
@@ -568,7 +568,7 @@ export function QueryWorkspace({
                   {activeResult ? (
                     activeResult.success ? (
                       <Box className="result-table-container">
-                        {formatResult(activeResult.data || [], activeResult.message)}
+                        {formatResult(activeResult.data || [], activeResult)}
                       </Box>
                     ) : (
                       <Flex align="center" justify="center" height="100%" p="4">

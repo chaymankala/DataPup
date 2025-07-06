@@ -1,8 +1,12 @@
+import { BaseDatabaseManager } from './base'
 import {
-  DatabaseManagerInterface,
   DatabaseConfig,
   ConnectionResult,
-  QueryResult
+  QueryResult,
+  QueryType,
+  DatabaseCapabilities,
+  TableSchema,
+  ColumnSchema
 } from './interface'
 
 interface ClickHouseConfig {
@@ -13,6 +17,7 @@ interface ClickHouseConfig {
   password: string
   secure?: boolean
   timeout?: number
+  readonly?: boolean
 }
 
 interface ClickHouseConnection {
@@ -23,8 +28,8 @@ interface ClickHouseConnection {
   lastUsed: Date
 }
 
-class ClickHouseManager implements DatabaseManagerInterface {
-  private connections: Map<string, ClickHouseConnection> = new Map()
+class ClickHouseManager extends BaseDatabaseManager {
+  protected connections: Map<string, ClickHouseConnection> = new Map()
 
   async connect(config: DatabaseConfig, connectionId: string): Promise<ConnectionResult> {
     try {
@@ -71,7 +76,8 @@ class ClickHouseManager implements DatabaseManagerInterface {
           username: config.username,
           password: config.password,
           secure: config.secure,
-          timeout: config.timeout
+          timeout: config.timeout,
+          readonly: config.readonly
         },
         client,
         isConnected: true,
@@ -79,6 +85,11 @@ class ClickHouseManager implements DatabaseManagerInterface {
       }
 
       this.connections.set(connectionId, connection)
+
+      // Track read-only connections
+      if (config.readonly) {
+        this.readonlyConnections.add(connectionId)
+      }
 
       return {
         success: true,
@@ -108,6 +119,7 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
       // Remove from connections map
       this.connections.delete(connectionId)
+      this.readonlyConnections.delete(connectionId)
 
       return { success: true, message: 'Disconnected from ClickHouse' }
     } catch (error) {
@@ -123,37 +135,41 @@ class ClickHouseManager implements DatabaseManagerInterface {
     try {
       const connection = this.connections.get(connectionId)
       if (!connection || !connection.isConnected) {
-        return {
-          success: false,
-          message: 'Not connected to ClickHouse. Please connect first.'
-        }
+        return this.createQueryResult(false, 'Not connected to ClickHouse. Please connect first.')
+      }
+
+      // Validate read-only queries
+      const validation = this.validateReadOnlyQuery(connectionId, sql)
+      if (!validation.valid) {
+        return this.createQueryResult(false, validation.error || 'Query not allowed')
       }
 
       // Update last used timestamp
       connection.lastUsed = new Date()
 
-      // Determine if this is a DDL query
-      const trimmedSql = sql.trim()
-      const isDDL =
-        /^(CREATE|DROP|ALTER|TRUNCATE|RENAME|ATTACH|DETACH|OPTIMIZE|INSERT|UPDATE|DELETE)\s/i.test(
-          trimmedSql
-        )
+      // Detect query type
+      const queryType = this.detectQueryType(sql)
+      const isDDL = queryType === QueryType.DDL
+      const isDML = [QueryType.INSERT, QueryType.UPDATE, QueryType.DELETE].includes(queryType)
 
       console.log('Executing ClickHouse query:', sql)
-      console.log('Query type:', isDDL ? 'DDL/DML' : 'DQL')
+      console.log('Query type:', queryType)
 
-      if (isDDL) {
+      if (isDDL || isDML) {
         // Use command() for DDL/DML queries that don't return data
         await connection.client.command({
           query: sql,
           session_id: connectionId
         })
 
-        return {
-          success: true,
-          data: [],
-          message: 'Command executed successfully.'
-        }
+        return this.createQueryResult(
+          true,
+          'Command executed successfully',
+          [],
+          undefined,
+          queryType,
+          isDML ? 1 : 0 // For DML, we don't get affected rows from ClickHouse easily
+        )
       } else {
         // Use query() for SELECT and data-returning queries
         const result = await connection.client.query({
@@ -179,19 +195,22 @@ class ClickHouseManager implements DatabaseManagerInterface {
         console.log('Extracted data:', data)
         console.log('Data length:', data.length)
 
-        return {
-          success: true,
-          data: data,
-          message: `Query executed successfully. Returned ${data.length} rows.`
-        }
+        return this.createQueryResult(
+          true,
+          `Query executed successfully. Returned ${data.length} rows.`,
+          data,
+          undefined,
+          queryType
+        )
       }
     } catch (error) {
       console.error('ClickHouse query error:', error)
-      return {
-        success: false,
-        message: 'Query execution failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+      return this.createQueryResult(
+        false,
+        'Query execution failed',
+        undefined,
+        error instanceof Error ? error.message : 'Unknown error'
+      )
     }
   }
 
@@ -287,6 +306,81 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
   getAllConnections(): string[] {
     return Array.from(this.connections.keys())
+  }
+
+  getCapabilities(): DatabaseCapabilities {
+    return {
+      supportsTransactions: false, // ClickHouse doesn't support traditional transactions
+      supportsBatchOperations: true,
+      supportsReturning: false,
+      supportsUpsert: true, // Via INSERT ... ON DUPLICATE KEY UPDATE
+      supportsSchemas: true, // Databases in ClickHouse
+      requiresPrimaryKey: false, // ClickHouse doesn't require primary keys
+      defaultSchema: 'default'
+    }
+  }
+
+  async getTableFullSchema(
+    connectionId: string,
+    tableName: string,
+    database?: string
+  ): Promise<{ success: boolean; schema?: TableSchema; message: string }> {
+    try {
+      // Get basic schema
+      const schemaResult = await this.getTableSchema(connectionId, tableName, database)
+      if (!schemaResult.success || !schemaResult.schema) {
+        return {
+          success: false,
+          message: schemaResult.message || 'Failed to get table schema'
+        }
+      }
+
+      // Get the current database if not specified
+      const connectionInfo = this.getConnectionInfo(connectionId)
+      const targetDatabase = database || connectionInfo?.database || 'default'
+
+      // Query system tables for primary key information
+      const pkQuery = `
+        SELECT name 
+        FROM system.columns 
+        WHERE database = '${targetDatabase}' 
+          AND table = '${tableName}' 
+          AND is_in_primary_key = 1
+        ORDER BY position
+      `
+
+      const pkResult = await this.query(connectionId, pkQuery)
+      const primaryKeys =
+        pkResult.success && pkResult.data ? pkResult.data.map((row) => row.name) : []
+
+      // Convert schema to ColumnSchema format
+      const columns: ColumnSchema[] = schemaResult.schema.map((col: any) => ({
+        name: col.name || col.field || col[0],
+        type: col.type || col[1],
+        nullable: col.nullable !== false, // ClickHouse columns are nullable by default unless specified
+        default: col.default_expression || col.default || col[3] || undefined,
+        isPrimaryKey: primaryKeys.includes(col.name || col.field || col[0]),
+        isUnique: false // ClickHouse doesn't have unique constraints
+      }))
+
+      const tableSchema: TableSchema = {
+        columns,
+        primaryKeys,
+        uniqueKeys: [] // ClickHouse doesn't support unique constraints
+      }
+
+      return {
+        success: true,
+        schema: tableSchema,
+        message: 'Table schema retrieved successfully'
+      }
+    } catch (error) {
+      console.error('Error getting full table schema:', error)
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get table schema'
+      }
+    }
   }
 
   // Clean up all connections
