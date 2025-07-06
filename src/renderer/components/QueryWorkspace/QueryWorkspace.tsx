@@ -98,8 +98,8 @@ export function QueryWorkspace({
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
-
-  const activeTab = tabs.find((tab) => tab.id === activeTabId)
+  
+  const activeTab = tabs.find(tab => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
@@ -250,9 +250,9 @@ export function QueryWorkspace({
 
   const handleExecuteQuery = async () => {
     if (!activeTab || activeTab.type !== 'query') return
-
+    
     let queryToExecute = ''
-
+    
     // If there's selected text, use only that
     if (selectedText && selectedText.trim()) {
       queryToExecute = selectedText.trim()
@@ -261,7 +261,7 @@ export function QueryWorkspace({
       const currentQuery = editorRef.current?.getValue() || activeTab.query
       queryToExecute = currentQuery.trim()
     }
-
+    
     if (!queryToExecute) return
 
     try {
@@ -275,13 +275,13 @@ export function QueryWorkspace({
         sessionId
       )
       const executionTime = Date.now() - startTime
-
+      
       const result: QueryExecutionResult = {
         ...queryResult,
         executionTime,
         rowCount: queryResult.data?.length || 0
       }
-
+      
       setResults({ ...results, [activeTab.id]: result })
     } catch (error) {
       console.error('Query execution error:', error)
@@ -511,7 +511,7 @@ export function QueryWorkspace({
                       </>
                     )}
                   </Flex>
-
+                  
                   {activeResult?.success && activeResult.data && activeResult.data.length > 0 && (
                     <Flex gap="1">
                       <Button

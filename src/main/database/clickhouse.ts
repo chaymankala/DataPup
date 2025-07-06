@@ -119,7 +119,7 @@ class ClickHouseManager implements DatabaseManagerInterface {
     }
   }
 
-  async query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult> {
+  async query(connectionId: string, sql: string): Promise<QueryResult> {
     try {
       const connection = this.connections.get(connectionId)
       if (!connection || !connection.isConnected) {
