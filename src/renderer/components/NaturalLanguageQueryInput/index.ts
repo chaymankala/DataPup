@@ -1,1 +1,0 @@
-export { NaturalLanguageQueryInput } from './NaturalLanguageQueryInput'

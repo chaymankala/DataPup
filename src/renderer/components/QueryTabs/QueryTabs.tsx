@@ -9,7 +9,6 @@ interface QueryTabsProps {
   activeTabId: string
   onSelectTab: (tabId: string) => void
   onNewTab: () => void
-  onNewNaturalLanguageTab?: () => void
   onCloseTab: (tabId: string) => void
   onUpdateTabTitle: (tabId: string, title: string) => void
 }
@@ -19,7 +18,6 @@ export function QueryTabs({
   activeTabId,
   onSelectTab,
   onNewTab,
-  onNewNaturalLanguageTab,
   onCloseTab,
   onUpdateTabTitle
 }: QueryTabsProps) {
@@ -99,27 +97,9 @@ export function QueryTabs({
         </Flex>
       </Box>
 
-      {onNewNaturalLanguageTab ? (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            <Button size="1" variant="ghost" className="new-tab-button">
-              +
-            </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item onClick={onNewTab}>
-              SQL Query
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onClick={onNewNaturalLanguageTab}>
-              Natural Language Query
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      ) : (
-        <Button size="1" variant="ghost" onClick={onNewTab} className="new-tab-button">
-          +
-        </Button>
-      )}
+      <Button size="1" variant="ghost" onClick={onNewTab} className="new-tab-button">
+        +
+      </Button>
     </Flex>
   )
 }

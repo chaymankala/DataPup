@@ -6,9 +6,9 @@ import { Skeleton, Badge } from '../ui'
 import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
-import { NaturalLanguageQueryInput } from '../NaturalLanguageQueryInput'
+
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
-import { Tab, QueryTab, TableTab, NaturalLanguageQueryTab, QueryExecutionResult } from '../../types/tabs'
+import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
 import './QueryWorkspace.css'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -244,17 +244,7 @@ export function QueryWorkspace({
     setActiveTabId(newTab.id)
   }, [])
 
-  // Open natural language query tab
-  const openNaturalLanguageQueryTab = useCallback(() => {
-    const newTab: NaturalLanguageQueryTab = {
-      id: Date.now().toString(),
-      type: 'natural-language-query',
-      title: 'Natural Language Query',
-      isDirty: false
-    }
-    setTabs(prev => [...prev, newTab])
-    setActiveTabId(newTab.id)
-  }, [])
+
 
   // Expose openTableTab to parent component
   React.useEffect(() => {
@@ -379,14 +369,13 @@ export function QueryWorkspace({
             activeTabId={activeTabId}
             onSelectTab={handleSelectTab}
             onNewTab={handleNewTab}
-            onNewNaturalLanguageTab={openNaturalLanguageQueryTab}
             onCloseTab={handleCloseTab}
             onUpdateTabTitle={handleUpdateTabTitle}
           />
         </Box>
 
         {/* Content */}
-        {activeTab && activeTab.type === 'query' ? (
+        {activeTab && activeTab.type === 'query' && (
           <PanelGroup direction="vertical" className="workspace-panels">
             {/* Top panel: Query editor */}
             <Panel defaultSize={50} minSize={30} className="editor-panel">
@@ -487,7 +476,9 @@ export function QueryWorkspace({
                               selectedText: selectedText || undefined,
                               results: activeResult?.success ? activeResult.data : undefined,
                               error: activeResult?.error,
-                              filters: activeTab.type === 'table' ? (activeTab as any).filters : undefined
+                              filters: undefined,
+                              connectionId: connectionId,
+                              database: undefined
                             }}
                             onExecuteQuery={handleExecuteQuery}
                             onClose={() => setShowAIPanel(false)}
@@ -575,7 +566,8 @@ export function QueryWorkspace({
               </Flex>
             </Panel>
           </PanelGroup>
-        ) : activeTab && activeTab.type === 'table' ? (
+        )}
+        {activeTab && activeTab.type === 'table' && (
           <Box style={{ flex: 1, overflow: 'hidden' }}>
             <TableView
               connectionId={connectionId}
@@ -584,30 +576,7 @@ export function QueryWorkspace({
               onFiltersChange={(filters) => handleUpdateTabContent(activeTab.id, { filters })}
             />
           </Box>
-        ) : activeTab && activeTab.type === 'natural-language-query' ? (
-          <Box style={{ flex: 1, overflow: 'hidden' }}>
-            <NaturalLanguageQueryInput
-              connectionId={connectionId}
-              connectionName={connectionName}
-              onQueryGenerated={(sql, explanation) => {
-                // Create a new query tab with the generated SQL
-                const newTab: QueryTab = {
-                  id: Date.now().toString(),
-                  type: 'query',
-                  title: 'Generated Query',
-                  query: sql,
-                  isDirty: false
-                }
-                setTabs(prev => [...prev, newTab])
-                setActiveTabId(newTab.id)
-              }}
-              onQueryExecuted={(result) => {
-                // Store the result for the current tab
-                setResults(prev => ({ ...prev, [activeTab.id]: result }))
-              }}
-            />
-          </Box>
-        ) : null}
+        )}
       </Flex>
     </Box>
   )

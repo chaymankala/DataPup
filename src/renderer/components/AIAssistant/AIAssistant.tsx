@@ -15,6 +15,8 @@ interface AIContext {
   results?: any[]
   filters?: any[]
   error?: string
+  connectionId?: string
+  database?: string
 }
 
 interface AIAssistantProps {
@@ -67,19 +69,51 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     setInputValue('')
     setIsLoading(true)
 
-    // Placeholder for AI response
-    setTimeout(() => {
+    try {
+      let response: string
+
+      if (provider === 'gemini') {
+        // Use the natural language query processor for Gemini
+        const result = await window.api.naturalLanguageQuery.generateSQL({
+          query: inputValue.trim(),
+          connectionId: context.connectionId || '',
+          database: context.database || undefined
+        })
+        if (result.success) {
+          response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\nExplanation:\n${result.explanation}`
+
+          // If there's an onExecuteQuery callback, offer to execute the query
+          if (onExecuteQuery) {
+            response += '\n\nWould you like me to execute this query?'
+          }
+        } else {
+          response = `Error: ${result.error}`
+        }
+      } else {
+        // Placeholder for other providers
+        response = `This is a placeholder response from ${
+          provider === 'openai' ? 'OpenAI' : 'Claude'
+        }. The actual AI integration will be implemented by your collaborator.`
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `This is a placeholder response from ${
-          provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'
-        }. The actual AI integration will be implemented by your collaborator.`,
+        content: response,
         timestamp: new Date()
       }
       setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+        timestamp: new Date()
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -119,7 +153,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
               <Flex align="center" gap="2">
                 <Text size="1">Provider:</Text>
                 <Select.Root value={provider} onValueChange={handleProviderChange}>
-                  <Select.Trigger size="1" />
+                  <Select.Trigger />
                   <Select.Content>
                     <Select.Item value="openai">OpenAI</Select.Item>
                     <Select.Item value="claude">Claude</Select.Item>
@@ -182,7 +216,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         </Flex>
         <Flex align="center" gap="2">
           <Select.Root value={provider} onValueChange={handleProviderChange}>
-            <Select.Trigger size="1" />
+            <Select.Trigger />
             <Select.Content>
               <Select.Item value="openai">OpenAI</Select.Item>
               <Select.Item value="claude">Claude</Select.Item>
@@ -253,9 +287,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             style={{ paddingRight: '36px', width: '100%' }}
             disabled={isLoading}
           />
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={!inputValue.trim() || isLoading} 
+          <Button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
             size="1"
             variant="ghost"
             className="ai-send-button"
