@@ -253,27 +253,15 @@ export function QueryWorkspace({
     }
   }, [openTableTab, onOpenTableTab])
 
-  const handleExecuteQuery = async () => {
+  const executeQuery = async (queryToExecute: string) => {
     if (!activeTab || activeTab.type !== 'query') return
 
-    let queryToExecute = ''
-
-    // If there's selected text, use only that
-    if (selectedText && selectedText.trim()) {
-      queryToExecute = selectedText.trim()
-    } else {
-      // Otherwise use the full editor content
-      const currentQuery = editorRef.current?.getValue() || activeTab.query
-      queryToExecute = currentQuery.trim()
-    }
-
-    if (!queryToExecute) return
+    if (!queryToExecute.trim()) return
 
     try {
       setIsExecuting(true)
       const startTime = Date.now()
 
-      const sessionId = uuidv4();
       const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
       const executionTime = Date.now() - startTime
 
@@ -297,6 +285,41 @@ export function QueryWorkspace({
     } finally {
       setIsExecuting(false)
     }
+  }
+
+  const handleExecuteQuery = async () => {
+    if (!activeTab || activeTab.type !== 'query') return
+
+    let queryToExecute = ''
+
+    // If there's selected text, use only that
+    if (selectedText && selectedText.trim()) {
+      queryToExecute = selectedText.trim()
+    } else {
+      // Otherwise use the full editor content
+      const currentQuery = editorRef.current?.getValue() || activeTab.query
+      queryToExecute = currentQuery.trim()
+    }
+
+    await executeQuery(queryToExecute)
+  }
+
+  const handleExecuteQueryFromAI = async (sqlQuery: string) => {
+    // Update the editor content with the SQL query
+    if (activeTab && activeTab.type === 'query') {
+      handleUpdateTabContent(activeTab.id, {
+        query: sqlQuery,
+        isDirty: true
+      })
+
+      // Update the editor value
+      if (editorRef.current) {
+        editorRef.current.setValue(sqlQuery)
+      }
+    }
+
+    // Execute the query
+    await executeQuery(sqlQuery)
   }
 
   const formatQuery = () => {
@@ -480,7 +503,7 @@ export function QueryWorkspace({
                               connectionId: connectionId,
                               database: undefined
                             }}
-                            onExecuteQuery={handleExecuteQuery}
+                            onExecuteQuery={handleExecuteQueryFromAI}
                             onClose={() => setShowAIPanel(false)}
                           />
                         </Panel>

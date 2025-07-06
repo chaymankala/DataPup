@@ -22,6 +22,7 @@ interface QueryGenerationRequest {
   databaseSchema: DatabaseSchema
   databaseType: string
   sampleData?: Record<string, any[]>
+  conversationContext?: string
 }
 
 interface QueryGenerationResponse {
@@ -71,12 +72,15 @@ class GeminiService {
   }
 
   private buildPrompt(request: QueryGenerationRequest): string {
-    const { naturalLanguageQuery, databaseSchema, databaseType, sampleData } = request
+    const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } = request
 
     let prompt = `You are a SQL expert specializing in ${databaseType.toUpperCase()} databases.
 Your task is to convert natural language queries into accurate SQL statements.
 
-DATABASE SCHEMA:
+${conversationContext ? `CONVERSATION CONTEXT:
+${conversationContext}
+
+` : ''}DATABASE SCHEMA:
 ${this.formatSchema(databaseSchema)}
 
 ${sampleData ? `SAMPLE DATA:
@@ -95,6 +99,8 @@ IMPORTANT INSTRUCTIONS:
 5. If the query is ambiguous, make reasonable assumptions and explain them
 6. Always include a brief explanation of what the query does
 7. DO NOT wrap the SQL in markdown code blocks or any other formatting
+8. Consider the conversation context when interpreting the current request
+9. If the user is referring to a previous query or result, use that context
 
 RESPONSE FORMAT:
 SQL: [Your SQL query here - raw SQL only, no markdown]

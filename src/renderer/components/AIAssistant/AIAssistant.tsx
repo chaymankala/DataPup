@@ -7,6 +7,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  sqlQuery?: string // Store the SQL query that was generated
 }
 
 interface AIContext {
@@ -67,36 +68,79 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
+    const userInput = inputValue.trim()
+    setInputValue('')
+    setIsLoading(true)
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
+      content: userInput,
       timestamp: new Date()
     }
 
     setMessages((prev) => [...prev, userMessage])
-    setInputValue('')
-    setIsLoading(true)
 
-    try {
+        try {
       let response: string
+      let sqlQuery: string | undefined
 
-      if (provider === 'gemini') {
-        // Use the natural language query processor for Gemini
-        const result = await (window.api as any).naturalLanguageQuery.generateSQL({
-          naturalLanguageQuery: inputValue.trim(),
-          connectionId: context.connectionId || '',
-          database: context.database || undefined
-        })
-        if (result.success) {
-          response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\nExplanation:\n${result.explanation}`
+      // Check if this is a command to execute the last query
+      const isExecuteCommand = /^(run|execute|yes|ok|go)$/i.test(userInput)
 
-          // If there's an onExecuteQuery callback, offer to execute the query
-          if (onExecuteQuery) {
-            response += '\n\nWould you like me to execute this query?'
+      if (isExecuteCommand) {
+        // Find the last generated SQL query
+        const lastAssistantMessage = messages
+          .filter(m => m.role === 'assistant')
+          .pop()
+
+        if (lastAssistantMessage?.sqlQuery && onExecuteQuery) {
+          // Execute the last query
+          onExecuteQuery(lastAssistantMessage.sqlQuery)
+          response = `Executing the previous query:\n\`\`\`sql\n${lastAssistantMessage.sqlQuery}\n\`\`\`\n\nThe query has been executed. Check the results panel below.`
+        } else {
+          response = "I don't have a previous query to execute. Please ask me to generate a SQL query first."
+        }
+            } else if (provider === 'gemini') {
+        // Build conversation context
+        const conversationContext = buildConversationContext(messages, userInput)
+
+        // Check if this might be a response to execute a previous query
+        const lastAssistantMessage = messages
+          .filter(m => m.role === 'assistant')
+          .pop()
+
+        const hasPreviousQuery = lastAssistantMessage?.sqlQuery &&
+          lastAssistantMessage.content.includes('Would you like me to execute this query?')
+
+        if (hasPreviousQuery && isLikelyExecuteResponse(userInput)) {
+          // Execute the last query
+          if (onExecuteQuery && lastAssistantMessage.sqlQuery) {
+            onExecuteQuery(lastAssistantMessage.sqlQuery)
+            response = `Executing the previous query:\n\`\`\`sql\n${lastAssistantMessage.sqlQuery}\n\`\`\`\n\nThe query has been executed. Check the results panel below.`
+          } else {
+            response = "I don't have a previous query to execute. Please ask me to generate a SQL query first."
           }
         } else {
-          response = `Error: ${result.error}`
+          // Use the natural language query processor for Gemini
+          const result = await (window.api as any).naturalLanguageQuery.generateSQL({
+            naturalLanguageQuery: userInput,
+            connectionId: context.connectionId || '',
+            database: context.database || undefined,
+            conversationContext: conversationContext
+          })
+
+          if (result.success) {
+            sqlQuery = result.sqlQuery
+            response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\nExplanation:\n${result.explanation}`
+
+            // If there's an onExecuteQuery callback, offer to execute the query
+            if (onExecuteQuery) {
+              response += '\n\nWould you like me to execute this query?'
+            }
+          } else {
+            response = `Error: ${result.error}`
+          }
         }
       } else {
         // Placeholder for other providers
@@ -109,7 +153,8 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        sqlQuery: sqlQuery
       }
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
@@ -123,6 +168,62 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     } finally {
       setIsLoading(false)
     }
+  }
+
+    const buildConversationContext = (messages: Message[], currentInput: string): string => {
+    // Build context from recent messages (last 10 messages to avoid token limits)
+    const recentMessages = messages.slice(-10)
+
+    let context = "Previous conversation:\n"
+
+    for (const message of recentMessages) {
+      const role = message.role === 'user' ? 'User' : 'Assistant'
+      context += `${role}: ${message.content}\n`
+    }
+
+    context += `\nCurrent request: ${currentInput}\n`
+
+    return context
+  }
+
+  const isLikelyExecuteResponse = (userInput: string): boolean => {
+    const executeKeywords = [
+      'yes', 'sure', 'ok', 'okay', 'go ahead', 'execute', 'run', 'do it',
+      'please', 'alright', 'fine', 'absolutely', 'definitely', 'certainly',
+      'of course', 'by all means', 'proceed', 'continue', 'start'
+    ]
+
+    const lowerInput = userInput.toLowerCase().trim()
+
+    // Check for exact matches
+    if (executeKeywords.includes(lowerInput)) {
+      return true
+    }
+
+    // Check for phrases that contain execute keywords
+    for (const keyword of executeKeywords) {
+      if (lowerInput.includes(keyword)) {
+        return true
+      }
+    }
+
+    // Check for affirmative patterns
+    const affirmativePatterns = [
+      /^(yes|sure|ok|okay)$/i,
+      /^(go ahead|execute it|run it|do it)$/i,
+      /^(please|alright|fine)$/i,
+      /^(absolutely|definitely|certainly)$/i,
+      /^(of course|by all means)$/i,
+      /^(proceed|continue|start)$/i
+    ]
+
+    for (const pattern of affirmativePatterns) {
+      if (pattern.test(lowerInput)) {
+        return true
+      }
+    }
+
+    return false
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

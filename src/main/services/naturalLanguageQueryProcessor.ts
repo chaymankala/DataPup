@@ -9,6 +9,7 @@ interface NaturalLanguageQueryRequest {
   database?: string
   includeSampleData?: boolean
   maxSampleRows?: number
+  conversationContext?: string
 }
 
 interface NaturalLanguageQueryResponse {
@@ -70,7 +71,8 @@ class NaturalLanguageQueryProcessor {
         naturalLanguageQuery,
         databaseSchema: schema,
         databaseType,
-        sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined
+        sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined,
+        conversationContext: request.conversationContext
       }
 
       const generationResponse = await this.geminiService.generateSQLQuery(generationRequest)
@@ -139,7 +141,8 @@ class NaturalLanguageQueryProcessor {
         naturalLanguageQuery,
         databaseSchema: schema,
         databaseType,
-        sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined
+        sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined,
+        conversationContext: request.conversationContext
       }
 
       return await this.geminiService.generateSQLQuery(generationRequest)
