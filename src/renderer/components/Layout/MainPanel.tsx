@@ -7,7 +7,6 @@ import { ActiveConnectionLayout } from '../ActiveConnectionLayout'
 import { ConnectionCard, ConnectionCardSkeleton } from '../ConnectionCard'
 import { useState, useEffect } from 'react'
 import './MainPanel.css'
-import { v4 as uuidv4 } from 'uuid';
 
 interface MainPanelProps {
   activeConnection?: {

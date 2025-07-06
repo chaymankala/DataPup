@@ -6,7 +6,7 @@ const api = {
   database: {
     connect: (config: any) => ipcRenderer.invoke('db:connect', config),
     disconnect: (connectionId?: string) => ipcRenderer.invoke('db:disconnect', connectionId),
-    query: (connectionId: string, sql: string, sessionId?: string) => ipcRenderer.invoke('db:query', connectionId, sql, sessionId),
+    query: (connectionId: string, sql: string) => ipcRenderer.invoke('db:query', connectionId, sql),
     getDatabases: (connectionId: string) => ipcRenderer.invoke('db:getDatabases', connectionId),
     getTables: (connectionId: string, database?: string) =>
       ipcRenderer.invoke('db:getTables', connectionId, database),

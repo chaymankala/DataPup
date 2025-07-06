@@ -119,7 +119,7 @@ class ClickHouseManager implements DatabaseManagerInterface {
     }
   }
 
-  async query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult> {
+  async query(connectionId: string, sql: string): Promise<QueryResult> {
     try {
       const connection = this.connections.get(connectionId)
       if (!connection || !connection.isConnected) {
@@ -134,7 +134,7 @@ class ClickHouseManager implements DatabaseManagerInterface {
 
       // Execute the query with correct format
       console.log('Executing ClickHouse query:', sql)
-      const result = await connection.client.query({ query: sql, session_id: sessionId || connectionId })
+      const result = await connection.client.query({ query: sql })
 
       // Convert result to plain JavaScript object for IPC serialization
       const rawData = await result.json()

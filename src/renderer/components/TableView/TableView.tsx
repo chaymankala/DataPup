@@ -4,7 +4,6 @@ import { Skeleton } from '../ui'
 import { TableFilter } from '../../types/tabs'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import './TableView.css'
-import { v4 as uuidv4 } from 'uuid';
 
 interface TableViewProps {
   connectionId: string
@@ -76,11 +75,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
   const buildQuery = () => {
     let query = `SELECT * FROM ${database}.${tableName}`
-
-    const validFilters = filters.filter(f =>
+    
+    const validFilters = filters.filter(f => 
       f.column && f.operator && (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
     )
-
+    
     if (validFilters.length > 0) {
       const whereClauses = validFilters.map(filter => {
         if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
@@ -95,7 +94,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       })
       query += ` WHERE ${whereClauses.join(' AND ')}`
     }
-
+    
     query += ' LIMIT 1000'
     return query
   }
@@ -105,11 +104,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       setIsLoading(true)
       const startTime = Date.now()
       const query = buildQuery()
-
-      const sessionId = uuidv4();
-      const queryResult = await window.api.database.query(connectionId, query, sessionId)
+      
+      const queryResult = await window.api.database.query(connectionId, query)
       const executionTime = Date.now() - startTime
-
+      
       setResult({
         ...queryResult,
         executionTime
@@ -139,7 +137,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   }
 
   const updateFilter = (id: string, updates: Partial<TableFilter>) => {
-    const newFilters = filters.map(f =>
+    const newFilters = filters.map(f => 
       f.id === id ? { ...f, ...updates } : f
     )
     setFilters(newFilters)
@@ -285,7 +283,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                 </>
               )}
             </Flex>
-
+            
             {result?.success && result.data && result.data.length > 0 && (
               <Flex gap="1">
                 <Button
