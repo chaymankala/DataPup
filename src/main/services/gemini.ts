@@ -94,9 +94,10 @@ IMPORTANT INSTRUCTIONS:
 4. If the query involves date/time operations, use ${databaseType.toUpperCase()} date functions
 5. If the query is ambiguous, make reasonable assumptions and explain them
 6. Always include a brief explanation of what the query does
+7. DO NOT wrap the SQL in markdown code blocks or any other formatting
 
 RESPONSE FORMAT:
-SQL: [Your SQL query here]
+SQL: [Your SQL query here - raw SQL only, no markdown]
 Explanation: [Brief explanation of what the query does]`
 
     return prompt
@@ -166,19 +167,42 @@ Explanation: [Brief explanation of what the query does]`
       }
     }
 
+    // Clean up the SQL - remove any markdown formatting that might have been included
+    if (sql) {
+      // Remove markdown code blocks
+      sql = sql.replace(/```sql\s*/g, '').replace(/```\s*$/g, '')
+      // Remove any leading/trailing whitespace
+      sql = sql.trim()
+    }
+
     // If we couldn't parse the structured format, try to extract SQL from the response
     if (!sql) {
+      // Try to find SQL in markdown code blocks
       const sqlMatch = response.match(/```sql\s*([\s\S]*?)\s*```/)
       if (sqlMatch) {
         sql = sqlMatch[1].trim()
       } else {
-        // Fallback: try to find SQL-like content
-        const lines = response.split('\n')
-        for (const line of lines) {
-          if (line.trim().toUpperCase().startsWith('SELECT') ||
-              line.trim().toUpperCase().startsWith('WITH')) {
-            sql = line.trim()
-            break
+        // Try to find SQL in regular code blocks
+        const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/)
+        if (codeMatch) {
+          const codeContent = codeMatch[1].trim()
+          // Check if it looks like SQL
+          if (codeContent.toUpperCase().includes('SELECT') ||
+              codeContent.toUpperCase().includes('FROM') ||
+              codeContent.toUpperCase().includes('WHERE')) {
+            sql = codeContent
+          }
+        } else {
+          // Fallback: try to find SQL-like content in lines
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (trimmedLine.toUpperCase().startsWith('SELECT') ||
+                trimmedLine.toUpperCase().startsWith('WITH') ||
+                trimmedLine.toUpperCase().startsWith('SHOW') ||
+                trimmedLine.toUpperCase().startsWith('DESCRIBE')) {
+              sql = trimmedLine
+              break
+            }
           }
         }
       }
