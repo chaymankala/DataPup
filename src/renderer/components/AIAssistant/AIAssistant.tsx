@@ -1,13 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
+import { MessageRenderer } from './MessageRenderer'
 import './AIAssistant.css'
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool'
   content: string
   timestamp: Date
-  sqlQuery?: string // Store the SQL query that was generated
+  sqlQuery?: string
+  toolCall?: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }
 }
 
 interface AIContext {
@@ -43,9 +49,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   useEffect(() => {
     const checkApiKey = async () => {
       try {
-        const savedKey = await (window.api as any).secureStorage.get(`ai-api-key-${provider}`)
-        if (savedKey) {
-          setApiKey(savedKey)
+        const result = await (window.api as any).secureStorage.get(`ai-api-key-${provider}`)
+        if (result.success && result.value) {
+          setApiKey(result.value)
           setShowApiKeySetup(false)
         } else {
           setShowApiKeySetup(true)
@@ -65,6 +71,32 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     }
   }, [messages])
 
+  const addToolMessage = (toolCall: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }) => {
+    const toolMessage: Message = {
+      id: `tool-${Date.now()}`,
+      role: 'tool',
+      content: '',
+      timestamp: new Date(),
+      toolCall
+    }
+    setMessages((prev) => [...prev, toolMessage])
+    return toolMessage.id
+  }
+
+  const updateToolMessage = (messageId: string, status: 'completed' | 'failed') => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId && msg.toolCall
+          ? { ...msg, toolCall: { ...msg.toolCall, status } }
+          : msg
+      )
+    )
+  }
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
@@ -81,72 +113,43 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
 
     setMessages((prev) => [...prev, userMessage])
 
-        try {
+    try {
+      // Build conversation context
+      const conversationContext = buildConversationContext(messages, userInput)
+
+      // Use natural language query processor
+      const result = await (window.api as any).naturalLanguageQuery.generateSQL({
+        naturalLanguageQuery: userInput,
+        connectionId: context.connectionId || '',
+        database: context.database || undefined,
+        conversationContext: conversationContext,
+        provider: provider
+      })
+
+      // Display tool calls if they exist
+      if (result.toolCalls) {
+        for (const toolCall of result.toolCalls) {
+          const toolMessageId = addToolMessage(toolCall)
+          // Update status after a short delay for completed/failed states
+          if (toolCall.status !== 'running') {
+            setTimeout(() => updateToolMessage(toolMessageId, toolCall.status), 100)
+          }
+        }
+      }
+
       let response: string
       let sqlQuery: string | undefined
 
-      // Check if this is a command to execute the last query
-      const isExecuteCommand = /^(run|execute|yes|ok|go)$/i.test(userInput)
+      if (result.success) {
+        sqlQuery = result.sqlQuery
+        response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
 
-      if (isExecuteCommand) {
-        // Find the last generated SQL query
-        const lastAssistantMessage = messages
-          .filter(m => m.role === 'assistant')
-          .pop()
-
-        if (lastAssistantMessage?.sqlQuery && onExecuteQuery) {
-          // Execute the last query
-          onExecuteQuery(lastAssistantMessage.sqlQuery)
-          response = `Executing the previous query:\n\`\`\`sql\n${lastAssistantMessage.sqlQuery}\n\`\`\`\n\nThe query has been executed. Check the results panel below.`
-        } else {
-          response = "I don't have a previous query to execute. Please ask me to generate a SQL query first."
-        }
-            } else if (provider === 'gemini') {
-        // Build conversation context
-        const conversationContext = buildConversationContext(messages, userInput)
-
-        // Check if this might be a response to execute a previous query
-        const lastAssistantMessage = messages
-          .filter(m => m.role === 'assistant')
-          .pop()
-
-        const hasPreviousQuery = lastAssistantMessage?.sqlQuery &&
-          lastAssistantMessage.content.includes('Would you like me to execute this query?')
-
-        if (hasPreviousQuery && isLikelyExecuteResponse(userInput)) {
-          // Execute the last query
-          if (onExecuteQuery && lastAssistantMessage.sqlQuery) {
-            onExecuteQuery(lastAssistantMessage.sqlQuery)
-            response = `Executing the previous query:\n\`\`\`sql\n${lastAssistantMessage.sqlQuery}\n\`\`\`\n\nThe query has been executed. Check the results panel below.`
-          } else {
-            response = "I don't have a previous query to execute. Please ask me to generate a SQL query first."
-          }
-        } else {
-          // Use the natural language query processor for Gemini
-          const result = await (window.api as any).naturalLanguageQuery.generateSQL({
-            naturalLanguageQuery: userInput,
-            connectionId: context.connectionId || '',
-            database: context.database || undefined,
-            conversationContext: conversationContext
-          })
-
-          if (result.success) {
-            sqlQuery = result.sqlQuery
-            response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\nExplanation:\n${result.explanation}`
-
-            // If there's an onExecuteQuery callback, offer to execute the query
-            if (onExecuteQuery) {
-              response += '\n\nWould you like me to execute this query?'
-            }
-          } else {
-            response = `Error: ${result.error}`
-          }
+        // If there's an onExecuteQuery callback, offer to execute the query
+        if (onExecuteQuery) {
+          response += '\n\n**Would you like me to execute this query?**'
         }
       } else {
-        // Placeholder for other providers
-        response = `This is a placeholder response from ${
-          provider === 'openai' ? 'OpenAI' : 'Claude'
-        }. The actual AI integration will be implemented by your collaborator.`
+        response = `Error: ${result.error}`
       }
 
       const assistantMessage: Message = {
@@ -170,60 +173,25 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     }
   }
 
-    const buildConversationContext = (messages: Message[], currentInput: string): string => {
+  const buildConversationContext = (messages: Message[], currentInput: string): string => {
     // Build context from recent messages (last 10 messages to avoid token limits)
-    const recentMessages = messages.slice(-10)
+    const recentMessages = messages.filter((m) => m.role !== 'tool').slice(-10)
 
-    let context = "Previous conversation:\n"
+    let context = 'Previous conversation:\n'
 
     for (const message of recentMessages) {
       const role = message.role === 'user' ? 'User' : 'Assistant'
-      context += `${role}: ${message.content}\n`
+      // Clean content for context (remove markdown formatting)
+      const cleanContent = message.content
+        .replace(/```[\s\S]*?```/g, '[SQL Query]')
+        .replace(/\*\*/g, '')
+        .trim()
+      context += `${role}: ${cleanContent}\n`
     }
 
     context += `\nCurrent request: ${currentInput}\n`
 
     return context
-  }
-
-  const isLikelyExecuteResponse = (userInput: string): boolean => {
-    const executeKeywords = [
-      'yes', 'sure', 'ok', 'okay', 'go ahead', 'execute', 'run', 'do it',
-      'please', 'alright', 'fine', 'absolutely', 'definitely', 'certainly',
-      'of course', 'by all means', 'proceed', 'continue', 'start'
-    ]
-
-    const lowerInput = userInput.toLowerCase().trim()
-
-    // Check for exact matches
-    if (executeKeywords.includes(lowerInput)) {
-      return true
-    }
-
-    // Check for phrases that contain execute keywords
-    for (const keyword of executeKeywords) {
-      if (lowerInput.includes(keyword)) {
-        return true
-      }
-    }
-
-    // Check for affirmative patterns
-    const affirmativePatterns = [
-      /^(yes|sure|ok|okay)$/i,
-      /^(go ahead|execute it|run it|do it)$/i,
-      /^(please|alright|fine)$/i,
-      /^(absolutely|definitely|certainly)$/i,
-      /^(of course|by all means)$/i,
-      /^(proceed|continue|start)$/i
-    ]
-
-    for (const pattern of affirmativePatterns) {
-      if (pattern.test(lowerInput)) {
-        return true
-      }
-    }
-
-    return false
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -253,6 +221,26 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     localStorage.setItem('datapup-ai-provider', newProvider)
   }
 
+  const renderToolCall = (toolCall: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }) => {
+    const icon =
+      toolCall.status === 'running' ? '⏳' : toolCall.status === 'completed' ? '✅' : '❌'
+    const color =
+      toolCall.status === 'running' ? 'blue' : toolCall.status === 'completed' ? 'green' : 'red'
+
+    return (
+      <Flex align="center" gap="2">
+        <Text size="2">{icon}</Text>
+        <Text size="1" color={color as any}>
+          {toolCall.name}: {toolCall.description}
+        </Text>
+      </Flex>
+    )
+  }
+
   if (showApiKeySetup) {
     return (
       <Box className="ai-assistant">
@@ -272,7 +260,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
               <Flex align="center" gap="2">
                 <Text size="1">Provider:</Text>
                 <Select.Root value={provider} onValueChange={handleProviderChange}>
-                  <Select.Trigger />
+                  <Select.Trigger size="1" />
                   <Select.Content>
                     <Select.Item value="openai">OpenAI</Select.Item>
                     <Select.Item value="claude">Claude</Select.Item>
@@ -336,7 +324,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         </Flex>
         <Flex align="center" gap="2">
           <Select.Root value={provider} onValueChange={handleProviderChange}>
-            <Select.Trigger />
+            <Select.Trigger size="1" />
             <Select.Content>
               <Select.Item value="openai">OpenAI</Select.Item>
               <Select.Item value="claude">Claude</Select.Item>
@@ -361,15 +349,23 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         ) : (
           <Box p="3">
             {messages.map((message) => (
-              <Box key={message.id} className={`ai-message ai-message-${message.role}`} mb="3">
-                <Text size="1" color="gray" weight="medium" mb="1">
-                  {message.role === 'user' ? 'You' : 'Assistant'}
-                </Text>
-                <Card size="1">
-                  <Text size="2" style={{ whiteSpace: 'pre-wrap' }}>
-                    {message.content}
-                  </Text>
-                </Card>
+              <Box key={message.id} mb="3">
+                {message.role === 'tool' && message.toolCall ? (
+                  <Box className="ai-tool-message">{renderToolCall(message.toolCall)}</Box>
+                ) : (
+                  <Box className={`ai-message ai-message-${message.role}`}>
+                    <Text size="1" color="gray" weight="medium" mb="1">
+                      {message.role === 'user' ? 'You' : 'Assistant'}
+                    </Text>
+                    <Card size="1">
+                      <MessageRenderer
+                        content={message.content}
+                        sqlQuery={message.sqlQuery}
+                        onRunQuery={onExecuteQuery}
+                      />
+                    </Card>
+                  </Box>
+                )}
               </Box>
             ))}
             {isLoading && (

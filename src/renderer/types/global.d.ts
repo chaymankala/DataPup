@@ -35,10 +35,24 @@ declare global {
         updateLastUsed: (id: string) => Promise<{ success: boolean }>
       }
       naturalLanguageQuery: {
-        process: (request: any) => Promise<{ success: boolean; sqlQuery?: string; explanation?: string; queryResult?: any; error?: string }>
-        generateSQL: (request: any) => Promise<{ success: boolean; sqlQuery?: string; explanation?: string; error?: string }>
-        getSchema: (connectionId: string, database?: string) => Promise<{ success: boolean; schema?: any; formattedSchema?: string; error?: string }>
-        validateQuery: (sql: string, connectionId: string) => Promise<{ isValid: boolean; error?: string }>
+        process: (request: any) => Promise<{
+          success: boolean
+          sqlQuery?: string
+          explanation?: string
+          queryResult?: any
+          error?: string
+        }>
+        generateSQL: (
+          request: any
+        ) => Promise<{ success: boolean; sqlQuery?: string; explanation?: string; error?: string }>
+        getSchema: (
+          connectionId: string,
+          database?: string
+        ) => Promise<{ success: boolean; schema?: any; formattedSchema?: string; error?: string }>
+        validateQuery: (
+          sql: string,
+          connectionId: string
+        ) => Promise<{ isValid: boolean; error?: string }>
       }
     }
   }

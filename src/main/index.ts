@@ -44,28 +44,18 @@ function createWindow(): void {
 const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
-// Initialize natural language query processor with API key from secure storage
-let naturalLanguageQueryProcessor: NaturalLanguageQueryProcessor
-
-const initializeNaturalLanguageQueryProcessor = async () => {
-  try {
-    const geminiApiKey = secureStorage.get('ai-api-key-gemini')
-    naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager, geminiApiKey || undefined)
-  } catch (error) {
-    console.error('Error initializing natural language query processor:', error)
-    naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager)
-  }
-}
-
-// Initialize the processor
-initializeNaturalLanguageQueryProcessor()
+// Initialize natural language query processor
+const naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(
+  databaseManager,
+  secureStorage
+)
 
 app.whenReady().then(() => {
   // Set the app name for macOS menu bar
   app.setName('DataPup')
   electronApp.setAppUserModelId('com.datapup')
 
-    // Set dock icon for macOS
+  // Set dock icon for macOS
   if (process.platform === 'darwin' && app.dock) {
     const dockIconPath = is.dev
       ? join(__dirname, '../../build/icons/icon.png')
@@ -380,12 +370,6 @@ ipcMain.handle('secureStorage:get', async (_, key: string) => {
 ipcMain.handle('secureStorage:set', async (_, key: string, value: string) => {
   try {
     secureStorage.set(key, value)
-
-    // If this is a Gemini API key, reinitialize the processor
-    if (key === 'ai-api-key-gemini') {
-      await initializeNaturalLanguageQueryProcessor()
-    }
-
     return { success: true }
   } catch (error) {
     console.error('Error setting in secure storage:', error)

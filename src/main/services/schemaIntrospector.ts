@@ -29,7 +29,11 @@ class SchemaIntrospector {
 
       // Get schema for each table
       for (const tableName of tablesResult.tables) {
-        const schemaResult = await this.databaseManager.getTableSchema(connectionId, tableName, database)
+        const schemaResult = await this.databaseManager.getTableSchema(
+          connectionId,
+          tableName,
+          database
+        )
         if (schemaResult.success && schemaResult.schema) {
           const columns: ColumnSchema[] = schemaResult.schema.map((col: any) => ({
             name: col.name || col.field || col[0],
@@ -55,7 +59,12 @@ class SchemaIntrospector {
     }
   }
 
-  async getSampleData(connectionId: string, database: string, tableNames: string[], limit: number = 3): Promise<Record<string, any[]>> {
+  async getSampleData(
+    connectionId: string,
+    database: string,
+    tableNames: string[],
+    limit: number = 3
+  ): Promise<Record<string, any[]>> {
     const sampleData: Record<string, any[]> = {}
 
     try {
@@ -74,7 +83,11 @@ class SchemaIntrospector {
     return sampleData
   }
 
-  async getRelevantTables(connectionId: string, database: string, naturalLanguageQuery: string): Promise<string[]> {
+  async getRelevantTables(
+    connectionId: string,
+    database: string,
+    naturalLanguageQuery: string
+  ): Promise<string[]> {
     try {
       // Get all tables
       const tablesResult = await this.databaseManager.getTables(connectionId, database)
@@ -115,7 +128,8 @@ class SchemaIntrospector {
     for (const table of schema.tables) {
       formatted += `📋 Table: ${table.name}\n`
       for (const column of table.columns) {
-        const nullable = column.nullable !== undefined ? (column.nullable ? 'NULL' : 'NOT NULL') : ''
+        const nullable =
+          column.nullable !== undefined ? (column.nullable ? 'NULL' : 'NOT NULL') : ''
         const defaultValue = column.default ? ` DEFAULT ${column.default}` : ''
         formatted += `  ├─ ${column.name}: ${column.type}${nullable}${defaultValue}\n`
       }

@@ -51,12 +51,18 @@ declare global {
           explanation?: string
           error?: string
         }>
-        getSchema: (connectionId: string, database?: string) => Promise<{
+        getSchema: (
+          connectionId: string,
+          database?: string
+        ) => Promise<{
           success: boolean
           schema?: any
           error?: string
         }>
-        validateQuery: (sql: string, connectionId: string) => Promise<{
+        validateQuery: (
+          sql: string,
+          connectionId: string
+        ) => Promise<{
           success: boolean
           isValid: boolean
           error?: string

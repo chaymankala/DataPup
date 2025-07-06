@@ -16,8 +16,6 @@ export interface TableTab extends BaseTab {
   filters: TableFilter[]
 }
 
-
-
 export interface TableFilter {
   id: string
   column: string

@@ -100,7 +100,7 @@ export function QueryWorkspace({
   const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
 
-  const activeTab = tabs.find(tab => tab.id === activeTabId)
+  const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
@@ -186,7 +186,7 @@ export function QueryWorkspace({
       query: '',
       isDirty: false
     }
-    setTabs(prev => [...prev, newTab])
+    setTabs((prev) => [...prev, newTab])
     setActiveTabId(newTab.id)
   }, [tabs])
 
@@ -224,9 +224,7 @@ export function QueryWorkspace({
   )
 
   const handleUpdateTabContent = useCallback((tabId: string, updates: any) => {
-    setTabs(prev => prev.map(tab =>
-      tab.id === tabId ? { ...tab, ...updates } : tab
-    ))
+    setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)))
   }, [])
 
   // Open table tab from database explorer
@@ -240,11 +238,9 @@ export function QueryWorkspace({
       filters: [],
       isDirty: false
     }
-    setTabs(prev => [...prev, newTab])
+    setTabs((prev) => [...prev, newTab])
     setActiveTabId(newTab.id)
   }, [])
-
-
 
   // Expose openTableTab to parent component
   React.useEffect(() => {

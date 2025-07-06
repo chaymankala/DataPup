@@ -81,14 +81,13 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const buildQuery = () => {
     let query = `SELECT * FROM ${database}.${tableName}`
 
-
     const validFilters = filters.filter(
       (f) =>
         f.column &&
         f.operator &&
         (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
     )
-    
+
     if (validFilters.length > 0) {
       const whereClauses = validFilters.map((filter) => {
         if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
@@ -103,7 +102,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       })
       query += ` WHERE ${whereClauses.join(' AND ')}`
     }
-    
+
     query += ' LIMIT 1000'
     return query
   }
@@ -117,7 +116,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       const sessionId = uuidv4()
       const queryResult = await window.api.database.query(connectionId, query, sessionId)
       const executionTime = Date.now() - startTime
-      
+
       setResult({
         ...queryResult,
         executionTime
@@ -300,7 +299,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                 </>
               )}
             </Flex>
-            
+
             {result?.success && result.data && result.data.length > 0 && (
               <Flex gap="1">
                 <Button

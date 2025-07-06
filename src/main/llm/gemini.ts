@@ -1,52 +1,27 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import {
+  LLMInterface,
+  SQLGenerationRequest,
+  SQLGenerationResponse,
+  ValidationRequest,
+  ValidationResponse,
+  DatabaseSchema
+} from './interface'
 
-interface DatabaseSchema {
-  database: string
-  tables: TableSchema[]
-}
-
-interface TableSchema {
-  name: string
-  columns: ColumnSchema[]
-}
-
-interface ColumnSchema {
-  name: string
-  type: string
-  nullable?: boolean
-  default?: string
-}
-
-interface QueryGenerationRequest {
-  naturalLanguageQuery: string
-  databaseSchema: DatabaseSchema
-  databaseType: string
-  sampleData?: Record<string, any[]>
-  conversationContext?: string
-}
-
-interface QueryGenerationResponse {
-  success: boolean
-  sqlQuery?: string
-  explanation?: string
-  error?: string
-}
-
-class GeminiService {
+export class GeminiLLM implements LLMInterface {
   private genAI: GoogleGenerativeAI
   private model: any
 
-  constructor(apiKey?: string) {
-    const key = apiKey || process.env.GEMINI_API_KEY
-    if (!key) {
-      throw new Error('Gemini API key is required. Set GEMINI_API_KEY environment variable or pass it to the constructor.')
+  constructor(apiKey: string, modelName?: string) {
+    if (!apiKey) {
+      throw new Error('Gemini API key is required')
     }
 
-    this.genAI = new GoogleGenerativeAI(key)
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    this.genAI = new GoogleGenerativeAI(apiKey)
+    this.model = this.genAI.getGenerativeModel({ model: modelName || 'gemini-1.5-flash' })
   }
 
-  async generateSQLQuery(request: QueryGenerationRequest): Promise<QueryGenerationResponse> {
+  async generateSQL(request: SQLGenerationRequest): Promise<SQLGenerationResponse> {
     try {
       const prompt = this.buildPrompt(request)
 
@@ -71,22 +46,71 @@ class GeminiService {
     }
   }
 
-  private buildPrompt(request: QueryGenerationRequest): string {
-    const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } = request
+  async validateQuery(request: ValidationRequest): Promise<ValidationResponse> {
+    try {
+      const prompt = `You are a SQL validator. Please validate this ${request.databaseType.toUpperCase()} SQL query and return only "VALID" if it's syntactically correct, or a brief error message if it's not.
+
+Query: ${request.sql}
+
+Response:`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text().trim()
+
+      if (text.toUpperCase() === 'VALID') {
+        return { isValid: true }
+      } else {
+        return { isValid: false, error: text }
+      }
+    } catch (error) {
+      console.error('Error validating query:', error)
+      return { isValid: false, error: 'Failed to validate query' }
+    }
+  }
+
+  async generateExplanation(sql: string, databaseType: string): Promise<string> {
+    try {
+      const prompt = `Explain this ${databaseType.toUpperCase()} SQL query in simple terms:
+
+Query: ${sql}
+
+Provide a brief, clear explanation of what this query does.`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text().trim()
+    } catch (error) {
+      console.error('Error generating explanation:', error)
+      throw error
+    }
+  }
+
+  private buildPrompt(request: SQLGenerationRequest): string {
+    const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } =
+      request
 
     let prompt = `You are a SQL expert specializing in ${databaseType.toUpperCase()} databases.
 Your task is to convert natural language queries into accurate SQL statements.
 
-${conversationContext ? `CONVERSATION CONTEXT:
+${
+  conversationContext
+    ? `CONVERSATION CONTEXT:
 ${conversationContext}
 
-` : ''}DATABASE SCHEMA:
+`
+    : ''
+}DATABASE SCHEMA:
 ${this.formatSchema(databaseSchema)}
 
-${sampleData ? `SAMPLE DATA:
+${
+  sampleData
+    ? `SAMPLE DATA:
 ${this.formatSampleData(sampleData)}
 
-` : ''}NATURAL LANGUAGE QUERY:
+`
+    : ''
+}NATURAL LANGUAGE QUERY:
 "${naturalLanguageQuery}"
 
 Please generate a ${databaseType.toUpperCase()} SQL query that answers this question.
@@ -115,7 +139,8 @@ Explanation: [Brief explanation of what the query does]`
     for (const table of schema.tables) {
       formatted += `Table: ${table.name}\n`
       for (const column of table.columns) {
-        const nullable = column.nullable !== undefined ? (column.nullable ? 'NULL' : 'NOT NULL') : ''
+        const nullable =
+          column.nullable !== undefined ? (column.nullable ? 'NULL' : 'NOT NULL') : ''
         const defaultValue = column.default ? ` DEFAULT ${column.default}` : ''
         formatted += `  - ${column.name}: ${column.type}${nullable}${defaultValue}\n`
       }
@@ -138,7 +163,7 @@ Explanation: [Brief explanation of what the query does]`
         // Show first 3 rows as examples
         const sampleRows = rows.slice(0, 3)
         for (const row of sampleRows) {
-          const values = columns.map(col => row[col]).join(', ')
+          const values = columns.map((col) => row[col]).join(', ')
           formatted += `  [${values}]\n`
         }
         formatted += '\n'
@@ -193,19 +218,23 @@ Explanation: [Brief explanation of what the query does]`
         if (codeMatch) {
           const codeContent = codeMatch[1].trim()
           // Check if it looks like SQL
-          if (codeContent.toUpperCase().includes('SELECT') ||
-              codeContent.toUpperCase().includes('FROM') ||
-              codeContent.toUpperCase().includes('WHERE')) {
+          if (
+            codeContent.toUpperCase().includes('SELECT') ||
+            codeContent.toUpperCase().includes('FROM') ||
+            codeContent.toUpperCase().includes('WHERE')
+          ) {
             sql = codeContent
           }
         } else {
           // Fallback: try to find SQL-like content in lines
           for (const line of lines) {
             const trimmedLine = line.trim()
-            if (trimmedLine.toUpperCase().startsWith('SELECT') ||
-                trimmedLine.toUpperCase().startsWith('WITH') ||
-                trimmedLine.toUpperCase().startsWith('SHOW') ||
-                trimmedLine.toUpperCase().startsWith('DESCRIBE')) {
+            if (
+              trimmedLine.toUpperCase().startsWith('SELECT') ||
+              trimmedLine.toUpperCase().startsWith('WITH') ||
+              trimmedLine.toUpperCase().startsWith('SHOW') ||
+              trimmedLine.toUpperCase().startsWith('DESCRIBE')
+            ) {
               sql = trimmedLine
               break
             }
@@ -216,36 +245,4 @@ Explanation: [Brief explanation of what the query does]`
 
     return { sql, explanation }
   }
-
-  async validateQuery(sql: string, databaseType: string): Promise<{ isValid: boolean; error?: string }> {
-    try {
-      const prompt = `You are a SQL validator. Please validate this ${databaseType.toUpperCase()} SQL query and return only "VALID" if it's syntactically correct, or a brief error message if it's not.
-
-Query: ${sql}
-
-Response:`
-
-      const result = await this.model.generateContent(prompt)
-      const response = await result.response
-      const text = response.text().trim()
-
-      if (text.toUpperCase() === 'VALID') {
-        return { isValid: true }
-      } else {
-        return { isValid: false, error: text }
-      }
-    } catch (error) {
-      console.error('Error validating query:', error)
-      return { isValid: false, error: 'Failed to validate query' }
-    }
-  }
-}
-
-export { GeminiService }
-export type {
-  DatabaseSchema,
-  TableSchema,
-  ColumnSchema,
-  QueryGenerationRequest,
-  QueryGenerationResponse
 }
