@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Box, Flex, ScrollArea, Text } from '@radix-ui/themes'
+import { Box, Flex, ScrollArea, Text, Button } from '@radix-ui/themes'
 import { Badge, Skeleton } from '../ui'
 import './DatabaseExplorer.css'
+import { ReloadIcon } from '@radix-ui/react-icons'
 
 interface DatabaseExplorerProps {
   connectionId: string
@@ -270,7 +271,43 @@ export function DatabaseExplorer({
                   <Text size="1" className="expand-icon">
                     {db.expanded ? '▼' : '▶'}
                   </Text>
-                  <Text size="1">🗄️ {db.name}</Text>
+                  <Flex align="center" justify="between" style={{ flex: 1 }}>
+                    <Text size="1" style={{ fontWeight: 500 }}>
+                      {db.name}
+                    </Text>
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        // Refresh tables for this database
+                        const result = await window.api.database.getTables(connectionId, db.name)
+                        if (result.success && result.tables) {
+                          const objects = result.tables.map((tableName: string) => ({
+                            name: tableName,
+                            type: 'table' as const,
+                            expanded: false
+                          }))
+                          setDatabases((prev) =>
+                            prev.map((d) =>
+                              d.name === db.name
+                                ? { ...d, objects, expanded: true, loading: false }
+                                : d
+                            )
+                          )
+                        }
+                      }}
+                      aria-label={`Refresh ${db.name}`}
+                      style={{
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        transform: 'scale(0.8)'
+                      }}
+                    >
+                      <ReloadIcon />
+                    </Button>
+                  </Flex>
                 </Flex>
 
                 {db.loading && (
