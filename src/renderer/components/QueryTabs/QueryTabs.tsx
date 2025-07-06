@@ -70,7 +70,9 @@ export function QueryTabs({
                   />
                 ) : (
                   <>
-                    <Text size="1" style={{ flexShrink: 0 }}>{tab.type === 'table' ? '◆' : '▹'}</Text>
+                    <Text size="1" style={{ flexShrink: 0 }}>
+                      {tab.type === 'table' ? '◆' : '▹'}
+                    </Text>
                     <Text size="1" className="tab-title" onDoubleClick={() => handleStartEdit(tab)}>
                       {tab.title}
                       {tab.isDirty && <span className="dirty-indicator">•</span>}
