@@ -13,7 +13,8 @@ declare global {
         ) => Promise<{ success: boolean; message: string; error?: string }>
         query: (
           connectionId: string,
-          sql: string
+          sql: string,
+          sessionId?: string
         ) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
         getDatabases: (
           connectionId: string

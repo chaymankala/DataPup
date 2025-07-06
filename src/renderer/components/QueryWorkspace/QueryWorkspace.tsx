@@ -8,6 +8,7 @@ import { TableView } from '../TableView/TableView'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
 import './QueryWorkspace.css'
+import { v4 as uuidv4 } from 'uuid';
 
 interface QueryWorkspaceProps {
   connectionId: string
@@ -91,7 +92,7 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
   const [isExecuting, setIsExecuting] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const editorRef = useRef<any>(null)
-  
+
   const activeTab = tabs.find(tab => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
@@ -178,17 +179,17 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
 
   const handleCloseTab = useCallback((tabId: string) => {
     if (tabs.length === 1) return // Keep at least one tab
-    
+
     const tabIndex = tabs.findIndex(t => t.id === tabId)
     const newTabs = tabs.filter(t => t.id !== tabId)
     setTabs(newTabs)
-    
+
     // Update active tab if needed
     if (activeTabId === tabId) {
       const newActiveTab = tabIndex > 0 ? newTabs[tabIndex - 1] : newTabs[0]
       setActiveTabId(newActiveTab.id)
     }
-    
+
     // Clean up results
     const newResults = { ...results }
     delete newResults[tabId]
@@ -200,13 +201,13 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
   }, [])
 
   const handleUpdateTabTitle = useCallback((tabId: string, title: string) => {
-    setTabs(tabs.map(tab => 
+    setTabs(tabs.map(tab =>
       tab.id === tabId ? { ...tab, title } : tab
     ))
   }, [tabs])
 
   const handleUpdateTabContent = useCallback((tabId: string, updates: Partial<Tab>) => {
-    setTabs(tabs.map(tab => 
+    setTabs(tabs.map(tab =>
       tab.id === tabId ? { ...tab, ...updates } : tab
     ))
   }, [tabs])
@@ -235,9 +236,9 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
 
   const handleExecuteQuery = async () => {
     if (!activeTab || activeTab.type !== 'query') return
-    
+
     let queryToExecute = ''
-    
+
     // If there's selected text, use only that
     if (selectedText && selectedText.trim()) {
       queryToExecute = selectedText.trim()
@@ -246,22 +247,23 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
       const currentQuery = editorRef.current?.getValue() || activeTab.query
       queryToExecute = currentQuery.trim()
     }
-    
+
     if (!queryToExecute) return
 
     try {
       setIsExecuting(true)
       const startTime = Date.now()
 
-      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
+      const sessionId = uuidv4();
+      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim(), sessionId)
       const executionTime = Date.now() - startTime
-      
+
       const result: QueryExecutionResult = {
         ...queryResult,
         executionTime,
         rowCount: queryResult.data?.length || 0
       }
-      
+
       setResults({ ...results, [activeTab.id]: result })
     } catch (error) {
       console.error('Query execution error:', error)
@@ -392,9 +394,9 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
                     defaultLanguage="sql"
                     theme="data-pup"
                     value={activeTab.query}
-                    onChange={(value) => handleUpdateTabContent(activeTab.id, { 
-                      query: value || '', 
-                      isDirty: true 
+                    onChange={(value) => handleUpdateTabContent(activeTab.id, {
+                      query: value || '',
+                      isDirty: true
                     })}
                     onMount={handleEditorDidMount}
                     loading={<Skeleton height="100%" />}
@@ -449,7 +451,7 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
                       </>
                     )}
                   </Flex>
-                  
+
                   {activeResult?.success && activeResult.data && activeResult.data.length > 0 && (
                     <Flex gap="1">
                       <Button
@@ -507,7 +509,7 @@ export function QueryWorkspace({ connectionId, connectionName, onOpenTableTab }:
               connectionId={connectionId}
               database={activeTab.database}
               tableName={activeTab.tableName}
-              onFiltersChange={(filters) => 
+              onFiltersChange={(filters) =>
                 handleUpdateTabContent(activeTab.id, { filters })
               }
             />
