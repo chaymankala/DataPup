@@ -157,8 +157,18 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     onFiltersChange(newFilters)
   }
 
-  const formatResult = (data: any[]) => {
+  const formatResult = (data: any[], result?: QueryExecutionResult) => {
     if (!data || data.length === 0) {
+      // Check if this is a successful DDL/DML command
+      if (result?.isDDL || result?.isDML) {
+        return (
+          <Flex align="center" justify="center" height="100%" p="4">
+            <Text color="green" size="2" weight="medium">
+              ✓ {result.message}
+            </Text>
+          </Flex>
+        )
+      }
       return <Text color="gray">No data returned</Text>
     }
 
@@ -329,7 +339,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               </Flex>
             ) : result ? (
               result.success ? (
-                <Box className="result-table-container">{formatResult(result.data || [])}</Box>
+                <Box className="result-table-container">
+                  {formatResult(result.data || [], result)}
+                </Box>
               ) : (
                 <Flex align="center" justify="center" height="100%" p="4">
                   <Box className="error-message">

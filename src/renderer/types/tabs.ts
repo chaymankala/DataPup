@@ -43,4 +43,7 @@ export interface QueryExecutionResult {
   error?: string
   executionTime?: number
   rowCount?: number
+  isDDL?: boolean
+  isDML?: boolean
+  queryType?: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'DDL' | 'SYSTEM' | 'OTHER'
 }

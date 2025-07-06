@@ -2,7 +2,12 @@ import {
   DatabaseManagerInterface,
   DatabaseConfig,
   ConnectionResult,
-  QueryResult
+  QueryResult,
+  InsertResult,
+  UpdateResult,
+  DeleteResult,
+  TableSchema,
+  DatabaseCapabilities
 } from './interface'
 import { DatabaseManagerFactory } from './factory'
 
@@ -182,6 +187,12 @@ class DatabaseManager {
     return this.activeConnection.manager.isConnected(connectionId)
   }
 
+  isReadOnly(connectionId: string): boolean {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) return false
+
+    return this.activeConnection.manager.isReadOnly(connectionId)
+  }
+
   getConnectionInfo(
     connectionId: string
   ): { type: string; host: string; port: number; database: string } | null {
@@ -218,6 +229,143 @@ class DatabaseManager {
 
   getSupportedDatabaseTypes(): string[] {
     return this.factory.getSupportedTypes()
+  }
+
+  getCapabilities(): DatabaseCapabilities {
+    if (!this.activeConnection) {
+      // Return default capabilities when no connection
+      return {
+        supportsTransactions: false,
+        supportsBatchOperations: false,
+        supportsReturning: false,
+        supportsUpsert: false,
+        supportsSchemas: true,
+        requiresPrimaryKey: false
+      }
+    }
+
+    return this.activeConnection.manager.getCapabilities()
+  }
+
+  async insertRow(
+    connectionId: string,
+    table: string,
+    data: Record<string, any>,
+    database?: string
+  ): Promise<InsertResult> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found',
+          error: 'No active connection'
+        }
+      }
+
+      return await this.activeConnection.manager.insertRow(connectionId, table, data, database)
+    } catch (error) {
+      console.error('Insert error:', error)
+      return {
+        success: false,
+        message: 'Insert operation failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  async updateRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    updates: Record<string, any>,
+    database?: string
+  ): Promise<UpdateResult> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found',
+          error: 'No active connection',
+          affectedRows: 0
+        }
+      }
+
+      return await this.activeConnection.manager.updateRow(
+        connectionId,
+        table,
+        primaryKey,
+        updates,
+        database
+      )
+    } catch (error) {
+      console.error('Update error:', error)
+      return {
+        success: false,
+        message: 'Update operation failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        affectedRows: 0
+      }
+    }
+  }
+
+  async deleteRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    database?: string
+  ): Promise<DeleteResult> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found',
+          error: 'No active connection',
+          affectedRows: 0
+        }
+      }
+
+      return await this.activeConnection.manager.deleteRow(
+        connectionId,
+        table,
+        primaryKey,
+        database
+      )
+    } catch (error) {
+      console.error('Delete error:', error)
+      return {
+        success: false,
+        message: 'Delete operation failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        affectedRows: 0
+      }
+    }
+  }
+
+  async getTableFullSchema(
+    connectionId: string,
+    tableName: string,
+    database?: string
+  ): Promise<{ success: boolean; schema?: TableSchema; message: string }> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found'
+        }
+      }
+
+      return await this.activeConnection.manager.getTableFullSchema(
+        connectionId,
+        tableName,
+        database
+      )
+    } catch (error) {
+      console.error('Get table full schema error:', error)
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get table schema'
+      }
+    }
   }
 
   // Clean up the active connection
