@@ -102,6 +102,7 @@ export function QueryWorkspace({
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
+  console.log(activeResult)
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor
@@ -269,7 +270,6 @@ export function QueryWorkspace({
 
       setResults({ ...results, [activeTab.id]: result })
     } catch (error) {
-      console.error('Query execution error:', error)
       setResults({
         ...results,
         [activeTab.id]: {
@@ -324,8 +324,18 @@ export function QueryWorkspace({
     }
   }
 
-  const formatResult = (data: any[]) => {
+  const formatResult = (data: any[], message?: string) => {
     if (!data || data.length === 0) {
+      // Check if this is a successful DDL/DML command
+      if (message && message.toLowerCase().includes('command executed successfully')) {
+        return (
+          <Flex align="center" justify="center" height="100%" p="4">
+            <Text color="green" size="2" weight="medium">
+              ✓ {message}
+            </Text>
+          </Flex>
+        )
+      }
       return <Text color="gray">No data returned</Text>
     }
 
@@ -558,7 +568,7 @@ export function QueryWorkspace({
                   {activeResult ? (
                     activeResult.success ? (
                       <Box className="result-table-container">
-                        {formatResult(activeResult.data || [])}
+                        {formatResult(activeResult.data || [], activeResult.message)}
                       </Box>
                     ) : (
                       <Flex align="center" justify="center" height="100%" p="4">

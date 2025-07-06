@@ -132,35 +132,58 @@ class ClickHouseManager implements DatabaseManagerInterface {
       // Update last used timestamp
       connection.lastUsed = new Date()
 
-      // Execute the query with correct format
+      // Determine if this is a DDL query
+      const trimmedSql = sql.trim()
+      const isDDL =
+        /^(CREATE|DROP|ALTER|TRUNCATE|RENAME|ATTACH|DETACH|OPTIMIZE|INSERT|UPDATE|DELETE)\s/i.test(
+          trimmedSql
+        )
+
       console.log('Executing ClickHouse query:', sql)
-      const result = await connection.client.query({
-        query: sql,
-        session_id: connectionId
-      })
+      console.log('Query type:', isDDL ? 'DDL/DML' : 'DQL')
 
-      // Convert result to plain JavaScript object for IPC serialization
-      const rawData = await result.json()
-      console.log('ClickHouse raw result:', rawData)
-      console.log('ClickHouse result type:', typeof rawData)
+      if (isDDL) {
+        // Use command() for DDL/DML queries that don't return data
+        await connection.client.command({
+          query: sql,
+          session_id: connectionId
+        })
 
-      // Extract the actual data rows from the ClickHouse response
-      let data = []
-      if (rawData && typeof rawData === 'object') {
-        if (rawData.data && Array.isArray(rawData.data)) {
-          data = rawData.data
-        } else if (Array.isArray(rawData)) {
-          data = rawData
+        return {
+          success: true,
+          data: [],
+          message: 'Command executed successfully.'
         }
-      }
+      } else {
+        // Use query() for SELECT and data-returning queries
+        const result = await connection.client.query({
+          query: sql,
+          session_id: connectionId
+        })
 
-      console.log('Extracted data:', data)
-      console.log('Data length:', data.length)
+        // Convert result to plain JavaScript object for IPC serialization
+        const rawData = await result.json()
+        console.log('ClickHouse raw result:', rawData)
+        console.log('ClickHouse result type:', typeof rawData)
 
-      return {
-        success: true,
-        data: data,
-        message: `Query executed successfully. Returned ${data.length} rows.`
+        // Extract the actual data rows from the ClickHouse response
+        let data = []
+        if (rawData && typeof rawData === 'object') {
+          if (rawData.data && Array.isArray(rawData.data)) {
+            data = rawData.data
+          } else if (Array.isArray(rawData)) {
+            data = rawData
+          }
+        }
+
+        console.log('Extracted data:', data)
+        console.log('Data length:', data.length)
+
+        return {
+          success: true,
+          data: data,
+          message: `Query executed successfully. Returned ${data.length} rows.`
+        }
       }
     } catch (error) {
       console.error('ClickHouse query error:', error)
