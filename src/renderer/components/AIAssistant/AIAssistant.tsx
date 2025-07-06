@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
+import { MessageRenderer } from './MessageRenderer'
 import './AIAssistant.css'
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool'
   content: string
   timestamp: Date
+  sqlQuery?: string
+  toolCall?: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }
 }
 
 interface AIContext {
@@ -15,6 +22,8 @@ interface AIContext {
   results?: any[]
   filters?: any[]
   error?: string
+  connectionId?: string
+  database?: string
 }
 
 interface AIAssistantProps {
@@ -32,18 +41,27 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   )
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // Check for API key on mount and when provider changes
   useEffect(() => {
-    const savedKey = localStorage.getItem(`datapup-ai-api-key-${provider}`)
-    if (savedKey) {
-      setApiKey(savedKey)
-      setShowApiKeySetup(false)
-    } else {
-      setShowApiKeySetup(true)
+    const checkApiKey = async () => {
+      try {
+        const result = await (window.api as any).secureStorage.get(`ai-api-key-${provider}`)
+        if (result.success && result.value) {
+          setApiKey(result.value)
+          setShowApiKeySetup(false)
+        } else {
+          setShowApiKeySetup(true)
+        }
+      } catch (error) {
+        console.error('Error checking API key:', error)
+        setShowApiKeySetup(true)
+      }
     }
+    checkApiKey()
   }, [provider])
 
   // Auto-scroll to bottom when new messages arrive
@@ -53,33 +71,127 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     }
   }, [messages])
 
+  const addToolMessage = (toolCall: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }) => {
+    const toolMessage: Message = {
+      id: `tool-${Date.now()}`,
+      role: 'tool',
+      content: '',
+      timestamp: new Date(),
+      toolCall
+    }
+    setMessages((prev) => [...prev, toolMessage])
+    return toolMessage.id
+  }
+
+  const updateToolMessage = (messageId: string, status: 'completed' | 'failed') => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId && msg.toolCall
+          ? { ...msg, toolCall: { ...msg.toolCall, status } }
+          : msg
+      )
+    )
+  }
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
+
+    const userInput = inputValue.trim()
+    setInputValue('')
+    setIsLoading(true)
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
+      content: userInput,
       timestamp: new Date()
     }
 
     setMessages((prev) => [...prev, userMessage])
-    setInputValue('')
-    setIsLoading(true)
 
-    // Placeholder for AI response
-    setTimeout(() => {
+    try {
+      // Build conversation context
+      const conversationContext = buildConversationContext(messages, userInput)
+
+      // Use natural language query processor
+      const result = await (window.api as any).naturalLanguageQuery.generateSQL({
+        naturalLanguageQuery: userInput,
+        connectionId: context.connectionId || '',
+        database: context.database || undefined,
+        conversationContext: conversationContext,
+        provider: provider
+      })
+
+      // Display tool calls if they exist
+      if (result.toolCalls) {
+        for (const toolCall of result.toolCalls) {
+          const toolMessageId = addToolMessage(toolCall)
+          // Update status after a short delay for completed/failed states
+          if (toolCall.status !== 'running') {
+            setTimeout(() => updateToolMessage(toolMessageId, toolCall.status), 100)
+          }
+        }
+      }
+
+      let response: string
+      let sqlQuery: string | undefined
+
+      if (result.success) {
+        sqlQuery = result.sqlQuery
+        response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
+
+        // If there's an onExecuteQuery callback, offer to execute the query
+        if (onExecuteQuery) {
+          response += '\n\n**Would you like me to execute this query?**'
+        }
+      } else {
+        response = `Error: ${result.error}`
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `This is a placeholder response from ${
-          provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'
-        }. The actual AI integration will be implemented by your collaborator.`,
-        timestamp: new Date()
+        content: response,
+        timestamp: new Date(),
+        sqlQuery: sqlQuery
       }
       setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+        timestamp: new Date()
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
+  }
+
+  const buildConversationContext = (messages: Message[], currentInput: string): string => {
+    // Build context from recent messages (last 10 messages to avoid token limits)
+    const recentMessages = messages.filter((m) => m.role !== 'tool').slice(-10)
+
+    let context = 'Previous conversation:\n'
+
+    for (const message of recentMessages) {
+      const role = message.role === 'user' ? 'User' : 'Assistant'
+      // Clean content for context (remove markdown formatting)
+      const cleanContent = message.content
+        .replace(/```[\s\S]*?```/g, '[SQL Query]')
+        .replace(/\*\*/g, '')
+        .trim()
+      context += `${role}: ${cleanContent}\n`
+    }
+
+    context += `\nCurrent request: ${currentInput}\n`
+
+    return context
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -89,15 +201,44 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     }
   }
 
-  const handleApiKeySubmit = (key: string) => {
-    localStorage.setItem(`datapup-ai-api-key-${provider}`, key)
-    setApiKey(key)
-    setShowApiKeySetup(false)
+  const handleApiKeySubmit = async (key: string) => {
+    try {
+      const result = await (window.api as any).secureStorage.set(`ai-api-key-${provider}`, key)
+      if (result.success) {
+        setApiKey(key)
+        setShowApiKeySetup(false)
+        setApiKeyInput('')
+      } else {
+        console.error('Failed to save API key')
+      }
+    } catch (error) {
+      console.error('Error saving API key:', error)
+    }
   }
 
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider)
     localStorage.setItem('datapup-ai-provider', newProvider)
+  }
+
+  const renderToolCall = (toolCall: {
+    name: string
+    description: string
+    status: 'running' | 'completed' | 'failed'
+  }) => {
+    const icon =
+      toolCall.status === 'running' ? '⏳' : toolCall.status === 'completed' ? '✅' : '❌'
+    const color =
+      toolCall.status === 'running' ? 'blue' : toolCall.status === 'completed' ? 'green' : 'red'
+
+    return (
+      <Flex align="center" gap="2">
+        <Text size="2">{icon}</Text>
+        <Text size="1" color={color as any}>
+          {toolCall.name}: {toolCall.description}
+        </Text>
+      </Flex>
+    )
   }
 
   if (showApiKeySetup) {
@@ -133,13 +274,14 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 key:
               </Text>
               <TextArea
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API key...`}
                 size="1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    const value = (e.target as HTMLTextAreaElement).value
-                    if (value) handleApiKeySubmit(value)
+                    if (apiKeyInput.trim()) handleApiKeySubmit(apiKeyInput.trim())
                   }
                 }}
               />
@@ -147,9 +289,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 <Button
                   size="1"
                   onClick={() => {
-                    const input = document.querySelector('textarea')
-                    if (input?.value) handleApiKeySubmit(input.value)
+                    if (apiKeyInput.trim()) handleApiKeySubmit(apiKeyInput.trim())
                   }}
+                  disabled={!apiKeyInput.trim()}
                 >
                   Save API Key
                 </Button>
@@ -207,15 +349,23 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         ) : (
           <Box p="3">
             {messages.map((message) => (
-              <Box key={message.id} className={`ai-message ai-message-${message.role}`} mb="3">
-                <Text size="1" color="gray" weight="medium" mb="1">
-                  {message.role === 'user' ? 'You' : 'Assistant'}
-                </Text>
-                <Card size="1">
-                  <Text size="2" style={{ whiteSpace: 'pre-wrap' }}>
-                    {message.content}
-                  </Text>
-                </Card>
+              <Box key={message.id} mb="3">
+                {message.role === 'tool' && message.toolCall ? (
+                  <Box className="ai-tool-message">{renderToolCall(message.toolCall)}</Box>
+                ) : (
+                  <Box className={`ai-message ai-message-${message.role}`}>
+                    <Text size="1" color="gray" weight="medium" mb="1">
+                      {message.role === 'user' ? 'You' : 'Assistant'}
+                    </Text>
+                    <Card size="1">
+                      <MessageRenderer
+                        content={message.content}
+                        sqlQuery={message.sqlQuery}
+                        onRunQuery={onExecuteQuery}
+                      />
+                    </Card>
+                  </Box>
+                )}
               </Box>
             ))}
             {isLoading && (
@@ -253,9 +403,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             style={{ paddingRight: '36px', width: '100%' }}
             disabled={isLoading}
           />
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={!inputValue.trim() || isLoading} 
+          <Button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
             size="1"
             variant="ghost"
             className="ai-send-button"

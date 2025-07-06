@@ -37,6 +37,42 @@ declare global {
         delete: (id: string) => Promise<{ success: boolean }>
         updateLastUsed: (id: string) => Promise<{ success: boolean }>
       }
+      naturalLanguageQuery: {
+        process: (request: any) => Promise<{
+          success: boolean
+          sqlQuery?: string
+          explanation?: string
+          queryResult?: any
+          error?: string
+        }>
+        generateSQL: (request: any) => Promise<{
+          success: boolean
+          sql?: string
+          explanation?: string
+          error?: string
+        }>
+        getSchema: (
+          connectionId: string,
+          database?: string
+        ) => Promise<{
+          success: boolean
+          schema?: any
+          error?: string
+        }>
+        validateQuery: (
+          sql: string,
+          connectionId: string
+        ) => Promise<{
+          success: boolean
+          isValid: boolean
+          error?: string
+        }>
+      }
+      secureStorage: {
+        get: (key: string) => Promise<{ success: boolean; value: string | null }>
+        set: (key: string, value: string) => Promise<{ success: boolean }>
+        delete: (key: string) => Promise<{ success: boolean }>
+      }
     }
   }
 }

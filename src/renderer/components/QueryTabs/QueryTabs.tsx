@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Flex, Text, IconButton } from '@radix-ui/themes'
+import { Box, Flex, Text, IconButton, DropdownMenu } from '@radix-ui/themes'
 import { Button } from '../ui'
 import { Tab } from '../../types/tabs'
 import './QueryTabs.css'

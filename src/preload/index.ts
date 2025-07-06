@@ -22,6 +22,19 @@ const api = {
     getById: (id: string) => ipcRenderer.invoke('connections:getById', id),
     delete: (id: string) => ipcRenderer.invoke('connections:delete', id),
     updateLastUsed: (id: string) => ipcRenderer.invoke('connections:updateLastUsed', id)
+  },
+  naturalLanguageQuery: {
+    process: (request: any) => ipcRenderer.invoke('nlq:process', request),
+    generateSQL: (request: any) => ipcRenderer.invoke('nlq:generateSQL', request),
+    getSchema: (connectionId: string, database?: string) =>
+      ipcRenderer.invoke('nlq:getSchema', connectionId, database),
+    validateQuery: (sql: string, connectionId: string) =>
+      ipcRenderer.invoke('nlq:validateQuery', sql, connectionId)
+  },
+  secureStorage: {
+    get: (key: string) => ipcRenderer.invoke('secureStorage:get', key),
+    set: (key: string, value: string) => ipcRenderer.invoke('secureStorage:set', key, value),
+    delete: (key: string) => ipcRenderer.invoke('secureStorage:delete', key)
   }
 }
 

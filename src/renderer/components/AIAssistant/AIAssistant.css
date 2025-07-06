@@ -124,6 +124,30 @@
   }
 }
 
+/* Tool call messages */
+.ai-tool-message {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+/* Markdown content styles */
+.ai-message pre {
+  margin: 0;
+}
+
+.ai-message code {
+  background: var(--gray-3);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.ai-message pre code {
+  background: none;
+  padding: 0;
+}
+
 @media (max-width: 800px) {
   .ai-message-user,
   .ai-message-assistant {

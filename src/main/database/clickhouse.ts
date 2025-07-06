@@ -136,7 +136,7 @@ class ClickHouseManager implements DatabaseManagerInterface {
       console.log('Executing ClickHouse query:', sql)
       const result = await connection.client.query({
         query: sql,
-        session_id: sessionId || connectionId
+        session_id: connectionId
       })
 
       // Convert result to plain JavaScript object for IPC serialization
