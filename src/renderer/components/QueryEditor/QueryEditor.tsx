@@ -3,7 +3,6 @@ import { Button, Flex, Text, Card, Box } from '@radix-ui/themes'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { Skeleton } from '../ui'
 import './QueryEditor.css'
-import { v4 as uuidv4 } from 'uuid';
 
 interface QueryEditorProps {
   connectionId: string
@@ -125,8 +124,7 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
       setIsExecuting(true)
       setResult(null)
 
-      const sessionId = uuidv4();
-      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim(), sessionId)
+      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
       setResult(queryResult)
     } catch (error) {
       console.error('Query execution error:', error)
