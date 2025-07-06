@@ -28,6 +28,7 @@ declare global {
           database?: string
         ) => Promise<{ success: boolean; schema?: any[]; message: string; error?: string }>
         isConnected: (connectionId: string) => Promise<{ success: boolean; isConnected: boolean }>
+        isReadOnly: (connectionId: string) => Promise<{ success: boolean; isReadOnly: boolean }>
         getSupportedTypes: () => Promise<{ success: boolean; types: string[] }>
         getAllConnections: () => Promise<{ success: boolean; connections: string[] }>
       }

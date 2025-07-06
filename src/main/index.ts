@@ -268,6 +268,16 @@ ipcMain.handle('db:isConnected', async (_, connectionId: string) => {
   }
 })
 
+ipcMain.handle('db:isReadOnly', async (_, connectionId: string) => {
+  try {
+    const isReadOnly = databaseManager.isReadOnly(connectionId)
+    return { success: true, isReadOnly }
+  } catch (error) {
+    console.error('Error checking read-only status:', error)
+    return { success: false, isReadOnly: false }
+  }
+})
+
 ipcMain.handle('db:getSupportedTypes', async () => {
   try {
     const supportedTypes = databaseManager.getSupportedDatabaseTypes()
@@ -386,3 +396,91 @@ ipcMain.handle('secureStorage:delete', async (_, key: string) => {
     return { success: false }
   }
 })
+
+// IPC handlers for CRUD operations
+ipcMain.handle(
+  'db:getTableFullSchema',
+  async (_, connectionId: string, tableName: string, database?: string) => {
+    try {
+      const result = await databaseManager.getTableFullSchema(connectionId, tableName, database)
+      return result
+    } catch (error) {
+      console.error('Error getting table full schema:', error)
+      return {
+        success: false,
+        message: 'Failed to get table full schema',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+)
+
+ipcMain.handle(
+  'db:insertRow',
+  async (_, connectionId: string, table: string, data: Record<string, any>, database?: string) => {
+    try {
+      const result = await databaseManager.insertRow(connectionId, table, data, database)
+      return result
+    } catch (error) {
+      console.error('Error inserting row:', error)
+      return {
+        success: false,
+        message: 'Failed to insert row',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+)
+
+ipcMain.handle(
+  'db:updateRow',
+  async (
+    _,
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    updates: Record<string, any>,
+    database?: string
+  ) => {
+    try {
+      const result = await databaseManager.updateRow(
+        connectionId,
+        table,
+        primaryKey,
+        updates,
+        database
+      )
+      return result
+    } catch (error) {
+      console.error('Error updating row:', error)
+      return {
+        success: false,
+        message: 'Failed to update row',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+)
+
+ipcMain.handle(
+  'db:deleteRow',
+  async (
+    _,
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    database?: string
+  ) => {
+    try {
+      const result = await databaseManager.deleteRow(connectionId, table, primaryKey, database)
+      return result
+    } catch (error) {
+      console.error('Error deleting row:', error)
+      return {
+        success: false,
+        message: 'Failed to delete row',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+)
