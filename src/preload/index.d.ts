@@ -62,6 +62,11 @@ declare global {
           error?: string
         }>
       }
+      secureStorage: {
+        get: (key: string) => Promise<{ success: boolean; value: string | null }>
+        set: (key: string, value: string) => Promise<{ success: boolean }>
+        delete: (key: string) => Promise<{ success: boolean }>
+      }
     }
   }
 }

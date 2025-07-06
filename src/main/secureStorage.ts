@@ -184,6 +184,65 @@ class SecureStorage {
       return false
     }
   }
+
+  // Generic key-value storage methods
+  private getGenericStoragePath(): string {
+    return join(app.getPath('userData'), 'generic-storage.json')
+  }
+
+  private loadGenericStorage(): Record<string, string> {
+    try {
+      const path = this.getGenericStoragePath()
+      if (!existsSync(path)) {
+        return {}
+      }
+      const data = readFileSync(path, 'utf8')
+      const encryptedData = JSON.parse(data)
+      const decryptedData: Record<string, string> = {}
+
+      for (const [key, encryptedValue] of Object.entries(encryptedData)) {
+        decryptedData[key] = this.decrypt(encryptedValue as string)
+      }
+
+      return decryptedData
+    } catch (error) {
+      console.error('Error loading generic storage:', error)
+      return {}
+    }
+  }
+
+  private saveGenericStorage(data: Record<string, string>): void {
+    try {
+      const path = this.getGenericStoragePath()
+      const encryptedData: Record<string, string> = {}
+
+      for (const [key, value] of Object.entries(data)) {
+        encryptedData[key] = this.encrypt(value)
+      }
+
+      writeFileSync(path, JSON.stringify(encryptedData, null, 2), 'utf8')
+    } catch (error) {
+      console.error('Error saving generic storage:', error)
+      throw error
+    }
+  }
+
+  get(key: string): string | null {
+    const storage = this.loadGenericStorage()
+    return storage[key] || null
+  }
+
+  set(key: string, value: string): void {
+    const storage = this.loadGenericStorage()
+    storage[key] = value
+    this.saveGenericStorage(storage)
+  }
+
+  delete(key: string): void {
+    const storage = this.loadGenericStorage()
+    delete storage[key]
+    this.saveGenericStorage(storage)
+  }
 }
 
 export { SecureStorage }

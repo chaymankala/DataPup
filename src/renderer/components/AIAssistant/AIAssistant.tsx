@@ -34,18 +34,27 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   )
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // Check for API key on mount and when provider changes
   useEffect(() => {
-    const savedKey = localStorage.getItem(`datapup-ai-api-key-${provider}`)
-    if (savedKey) {
-      setApiKey(savedKey)
-      setShowApiKeySetup(false)
-    } else {
-      setShowApiKeySetup(true)
+    const checkApiKey = async () => {
+      try {
+        const savedKey = await (window.api as any).secureStorage.get(`ai-api-key-${provider}`)
+        if (savedKey) {
+          setApiKey(savedKey)
+          setShowApiKeySetup(false)
+        } else {
+          setShowApiKeySetup(true)
+        }
+      } catch (error) {
+        console.error('Error checking API key:', error)
+        setShowApiKeySetup(true)
+      }
     }
+    checkApiKey()
   }, [provider])
 
   // Auto-scroll to bottom when new messages arrive
@@ -74,8 +83,8 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
 
       if (provider === 'gemini') {
         // Use the natural language query processor for Gemini
-        const result = await window.api.naturalLanguageQuery.generateSQL({
-          query: inputValue.trim(),
+        const result = await (window.api as any).naturalLanguageQuery.generateSQL({
+          naturalLanguageQuery: inputValue.trim(),
           connectionId: context.connectionId || '',
           database: context.database || undefined
         })
@@ -123,10 +132,19 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     }
   }
 
-  const handleApiKeySubmit = (key: string) => {
-    localStorage.setItem(`datapup-ai-api-key-${provider}`, key)
-    setApiKey(key)
-    setShowApiKeySetup(false)
+  const handleApiKeySubmit = async (key: string) => {
+    try {
+      const result = await (window.api as any).secureStorage.set(`ai-api-key-${provider}`, key)
+      if (result.success) {
+        setApiKey(key)
+        setShowApiKeySetup(false)
+        setApiKeyInput('')
+      } else {
+        console.error('Failed to save API key')
+      }
+    } catch (error) {
+      console.error('Error saving API key:', error)
+    }
   }
 
   const handleProviderChange = (newProvider: string) => {
@@ -167,13 +185,14 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 key:
               </Text>
               <TextArea
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API key...`}
                 size="1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    const value = (e.target as HTMLTextAreaElement).value
-                    if (value) handleApiKeySubmit(value)
+                    if (apiKeyInput.trim()) handleApiKeySubmit(apiKeyInput.trim())
                   }
                 }}
               />
@@ -181,9 +200,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 <Button
                   size="1"
                   onClick={() => {
-                    const input = document.querySelector('textarea')
-                    if (input?.value) handleApiKeySubmit(input.value)
+                    if (apiKeyInput.trim()) handleApiKeySubmit(apiKeyInput.trim())
                   }}
+                  disabled={!apiKeyInput.trim()}
                 >
                   Save API Key
                 </Button>

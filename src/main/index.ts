@@ -44,8 +44,21 @@ function createWindow(): void {
 const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
-// Initialize natural language query processor
-const naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager)
+// Initialize natural language query processor with API key from secure storage
+let naturalLanguageQueryProcessor: NaturalLanguageQueryProcessor
+
+const initializeNaturalLanguageQueryProcessor = async () => {
+  try {
+    const geminiApiKey = secureStorage.get('ai-api-key-gemini')
+    naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager, geminiApiKey || undefined)
+  } catch (error) {
+    console.error('Error initializing natural language query processor:', error)
+    naturalLanguageQueryProcessor = new NaturalLanguageQueryProcessor(databaseManager)
+  }
+}
+
+// Initialize the processor
+initializeNaturalLanguageQueryProcessor()
 
 app.whenReady().then(() => {
   // Set the app name for macOS menu bar
@@ -350,5 +363,42 @@ ipcMain.handle('nlq:validateQuery', async (_, sql: string, connectionId: string)
       isValid: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     }
+  }
+})
+
+// IPC handlers for secure storage
+ipcMain.handle('secureStorage:get', async (_, key: string) => {
+  try {
+    const value = secureStorage.get(key)
+    return { success: true, value }
+  } catch (error) {
+    console.error('Error getting from secure storage:', error)
+    return { success: false, value: null }
+  }
+})
+
+ipcMain.handle('secureStorage:set', async (_, key: string, value: string) => {
+  try {
+    secureStorage.set(key, value)
+
+    // If this is a Gemini API key, reinitialize the processor
+    if (key === 'ai-api-key-gemini') {
+      await initializeNaturalLanguageQueryProcessor()
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error setting in secure storage:', error)
+    return { success: false }
+  }
+})
+
+ipcMain.handle('secureStorage:delete', async (_, key: string) => {
+  try {
+    secureStorage.delete(key)
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting from secure storage:', error)
+    return { success: false }
   }
 })
