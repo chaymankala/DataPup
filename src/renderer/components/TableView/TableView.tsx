@@ -253,7 +253,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         tableName,
         database
       )
-      
+
       if (!schemaResult.success || !schemaResult.schema) {
         alert('Failed to get table schema')
         return
@@ -264,7 +264,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       // Group changes by row
       const changesByRow = new Map<number, Record<string, any>>()
       const newRows: number[] = []
-      
+
       editedCells.forEach((value, key) => {
         const [rowIndex, column] = key.split('-')
         const index = parseInt(rowIndex)
@@ -277,19 +277,18 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
       // Process each row
       const promises: Promise<any>[] = []
-      
+
       for (const [rowIndex, changes] of changesByRow.entries()) {
         const originalRow = result?.data?.[rowIndex]
-        
+
         // Check if this is a new row (all fields are being edited)
-        const isNewRow = Object.keys(changes).length === columns.length && 
-                        columns.every(col => editedCells.has(`${rowIndex}-${col.name}`))
-        
+        const isNewRow =
+          Object.keys(changes).length === columns.length &&
+          columns.every((col) => editedCells.has(`${rowIndex}-${col.name}`))
+
         if (isNewRow) {
           // Insert new row
-          promises.push(
-            window.api.database.insertRow(connectionId, tableName, changes, database)
-          )
+          promises.push(window.api.database.insertRow(connectionId, tableName, changes, database))
         } else if (originalRow) {
           // Update existing row
           if (primaryKeys.length === 0) {
@@ -298,7 +297,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           }
 
           const primaryKeyValues: Record<string, any> = {}
-          primaryKeys.forEach(pk => {
+          primaryKeys.forEach((pk) => {
             primaryKeyValues[pk] = originalRow[pk]
           })
 
@@ -315,8 +314,8 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       }
 
       const results = await Promise.all(promises)
-      const failures = results.filter(r => !r.success)
-      
+      const failures = results.filter((r) => !r.success)
+
       if (failures.length > 0) {
         alert(`Failed to save ${failures.length} change(s)`)
       } else {
@@ -328,7 +327,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       await executeQuery()
     } catch (error) {
       console.error('Error applying changes:', error)
-      alert('Failed to apply changes: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      alert(
+        'Failed to apply changes: ' + (error instanceof Error ? error.message : 'Unknown error')
+      )
     } finally {
       setIsLoading(false)
     }
@@ -344,14 +345,14 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
     try {
       setIsLoading(true)
-      
+
       // Get primary key information for the table
       const schemaResult = await window.api.database.getTableFullSchema(
         connectionId,
         tableName,
         database
       )
-      
+
       if (!schemaResult.success || !schemaResult.schema) {
         alert('Failed to get table schema for delete operation')
         return
@@ -367,22 +368,17 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       const deletePromises = Array.from(selectedRows).map(async (rowIndex) => {
         const row = result.data![rowIndex]
         const primaryKeyValues: Record<string, any> = {}
-        
-        primaryKeys.forEach(pk => {
+
+        primaryKeys.forEach((pk) => {
           primaryKeyValues[pk] = row[pk]
         })
 
-        return window.api.database.deleteRow(
-          connectionId,
-          tableName,
-          primaryKeyValues,
-          database
-        )
+        return window.api.database.deleteRow(connectionId, tableName, primaryKeyValues, database)
       })
 
       const results = await Promise.all(deletePromises)
-      const failedDeletes = results.filter(r => !r.success)
-      
+      const failedDeletes = results.filter((r) => !r.success)
+
       if (failedDeletes.length > 0) {
         alert(`Failed to delete ${failedDeletes.length} row(s)`)
       } else {
@@ -405,7 +401,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
     // Create a new empty row with default values
     const newRow: Record<string, any> = {}
-    columns.forEach(col => {
+    columns.forEach((col) => {
       newRow[col.name] = col.default || ''
     })
 
@@ -417,9 +413,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     })
 
     // Mark all cells in the new row as edited
-    columns.forEach(col => {
+    columns.forEach((col) => {
       const key = `0-${col.name}`
-      setEditedCells(prev => new Map(prev).set(key, newRow[col.name]))
+      setEditedCells((prev) => new Map(prev).set(key, newRow[col.name]))
     })
 
     // Optionally, start editing the first cell
@@ -697,7 +693,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               )}
             </Flex>
 
-            <Flex gap="1">
+            <Flex gap="1" align="center">
               {!isReadOnly && result?.success && result.data && (
                 <>
                   <Button
@@ -706,6 +702,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     onClick={handleAddRow}
                     disabled={isLoading}
                     title="Add new row"
+                    style={{ cursor: 'pointer' }}
                   >
                     <PlusCircledIcon />
                   </Button>
@@ -713,7 +710,6 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     <Button
                       size="1"
                       variant="solid"
-                      color="green"
                       onClick={handleApplyChanges}
                       disabled={isLoading}
                       title="Apply changes"
@@ -737,7 +733,12 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               {result?.success && result.data && result.data.length > 0 && (
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger>
-                    <Button size="1" variant="ghost" title="Export data">
+                    <Button
+                      size="1"
+                      variant="soft"
+                      title="Export data"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <DownloadIcon />
                     </Button>
                   </DropdownMenu.Trigger>
