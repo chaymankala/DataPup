@@ -113,13 +113,13 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             </Button>
           )}
         </Flex>
-        <Box className="ai-setup" p="4">
-          <Card>
-            <Flex direction="column" gap="3">
+        <Box className="ai-setup" p="3">
+          <Card size="1">
+            <Flex direction="column" gap="2">
               <Flex align="center" gap="2">
-                <Text size="2">Select AI Provider:</Text>
+                <Text size="1">Provider:</Text>
                 <Select.Root value={provider} onValueChange={handleProviderChange}>
-                  <Select.Trigger size="2" />
+                  <Select.Trigger size="1" />
                   <Select.Content>
                     <Select.Item value="openai">OpenAI</Select.Item>
                     <Select.Item value="claude">Claude</Select.Item>
@@ -127,14 +127,14 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                   </Select.Content>
                 </Select.Root>
               </Flex>
-              <Text size="2">
+              <Text size="1">
                 Enter your{' '}
                 {provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API
                 key:
               </Text>
               <TextArea
                 placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'claude' ? 'Claude' : 'Gemini'} API key...`}
-                size="2"
+                size="1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
@@ -143,9 +143,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                   }
                 }}
               />
-              <Flex gap="2">
+              <Flex gap="1">
                 <Button
-                  size="2"
+                  size="1"
                   onClick={() => {
                     const input = document.querySelector('textarea')
                     if (input?.value) handleApiKeySubmit(input.value)
@@ -153,7 +153,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 >
                   Save API Key
                 </Button>
-                <Button size="2" variant="soft" onClick={() => setShowApiKeySetup(false)}>
+                <Button size="1" variant="soft" onClick={() => setShowApiKeySetup(false)}>
                   Skip for Now
                 </Button>
               </Flex>
@@ -242,21 +242,27 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       </ScrollArea>
 
       <Box className="ai-input-container" p="3">
-        <Flex gap="2">
+        <Box className="ai-input-wrapper">
           <TextArea
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your query, data, or request help..."
-            size="2"
-            style={{ flex: 1 }}
+            size="1"
+            style={{ paddingRight: '36px', width: '100%' }}
             disabled={isLoading}
           />
-          <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isLoading} size="2">
-            Send
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={!inputValue.trim() || isLoading} 
+            size="1"
+            variant="ghost"
+            className="ai-send-button"
+          >
+            →
           </Button>
-        </Flex>
+        </Box>
         {apiKey && (
           <Button
             size="1"
