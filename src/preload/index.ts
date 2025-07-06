@@ -13,7 +13,29 @@ const api = {
       ipcRenderer.invoke('db:getTables', connectionId, database),
     getTableSchema: (connectionId: string, tableName: string, database?: string) =>
       ipcRenderer.invoke('db:getTableSchema', connectionId, tableName, database),
+    getTableFullSchema: (connectionId: string, tableName: string, database?: string) =>
+      ipcRenderer.invoke('db:getTableFullSchema', connectionId, tableName, database),
+    insertRow: (
+      connectionId: string,
+      table: string,
+      data: Record<string, any>,
+      database?: string
+    ) => ipcRenderer.invoke('db:insertRow', connectionId, table, data, database),
+    updateRow: (
+      connectionId: string,
+      table: string,
+      primaryKey: Record<string, any>,
+      updates: Record<string, any>,
+      database?: string
+    ) => ipcRenderer.invoke('db:updateRow', connectionId, table, primaryKey, updates, database),
+    deleteRow: (
+      connectionId: string,
+      table: string,
+      primaryKey: Record<string, any>,
+      database?: string
+    ) => ipcRenderer.invoke('db:deleteRow', connectionId, table, primaryKey, database),
     isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
+    isReadOnly: (connectionId: string) => ipcRenderer.invoke('db:isReadOnly', connectionId),
     getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
     getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')
   },

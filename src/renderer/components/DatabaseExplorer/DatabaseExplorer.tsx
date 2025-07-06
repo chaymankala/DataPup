@@ -302,7 +302,8 @@ export function DatabaseExplorer({
                         padding: 0,
                         display: 'flex',
                         alignItems: 'center',
-                        transform: 'scale(0.8)'
+                        transform: 'scale(0.8)',
+                        cursor: 'pointer'
                       }}
                     >
                       <ReloadIcon />

@@ -104,7 +104,6 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
     // Default implementation - can be overridden by specific database managers
     const columns = Object.keys(data)
     const values = Object.values(data)
-    const placeholders = values.map(() => '?').join(', ')
 
     const qualifiedTable = database ? `${database}.${table}` : table
 

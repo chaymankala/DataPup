@@ -1,5 +1,25 @@
-import { useState, useEffect } from 'react'
-import { Box, Button, Flex, Text, Select, TextField, Table, Badge } from '@radix-ui/themes'
+import { useState, useEffect, useRef } from 'react'
+import {
+  Box,
+  Button,
+  Flex,
+  Text,
+  Select,
+  TextField,
+  Table,
+  Badge,
+  Checkbox,
+  DropdownMenu
+} from '@radix-ui/themes'
+import {
+  PlusCircledIcon,
+  TrashIcon,
+  DownloadIcon,
+  CheckIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  MixerHorizontalIcon
+} from '@radix-ui/react-icons'
 import { Skeleton } from '../ui'
 import { TableFilter } from '../../types/tabs'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
@@ -45,6 +65,12 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [result, setResult] = useState<QueryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingSchema, setIsLoadingSchema] = useState(true)
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [isReadOnly, setIsReadOnly] = useState(false)
+  const [editedCells, setEditedCells] = useState<Map<string, any>>(new Map())
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string } | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' }[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Load table schema on mount
   useEffect(() => {
@@ -55,6 +81,20 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   useEffect(() => {
     executeQuery()
   }, [connectionId, database, tableName])
+
+  // Check if connection is read-only
+  useEffect(() => {
+    const checkReadOnly = async () => {
+      try {
+        const response = await window.api.database.isReadOnly(connectionId)
+        setIsReadOnly(response.isReadOnly || false)
+      } catch (error) {
+        console.error('Error checking read-only status:', error)
+        setIsReadOnly(false)
+      }
+    }
+    checkReadOnly()
+  }, [connectionId])
 
   const loadTableSchema = async () => {
     try {
@@ -157,6 +197,251 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     onFiltersChange(newFilters)
   }
 
+  const toggleRowSelection = (index: number) => {
+    const newSelected = new Set(selectedRows)
+    if (newSelected.has(index)) {
+      newSelected.delete(index)
+    } else {
+      newSelected.add(index)
+    }
+    setSelectedRows(newSelected)
+  }
+
+  const toggleAllRows = () => {
+    if (selectedRows.size === result?.data?.length) {
+      setSelectedRows(new Set())
+    } else {
+      const allIndices = new Set(result?.data?.map((_, i) => i) || [])
+      setSelectedRows(allIndices)
+    }
+  }
+
+  const handleCellEdit = (rowIndex: number, column: string, value: any) => {
+    const key = `${rowIndex}-${column}`
+    const originalValue = result?.data?.[rowIndex]?.[column]
+
+    if (value === originalValue) {
+      // Remove from edited cells if value is reverted to original
+      const newEdited = new Map(editedCells)
+      newEdited.delete(key)
+      setEditedCells(newEdited)
+    } else {
+      setEditedCells(new Map(editedCells).set(key, value))
+    }
+  }
+
+  const handleStartEdit = (rowIndex: number, column: string) => {
+    if (isReadOnly) return
+    setEditingCell({ rowIndex, column })
+    // Focus input on next render
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  const handleEndEdit = () => {
+    setEditingCell(null)
+  }
+
+  const handleApplyChanges = async () => {
+    if (editedCells.size === 0) return
+
+    try {
+      setIsLoading(true)
+
+      // Get primary key information for the table
+      const schemaResult = await window.api.database.getTableFullSchema(
+        connectionId,
+        tableName,
+        database
+      )
+
+      if (!schemaResult.success || !schemaResult.schema) {
+        alert('Failed to get table schema')
+        return
+      }
+
+      const primaryKeys = schemaResult.schema.primaryKeys
+
+      // Group changes by row
+      const changesByRow = new Map<number, Record<string, any>>()
+      const newRows: number[] = []
+
+      editedCells.forEach((value, key) => {
+        const [rowIndex, column] = key.split('-')
+        const index = parseInt(rowIndex)
+
+        if (!changesByRow.has(index)) {
+          changesByRow.set(index, {})
+        }
+        changesByRow.get(index)![column] = value
+      })
+
+      // Process each row
+      const promises: Promise<any>[] = []
+
+      for (const [rowIndex, changes] of changesByRow.entries()) {
+        const originalRow = result?.data?.[rowIndex]
+
+        // Check if this is a new row (all fields are being edited)
+        const isNewRow =
+          Object.keys(changes).length === columns.length &&
+          columns.every((col) => editedCells.has(`${rowIndex}-${col.name}`))
+
+        if (isNewRow) {
+          // Insert new row
+          promises.push(window.api.database.insertRow(connectionId, tableName, changes, database))
+        } else if (originalRow) {
+          // Update existing row
+          if (primaryKeys.length === 0) {
+            alert('Cannot update: Table has no primary keys defined')
+            continue
+          }
+
+          const primaryKeyValues: Record<string, any> = {}
+          primaryKeys.forEach((pk) => {
+            primaryKeyValues[pk] = originalRow[pk]
+          })
+
+          promises.push(
+            window.api.database.updateRow(
+              connectionId,
+              tableName,
+              primaryKeyValues,
+              changes,
+              database
+            )
+          )
+        }
+      }
+
+      const results = await Promise.all(promises)
+      const failures = results.filter((r) => !r.success)
+
+      if (failures.length > 0) {
+        alert(`Failed to save ${failures.length} change(s)`)
+      } else {
+        // Clear edited cells after successful update
+        setEditedCells(new Map())
+      }
+
+      // Refresh the table data
+      await executeQuery()
+    } catch (error) {
+      console.error('Error applying changes:', error)
+      alert(
+        'Failed to apply changes: ' + (error instanceof Error ? error.message : 'Unknown error')
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (selectedRows.size === 0 || !result?.data) return
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${selectedRows.size} row(s)?`
+    )
+    if (!confirmDelete) return
+
+    try {
+      setIsLoading(true)
+
+      // Get primary key information for the table
+      const schemaResult = await window.api.database.getTableFullSchema(
+        connectionId,
+        tableName,
+        database
+      )
+
+      if (!schemaResult.success || !schemaResult.schema) {
+        alert('Failed to get table schema for delete operation')
+        return
+      }
+
+      const primaryKeys = schemaResult.schema.primaryKeys
+      if (primaryKeys.length === 0) {
+        alert('Cannot delete: Table has no primary keys defined')
+        return
+      }
+
+      // Delete each selected row
+      const deletePromises = Array.from(selectedRows).map(async (rowIndex) => {
+        const row = result.data![rowIndex]
+        const primaryKeyValues: Record<string, any> = {}
+
+        primaryKeys.forEach((pk) => {
+          primaryKeyValues[pk] = row[pk]
+        })
+
+        return window.api.database.deleteRow(connectionId, tableName, primaryKeyValues, database)
+      })
+
+      const results = await Promise.all(deletePromises)
+      const failedDeletes = results.filter((r) => !r.success)
+
+      if (failedDeletes.length > 0) {
+        alert(`Failed to delete ${failedDeletes.length} row(s)`)
+      } else {
+        // Clear selection after successful delete
+        setSelectedRows(new Set())
+      }
+
+      // Refresh the table data
+      await executeQuery()
+    } catch (error) {
+      console.error('Error deleting rows:', error)
+      alert('Failed to delete rows: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddRow = () => {
+    if (!result?.data) return
+
+    // Create a new empty row with default values
+    const newRow: Record<string, any> = {}
+    columns.forEach((col) => {
+      newRow[col.name] = col.default || ''
+    })
+
+    // Add the new row to the data
+    const newData = [newRow, ...result.data]
+    setResult({
+      ...result,
+      data: newData
+    })
+
+    // Mark all cells in the new row as edited
+    columns.forEach((col) => {
+      const key = `0-${col.name}`
+      setEditedCells((prev) => new Map(prev).set(key, newRow[col.name]))
+    })
+
+    // Optionally, start editing the first cell
+    if (columns.length > 0) {
+      setTimeout(() => {
+        handleStartEdit(0, columns[0].name)
+      }, 100)
+    }
+  }
+
+  const handleSort = (column: string) => {
+    const existingSort = sortConfig.find((s) => s.column === column)
+    let newSortConfig: typeof sortConfig
+
+    if (!existingSort) {
+      newSortConfig = [{ column, direction: 'asc' }]
+    } else if (existingSort.direction === 'asc') {
+      newSortConfig = [{ column, direction: 'desc' }]
+    } else {
+      newSortConfig = sortConfig.filter((s) => s.column !== column)
+    }
+
+    setSortConfig(newSortConfig)
+    // TODO: Apply sorting to query
+  }
+
   const formatResult = (data: any[], result?: QueryExecutionResult) => {
     if (!data || data.length === 0) {
       // Check if this is a successful DDL/DML command
@@ -174,34 +459,120 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
     const columns = Object.keys(data[0])
 
+    const renderCell = (rowIndex: number, column: string, value: any) => {
+      const key = `${rowIndex}-${column}`
+      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column
+      const isEdited = editedCells.has(key)
+      const displayValue = isEdited ? editedCells.get(key) : value
+
+      if (isReadOnly) {
+        return (
+          <Text size="1">
+            {displayValue !== null && displayValue !== undefined ? (
+              String(displayValue)
+            ) : (
+              <Text size="1" color="gray">
+                null
+              </Text>
+            )}
+          </Text>
+        )
+      }
+
+      if (isEditing) {
+        return (
+          <TextField.Root
+            ref={inputRef}
+            size="1"
+            value={displayValue ?? ''}
+            onChange={(e) => handleCellEdit(rowIndex, column, e.target.value)}
+            onBlur={handleEndEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleEndEdit()
+              if (e.key === 'Escape') {
+                handleCellEdit(rowIndex, column, value)
+                handleEndEdit()
+              }
+            }}
+            style={{ width: '100%' }}
+          />
+        )
+      }
+
+      return (
+        <Box
+          onDoubleClick={() => handleStartEdit(rowIndex, column)}
+          style={{
+            cursor: 'text',
+            padding: '2px',
+            borderRadius: '2px',
+            backgroundColor: isEdited ? 'var(--amber-3)' : 'transparent',
+            width: '100%',
+            minHeight: '20px'
+          }}
+        >
+          <Text size="1">
+            {displayValue !== null && displayValue !== undefined ? (
+              String(displayValue)
+            ) : (
+              <Text size="1" color="gray">
+                null
+              </Text>
+            )}
+          </Text>
+        </Box>
+      )
+    }
+
     return (
       <Table.Root size="1">
         <Table.Header>
           <Table.Row>
-            {columns.map((column) => (
-              <Table.ColumnHeaderCell key={column}>
-                <Text size="1" weight="medium">
-                  {column}
-                </Text>
+            {!isReadOnly && (
+              <Table.ColumnHeaderCell width="40px">
+                <Checkbox
+                  checked={selectedRows.size === data.length && data.length > 0}
+                  onCheckedChange={toggleAllRows}
+                />
               </Table.ColumnHeaderCell>
-            ))}
+            )}
+            {columns.map((column) => {
+              const sortInfo = sortConfig.find((s) => s.column === column)
+              return (
+                <Table.ColumnHeaderCell
+                  key={column}
+                  onClick={() => handleSort(column)}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  <Flex align="center" gap="1">
+                    <Text size="1" weight="medium">
+                      {column}
+                    </Text>
+                    {sortInfo &&
+                      (sortInfo.direction === 'asc' ? (
+                        <ChevronUpIcon width={12} height={12} />
+                      ) : (
+                        <ChevronDownIcon width={12} height={12} />
+                      ))}
+                  </Flex>
+                </Table.ColumnHeaderCell>
+              )
+            })}
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {data.map((row, index) => (
-            <Table.Row key={index}>
-              {columns.map((column) => (
-                <Table.Cell key={column}>
-                  <Text size="1">
-                    {row[column] !== null && row[column] !== undefined ? (
-                      String(row[column])
-                    ) : (
-                      <Text size="1" color="gray">
-                        null
-                      </Text>
-                    )}
-                  </Text>
+          {data.map((row, rowIndex) => (
+            <Table.Row key={rowIndex}>
+              {!isReadOnly && (
+                <Table.Cell>
+                  <Checkbox
+                    checked={selectedRows.has(rowIndex)}
+                    onCheckedChange={() => toggleRowSelection(rowIndex)}
+                  />
                 </Table.Cell>
+              )}
+              {columns.map((column) => (
+                <Table.Cell key={column}>{renderCell(rowIndex, column, row[column])}</Table.Cell>
               ))}
             </Table.Row>
           ))}
@@ -220,11 +591,18 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               Filters
             </Text>
             <Flex gap="1">
-              <Button size="1" variant="outline" onClick={addFilter} disabled={isLoadingSchema}>
-                + Filter
+              <Button
+                size="1"
+                variant="outline"
+                onClick={addFilter}
+                disabled={isLoadingSchema}
+                title="Add filter"
+              >
+                <MixerHorizontalIcon />
+                Filter
               </Button>
-              <Button size="1" onClick={executeQuery} disabled={isLoading}>
-                Apply
+              <Button size="1" onClick={executeQuery} disabled={isLoading} title="Apply filters">
+                <CheckIcon />
               </Button>
             </Flex>
           </Flex>
@@ -306,28 +684,79 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                       {result.executionTime}ms
                     </Badge>
                   )}
+                  {selectedRows.size > 0 && (
+                    <Badge size="1" variant="soft" color="blue">
+                      {selectedRows.size} selected
+                    </Badge>
+                  )}
                 </>
               )}
             </Flex>
 
-            {result?.success && result.data && result.data.length > 0 && (
-              <Flex gap="1">
-                <Button
-                  size="1"
-                  variant="ghost"
-                  onClick={() => exportToCSV(result.data || [], `${tableName}-export.csv`)}
-                >
-                  CSV
-                </Button>
-                <Button
-                  size="1"
-                  variant="ghost"
-                  onClick={() => exportToJSON(result.data || [], `${tableName}-export.json`)}
-                >
-                  JSON
-                </Button>
-              </Flex>
-            )}
+            <Flex gap="1" align="center">
+              {!isReadOnly && result?.success && result.data && (
+                <>
+                  <Button
+                    size="1"
+                    variant="soft"
+                    onClick={handleAddRow}
+                    disabled={isLoading}
+                    title="Add new row"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <PlusCircledIcon />
+                  </Button>
+                  {editedCells.size > 0 && (
+                    <Button
+                      size="1"
+                      variant="solid"
+                      onClick={handleApplyChanges}
+                      disabled={isLoading}
+                      title="Apply changes"
+                    >
+                      <CheckIcon />
+                      Apply ({editedCells.size})
+                    </Button>
+                  )}
+                  <Button
+                    size="1"
+                    variant="soft"
+                    color="red"
+                    onClick={handleDelete}
+                    disabled={selectedRows.size === 0 || isLoading}
+                    title="Delete selected rows"
+                  >
+                    <TrashIcon />
+                  </Button>
+                </>
+              )}
+              {result?.success && result.data && result.data.length > 0 && (
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    <Button
+                      size="1"
+                      variant="soft"
+                      title="Export data"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <DownloadIcon />
+                    </Button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content>
+                    <DropdownMenu.Item
+                      onClick={() => exportToCSV(result.data || [], `${tableName}-export.csv`)}
+                    >
+                      Export as CSV
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onClick={() => exportToJSON(result.data || [], `${tableName}-export.json`)}
+                    >
+                      Export as JSON
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              )}
+            </Flex>
           </Flex>
 
           <Box className="results-content">
