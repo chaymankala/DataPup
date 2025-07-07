@@ -91,6 +91,7 @@ export function DatabaseConnection({
             port: parseInt(connectionData.port),
             database: connectionData.database,
             username: connectionData.username,
+            secure: connectionData.secure,
             createdAt: new Date().toISOString()
           }
           // Only call onConnectionSuccess if the connection should be saved

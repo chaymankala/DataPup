@@ -29,6 +29,7 @@ interface SavedConnection {
   port: number
   database: string
   username: string
+  secure?: boolean
   lastUsed?: string
   createdAt: string
 }
