@@ -131,7 +131,7 @@ class ClickHouseManager extends BaseDatabaseManager {
     }
   }
 
-  async query(connectionId: string, sql: string): Promise<QueryResult> {
+  async query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult> {
     try {
       const connection = this.connections.get(connectionId)
       if (!connection || !connection.isConnected) {
@@ -159,7 +159,7 @@ class ClickHouseManager extends BaseDatabaseManager {
         // Use command() for DDL/DML queries that don't return data
         await connection.client.command({
           query: sql,
-          session_id: connectionId
+          session_id: sessionId || connectionId
         })
 
         return this.createQueryResult(
@@ -174,7 +174,7 @@ class ClickHouseManager extends BaseDatabaseManager {
         // Use query() for SELECT and data-returning queries
         const result = await connection.client.query({
           query: sql,
-          session_id: connectionId
+          session_id: sessionId || connectionId
         })
 
         // Convert result to plain JavaScript object for IPC serialization
@@ -341,10 +341,10 @@ class ClickHouseManager extends BaseDatabaseManager {
 
       // Query system tables for primary key information
       const pkQuery = `
-        SELECT name 
-        FROM system.columns 
-        WHERE database = '${targetDatabase}' 
-          AND table = '${tableName}' 
+        SELECT name
+        FROM system.columns
+        WHERE database = '${targetDatabase}'
+          AND table = '${tableName}'
           AND is_in_primary_key = 1
         ORDER BY position
       `
