@@ -100,6 +100,7 @@ ipcMain.handle('db:connect', async (_, connectionConfig) => {
       database: connectionConfig.database,
       username: connectionConfig.username,
       password: connectionConfig.password,
+      secure: connectionConfig.secure,
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     }

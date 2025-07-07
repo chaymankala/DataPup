@@ -25,8 +25,19 @@ export function DatabaseConnection({
     port: '8123',
     database: 'default',
     username: 'default',
-    password: ''
+    password: '',
+    secure: false
   })
+
+  // Update port when secure connection is toggled
+  useEffect(() => {
+    if (dbType === 'clickhouse') {
+      setConnectionData((prev) => ({
+        ...prev,
+        port: prev.secure ? '8443' : '8123'
+      }))
+    }
+  }, [connectionData.secure, dbType])
 
   // Load supported database types on component mount
   useEffect(() => {
@@ -64,7 +75,8 @@ export function DatabaseConnection({
           port: '8123',
           database: 'default',
           username: 'default',
-          password: ''
+          password: '',
+          secure: false
         })
         setSaveConnection(true)
         // Notify parent component
@@ -213,6 +225,21 @@ export function DatabaseConnection({
                 placeholder="password"
               />
             </Flex>
+
+            {dbType === 'clickhouse' && (
+              <Flex align="center" gap="2">
+                <Checkbox
+                  id="secure-connection"
+                  checked={connectionData.secure}
+                  onCheckedChange={(checked) =>
+                    setConnectionData({ ...connectionData, secure: checked as boolean })
+                  }
+                />
+                <Label htmlFor="secure-connection" size="2">
+                  Use secure connection (HTTPS)
+                </Label>
+              </Flex>
+            )}
           </Flex>
 
           <Flex direction="column" gap="3">
@@ -330,6 +357,21 @@ export function DatabaseConnection({
                 placeholder="password"
               />
             </Flex>
+
+            {dbType === 'clickhouse' && (
+              <Flex align="center" gap="2">
+                <Checkbox
+                  id="secure-connection-dialog"
+                  checked={connectionData.secure}
+                  onCheckedChange={(checked) =>
+                    setConnectionData({ ...connectionData, secure: checked as boolean })
+                  }
+                />
+                <Label htmlFor="secure-connection-dialog" size="2">
+                  Use secure connection (HTTPS)
+                </Label>
+              </Flex>
+            )}
           </Flex>
 
           <Flex direction="column" gap="3" mt="4">

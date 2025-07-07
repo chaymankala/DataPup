@@ -11,6 +11,7 @@ interface ConnectionCardProps {
     port: number
     database: string
     username: string
+    secure?: boolean
     lastUsed?: string
     createdAt: string
   }
@@ -104,9 +105,16 @@ export function ConnectionCard({ connection, onSelect, onDelete }: ConnectionCar
         </Flex>
 
         <Box className="connection-details">
-          <Text size="1" color="gray">
-            {connection.host}:{connection.port}/{connection.database}
-          </Text>
+          <Flex align="center" gap="2">
+            <Text size="1" color="gray">
+              {connection.host}:{connection.port}/{connection.database}
+            </Text>
+            {connection.secure && (
+              <Text size="1" color="green" weight="medium">
+                🔒 Secure
+              </Text>
+            )}
+          </Flex>
         </Box>
 
         <Flex justify="between" align="center" className="card-footer">
