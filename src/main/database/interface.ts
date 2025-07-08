@@ -83,7 +83,7 @@ export interface DatabaseManagerInterface {
   isReadOnly(connectionId: string): boolean
 
   // Query execution
-  query(connectionId: string, sql: string): Promise<QueryResult>
+  query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult>
 
   // CRUD operations
   insertRow(
