@@ -87,19 +87,23 @@ app.on('window-all-closed', () => {
 // IPC handlers for database operations
 ipcMain.handle('db:connect', async (_, connectionConfig) => {
   try {
+    console.log('Main process received connection config:', connectionConfig)
+    console.log('Secure flag in config:', connectionConfig.secure)
+    
     // Generate a unique ID for the connection
     const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     // Create connection object
     const connection: DatabaseConnection = {
       id: connectionId,
-      name: `${connectionConfig.type} - ${connectionConfig.host}:${connectionConfig.port}`,
+      name: connectionConfig.label || `${connectionConfig.type} - ${connectionConfig.host}:${connectionConfig.port}`,
       type: connectionConfig.type,
       host: connectionConfig.host,
       port: connectionConfig.port,
       database: connectionConfig.database,
       username: connectionConfig.username,
       password: connectionConfig.password,
+      secure: connectionConfig.secure,
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     }
