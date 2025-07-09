@@ -96,8 +96,8 @@ export function MainPanel({
         <Flex direction="column" height="100%">
           {/* Header */}
           <Flex justify="between" align="center" p="4">
-            <Flex align="center" gap="2">
-              <Logo size={32} />
+            <Flex align="center" gap="3">
+              <Logo size={40} withBackground />
               <Heading size="5" weight="bold">
                 DataPup
               </Heading>
