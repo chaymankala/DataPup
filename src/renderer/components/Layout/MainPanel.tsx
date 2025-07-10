@@ -77,6 +77,7 @@ export function MainPanel({
 
   const handleConnectionSelect = (connection: any) => {
     console.log('Connection:', connection)
+    console.log('Read-only:', connection.readonly)
 
     // Trigger database connection for the selected saved connection
     if (onConnectionSelect) {
@@ -87,6 +88,39 @@ export function MainPanel({
   const handleConnectionDelete = (connectionId: string) => {
     if (onConnectionDelete) {
       onConnectionDelete(connectionId)
+    }
+  }
+
+  const handleTestConnection = async (connection: SavedConnection) => {
+    try {
+      // Get the full connection with password from secure storage
+      const fullConnectionResult = await window.api.connections.getById(connection.id)
+      
+      if (!fullConnectionResult.success || !fullConnectionResult.connection) {
+        alert('Failed to retrieve connection details for testing')
+        return
+      }
+      
+      const fullConnection = fullConnectionResult.connection
+      
+      const result = await window.api.database.testConnection({
+        type: fullConnection.type,
+        host: fullConnection.host,
+        port: fullConnection.port,
+        database: fullConnection.database,
+        username: fullConnection.username,
+        password: fullConnection.password,
+        secure: fullConnection.secure
+      })
+
+      if (result.success) {
+        alert('Connection test successful!')
+      } else {
+        alert(`Connection test failed: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Test connection error:', error)
+      alert('Test connection error occurred')
     }
   }
 
@@ -142,6 +176,7 @@ export function MainPanel({
                         connection={connection}
                         onSelect={handleConnectionSelect}
                         onDelete={handleConnectionDelete}
+                        onTestConnection={handleTestConnection}
                       />
                     ))}
                   </Flex>
