@@ -77,6 +77,7 @@ export function MainPanel({
 
   const handleConnectionSelect = (connection: any) => {
     console.log('Connection:', connection)
+    console.log('Read-only:', connection.readonly)
 
     // Trigger database connection for the selected saved connection
     if (onConnectionSelect) {
@@ -87,6 +88,29 @@ export function MainPanel({
   const handleConnectionDelete = (connectionId: string) => {
     if (onConnectionDelete) {
       onConnectionDelete(connectionId)
+    }
+  }
+
+  const handleTestConnection = async (connection: SavedConnection) => {
+    try {
+      const result = await window.api.database.testConnection({
+        type: connection.type,
+        host: connection.host,
+        port: connection.port,
+        database: connection.database,
+        username: connection.username,
+        password: '', // User will need to provide password
+        secure: connection.secure
+      })
+
+      if (result.success) {
+        alert('Connection test successful!')
+      } else {
+        alert(`Connection test failed: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Test connection error:', error)
+      alert('Test connection error occurred')
     }
   }
 
@@ -142,6 +166,7 @@ export function MainPanel({
                         connection={connection}
                         onSelect={handleConnectionSelect}
                         onDelete={handleConnectionDelete}
+                        onTestConnection={handleTestConnection}
                       />
                     ))}
                   </Flex>
