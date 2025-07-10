@@ -12,6 +12,7 @@ interface Connection {
   database: string
   username: string
   secure?: boolean
+  readonly?: boolean
   createdAt: string
   lastUsed?: string
 }
@@ -86,6 +87,7 @@ function App() {
         username: fullConnection.username,
         password: fullConnection.password, // Now we have the actual password
         secure: fullConnection.secure,
+        readonly: connection.readonly || fullConnection.readonly, // Use the readonly flag from the connection click
         saveConnection: false // Don't save again since it's already saved
       })
 
@@ -95,7 +97,8 @@ function App() {
         port: fullConnection.port,
         database: fullConnection.database,
         username: fullConnection.username,
-        secure: fullConnection.secure
+        secure: fullConnection.secure,
+        readonly: connection.readonly || fullConnection.readonly
       })
       console.log('Connection result:', result)
 

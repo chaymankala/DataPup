@@ -93,14 +93,24 @@ export function MainPanel({
 
   const handleTestConnection = async (connection: SavedConnection) => {
     try {
+      // Get the full connection with password from secure storage
+      const fullConnectionResult = await window.api.connections.getById(connection.id)
+      
+      if (!fullConnectionResult.success || !fullConnectionResult.connection) {
+        alert('Failed to retrieve connection details for testing')
+        return
+      }
+      
+      const fullConnection = fullConnectionResult.connection
+      
       const result = await window.api.database.testConnection({
-        type: connection.type,
-        host: connection.host,
-        port: connection.port,
-        database: connection.database,
-        username: connection.username,
-        password: '', // User will need to provide password
-        secure: connection.secure
+        type: fullConnection.type,
+        host: fullConnection.host,
+        port: fullConnection.port,
+        database: fullConnection.database,
+        username: fullConnection.username,
+        password: fullConnection.password,
+        secure: fullConnection.secure
       })
 
       if (result.success) {
