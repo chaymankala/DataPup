@@ -53,7 +53,6 @@ class ClickHouseManager extends BaseDatabaseManager {
         url: url,
         request_timeout: config.timeout || 30000,
         // Additional ClickHouse-specific options can be added here
-        session_id: connectionId,
         // Connection pooling settings
         keep_alive: {
           enabled: true,
@@ -410,7 +409,7 @@ class ClickHouseManager extends BaseDatabaseManager {
       // Execute the ALTER TABLE UPDATE command
       await connection.client.command({
         query: sql,
-        session_id: connectionId
+        session_id: sessionId
       })
 
       return this.createQueryResult(
