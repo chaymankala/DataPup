@@ -169,6 +169,33 @@ Provide a brief, clear explanation of what this query does.`
     }
   }
 
+  async embedQuery(text: string): Promise<number[]> {
+    try {
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-3-small',
+          input: text
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`OpenAI API error: ${response.status} - ${error}`)
+      }
+
+      const data = await response.json()
+      return data.data[0].embedding
+    } catch (error) {
+      console.error('Error generating embedding:', error)
+      throw new Error('Failed to generate embedding')
+    }
+  }
+
   private buildMessages(request: SQLGenerationRequest): OpenAIMessage[] {
     const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } =
       request

@@ -167,6 +167,34 @@ Provide a brief, clear explanation of what this query does.`
     }
   }
 
+  async embedQuery(text: string): Promise<number[]> {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-v3',
+          input: text
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Claude API error: ${response.status} - ${error}`)
+      }
+
+      const data = await response.json()
+      return data.data[0].embedding
+    } catch (error) {
+      console.error('Error generating embedding:', error)
+      throw new Error('Failed to generate embedding')
+    }
+  }
+
   private buildPromptMessages(request: SQLGenerationRequest): {
     systemPrompt: string
     userMessage: string

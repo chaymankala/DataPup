@@ -4,6 +4,7 @@ import { SchemaIntrospector } from './schemaIntrospector'
 import { DatabaseManager } from '../database/manager'
 import { QueryResult } from '../database/interface'
 import { SecureStorage } from '../secureStorage'
+import { ApiBasedEmbedding } from '../llm/LlamaIndexEmbedding'
 
 interface NaturalLanguageQueryRequest {
   connectionId: string
@@ -130,6 +131,27 @@ class NaturalLanguageQueryProcessor {
       const databaseType = connectionInfo
         ? this.getDatabaseTypeFromConnection(connectionInfo)
         : 'clickhouse'
+
+      // Set up API-based embedding using the active LLM
+      toolCalls.push({
+        name: 'Setup Embedding Model',
+        description: `Setting up ${provider} embedding model...`,
+        status: 'running'
+      })
+      const llmInstance = this.llmManager.getLlmInstance(llmConnectionId)
+      if (!llmInstance) {
+        toolCalls[toolCalls.length - 1].status = 'failed'
+        return {
+          success: false,
+          error: 'LLM not connected',
+          toolCalls
+        }
+      }
+
+      // Create API-based embedding instance
+      const embeddingModel = new ApiBasedEmbedding(llmInstance)
+      console.log(`Embedding model set to use ${provider} API.`)
+      toolCalls[toolCalls.length - 1].status = 'completed'
 
       // Generate SQL query using LLM
       toolCalls.push({

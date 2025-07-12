@@ -11,6 +11,7 @@ import {
 export class GeminiLLM implements LLMInterface {
   private genAI: GoogleGenerativeAI
   private model: any
+  private embeddingModel: any
 
   constructor(apiKey: string, modelName?: string) {
     if (!apiKey) {
@@ -19,6 +20,8 @@ export class GeminiLLM implements LLMInterface {
 
     this.genAI = new GoogleGenerativeAI(apiKey)
     this.model = this.genAI.getGenerativeModel({ model: modelName || 'gemini-1.5-flash' })
+    // Initialize the embedding model
+    this.embeddingModel = this.genAI.getGenerativeModel({ model: 'text-embedding-004' })
   }
 
   async generateSQL(request: SQLGenerationRequest): Promise<SQLGenerationResponse> {
@@ -83,6 +86,16 @@ Provide a brief, clear explanation of what this query does.`
     } catch (error) {
       console.error('Error generating explanation:', error)
       throw error
+    }
+  }
+
+  async embedQuery(text: string): Promise<number[]> {
+    try {
+      const result = await this.embeddingModel.embedContent(text)
+      return result.embedding.values
+    } catch (error) {
+      console.error('Error generating embedding:', error)
+      throw new Error('Failed to generate embedding')
     }
   }
 

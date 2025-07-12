@@ -191,6 +191,11 @@ export class LLMManager {
     return this.connections.has(connectionId)
   }
 
+  getLlmInstance(connectionId: string): LLMInterface | null {
+    const connection = this.connections.get(connectionId)
+    return connection ? connection.llm : null
+  }
+
   async cleanup(): Promise<void> {
     // Disconnect all connections
     for (const connectionId of this.connections.keys()) {
