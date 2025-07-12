@@ -45,6 +45,7 @@ class NaturalLanguageQueryProcessor {
     request: NaturalLanguageQueryRequest
   ): Promise<NaturalLanguageQueryResponse> {
     try {
+      console.log('DEBUG: Received request with provider:', request.provider)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -53,6 +54,16 @@ class NaturalLanguageQueryProcessor {
         maxSampleRows = 3,
         provider = 'gemini'
       } = request
+
+      // Validate provider
+      const validProviders = ['gemini', 'openai', 'claude']
+      if (provider && !validProviders.includes(provider)) {
+        console.error('DEBUG: Invalid provider received:', provider)
+        return {
+          success: false,
+          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
+        }
+      }
       const toolCalls: Array<{
         name: string
         description: string
@@ -222,6 +233,7 @@ class NaturalLanguageQueryProcessor {
     }
   > {
     try {
+      console.log('DEBUG: generateSQLOnly received request with provider:', request.provider)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -230,6 +242,16 @@ class NaturalLanguageQueryProcessor {
         maxSampleRows = 3,
         provider = 'gemini'
       } = request
+
+      // Validate provider
+      const validProviders = ['gemini', 'openai', 'claude']
+      if (provider && !validProviders.includes(provider)) {
+        console.error('DEBUG: Invalid provider received in generateSQLOnly:', provider)
+        return {
+          success: false,
+          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
+        }
+      }
       const toolCalls: Array<{
         name: string
         description: string

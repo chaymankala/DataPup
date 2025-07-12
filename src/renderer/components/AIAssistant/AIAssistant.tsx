@@ -118,6 +118,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       const conversationContext = buildConversationContext(messages, userInput)
 
       // Use natural language query processor
+      console.log('DEBUG: Sending provider to backend:', provider)
       const result = await (window.api as any).naturalLanguageQuery.generateSQL({
         naturalLanguageQuery: userInput,
         connectionId: context.connectionId || '',
