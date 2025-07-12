@@ -299,6 +299,35 @@ ipcMain.handle('db:isReadOnly', async (_, connectionId: string) => {
   }
 })
 
+ipcMain.handle('db:supportsTransactions', async (_, connectionId: string) => {
+  return databaseManager.supportsTransactions(connectionId)
+})
+
+ipcMain.handle('db:executeBulkOperations', async (_, connectionId: string, operations: any[]) => {
+  try {
+    return await databaseManager.executeBulkOperations(connectionId, operations)
+  } catch (error) {
+    console.error('Bulk operations error:', error)
+    return {
+      success: false,
+      results: [],
+      error: error instanceof Error ? error.message : 'Bulk operations failed'
+    }
+  }
+})
+
+ipcMain.handle(
+  'db:getPrimaryKeys',
+  async (_, connectionId: string, table: string, database?: string) => {
+    try {
+      return await databaseManager.getPrimaryKeys(connectionId, table, database)
+    } catch (error) {
+      console.error('Error getting primary keys:', error)
+      return []
+    }
+  }
+)
+
 ipcMain.handle('db:getSupportedTypes', async () => {
   try {
     const supportedTypes = databaseManager.getSupportedDatabaseTypes()

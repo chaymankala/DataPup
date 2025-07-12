@@ -8,7 +8,10 @@ import {
   UpdateResult,
   DeleteResult,
   TableSchema,
-  DatabaseCapabilities
+  DatabaseCapabilities,
+  TransactionHandle,
+  BulkOperation,
+  BulkOperationResult
 } from './interface'
 
 export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
@@ -212,6 +215,72 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
 
   getAllConnections(): string[] {
     return Array.from(this.connections.keys())
+  }
+
+  // Transaction support - default implementations
+  supportsTransactions(connectionId: string): boolean {
+    return this.getCapabilities().supportsTransactions
+  }
+
+  async beginTransaction(connectionId: string): Promise<TransactionHandle> {
+    throw new Error('Transactions not supported by this database')
+  }
+
+  async executeBulkOperations(
+    connectionId: string,
+    operations: BulkOperation[]
+  ): Promise<BulkOperationResult> {
+    // Default implementation without transactions
+    const results: QueryResult[] = []
+
+    for (const op of operations) {
+      try {
+        let result: QueryResult
+        switch (op.type) {
+          case 'insert':
+            result = await this.insertRow(connectionId, op.table, op.data!, op.database)
+            break
+          case 'update':
+            result = await this.updateRow(
+              connectionId,
+              op.table,
+              op.primaryKey || op.where!,
+              op.data!,
+              op.database
+            )
+            break
+          case 'delete':
+            result = await this.deleteRow(
+              connectionId,
+              op.table,
+              op.primaryKey || op.where!,
+              op.database
+            )
+            break
+        }
+        results.push(result)
+      } catch (error) {
+        results.push({
+          success: false,
+          message: `${op.type} operation failed`,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    return {
+      success: results.every((r) => r.success),
+      results,
+      warning: 'Operations executed without transaction support'
+    }
+  }
+
+  async getPrimaryKeys(connectionId: string, table: string, database?: string): Promise<string[]> {
+    const tableSchema = await this.getTableFullSchema(connectionId, table, database)
+    if (tableSchema.success && tableSchema.schema) {
+      return tableSchema.schema.primaryKeys
+    }
+    return []
   }
 
   abstract cleanup(): Promise<void>

@@ -7,10 +7,6 @@ class DatabaseManagerFactory {
   constructor() {
     // Initialize managers for supported database types
     this.managers.set('clickhouse', new ClickHouseManager())
-    // Add other database managers here as and when they are implemented
-    // this.managers.set('postgresql', new PostgreSQLManager())
-    // this.managers.set('mysql', new MySQLManager())
-    // this.managers.set('sqlite', new SQLiteManager())
   }
 
   getManager(databaseType: string): DatabaseManagerInterface | null {

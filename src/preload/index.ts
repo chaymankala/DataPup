@@ -38,7 +38,13 @@ const api = {
     isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
     isReadOnly: (connectionId: string) => ipcRenderer.invoke('db:isReadOnly', connectionId),
     getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
-    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')
+    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections'),
+    supportsTransactions: (connectionId: string) =>
+      ipcRenderer.invoke('db:supportsTransactions', connectionId),
+    executeBulkOperations: (connectionId: string, operations: any[]) =>
+      ipcRenderer.invoke('db:executeBulkOperations', connectionId, operations),
+    getPrimaryKeys: (connectionId: string, table: string, database?: string) =>
+      ipcRenderer.invoke('db:getPrimaryKeys', connectionId, table, database)
   },
   connections: {
     getAll: () => ipcRenderer.invoke('connections:getAll'),

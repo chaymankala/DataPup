@@ -72,6 +72,28 @@ declare global {
           primaryKey: Record<string, any>,
           database?: string
         ) => Promise<{ success: boolean; message: string; error?: string; affectedRows: number }>
+        supportsTransactions: (connectionId: string) => Promise<boolean>
+        executeBulkOperations: (
+          connectionId: string,
+          operations: Array<{
+            type: 'insert' | 'update' | 'delete'
+            table: string
+            data?: Record<string, any>
+            where?: Record<string, any>
+            primaryKey?: Record<string, any>
+            database?: string
+          }>
+        ) => Promise<{
+          success: boolean
+          results: Array<any>
+          warning?: string
+          error?: string
+        }>
+        getPrimaryKeys: (
+          connectionId: string,
+          table: string,
+          database?: string
+        ) => Promise<string[]>
       }
       connections: {
         getAll: () => Promise<{ success: boolean; connections: any[] }>

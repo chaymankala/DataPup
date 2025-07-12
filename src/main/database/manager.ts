@@ -7,7 +7,10 @@ import {
   UpdateResult,
   DeleteResult,
   TableSchema,
-  DatabaseCapabilities
+  DatabaseCapabilities,
+  TransactionHandle,
+  BulkOperation,
+  BulkOperationResult
 } from './interface'
 import { DatabaseManagerFactory } from './factory'
 
@@ -420,6 +423,41 @@ class DatabaseManager {
     if (this.activeConnection) {
       await this.disconnect(this.activeConnection.id)
     }
+  }
+
+  supportsTransactions(connectionId: string): boolean {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+      return false
+    }
+    return this.activeConnection.manager.supportsTransactions(connectionId)
+  }
+
+  async beginTransaction(connectionId: string): Promise<TransactionHandle> {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+      throw new Error('Connection not found')
+    }
+    return await this.activeConnection.manager.beginTransaction(connectionId)
+  }
+
+  async executeBulkOperations(
+    connectionId: string,
+    operations: BulkOperation[]
+  ): Promise<BulkOperationResult> {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+      return {
+        success: false,
+        results: [],
+        error: 'Connection not found'
+      }
+    }
+    return await this.activeConnection.manager.executeBulkOperations(connectionId, operations)
+  }
+
+  async getPrimaryKeys(connectionId: string, table: string, database?: string): Promise<string[]> {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+      return []
+    }
+    return await this.activeConnection.manager.getPrimaryKeys(connectionId, table, database)
   }
 }
 

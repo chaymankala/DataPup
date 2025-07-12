@@ -73,6 +73,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' }[]>([])
   const [deletedRows, setDeletedRows] = useState<Set<number>>(new Set())
   const [clonedRows, setClonedRows] = useState<Map<number, any>>(new Map())
+  const [supportsTransactions, setSupportsTransactions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Load table schema on mount
@@ -127,18 +128,23 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedRows, isReadOnly, editingCell, result, editedCells, deletedRows, clonedRows])
 
-  // Check if connection is read-only
+  // Check if connection is read-only and supports transactions
   useEffect(() => {
-    const checkReadOnly = async () => {
+    const checkConnectionCapabilities = async () => {
       try {
-        const response = await window.api.database.isReadOnly(connectionId)
-        setIsReadOnly(response.isReadOnly || false)
+        const [readOnlyResponse, transactionSupport] = await Promise.all([
+          window.api.database.isReadOnly(connectionId),
+          window.api.database.supportsTransactions(connectionId)
+        ])
+        setIsReadOnly(readOnlyResponse.isReadOnly || false)
+        setSupportsTransactions(transactionSupport)
       } catch (error) {
-        console.error('Error checking read-only status:', error)
+        console.error('Error checking connection capabilities:', error)
         setIsReadOnly(false)
+        setSupportsTransactions(false)
       }
     }
-    checkReadOnly()
+    checkConnectionCapabilities()
   }, [connectionId])
 
   const loadTableSchema = async () => {
@@ -323,54 +329,63 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     try {
       setIsLoading(true)
 
-      // Get primary key information for the table
-      const schemaResult = await window.api.database.getTableFullSchema(
+      // Get primary keys
+      const primaryKeys = await window.api.database.getPrimaryKeys(
         connectionId,
         tableName,
         database
       )
 
-      if (!schemaResult.success || !schemaResult.schema) {
-        alert('Failed to get table schema')
-        return
+      if (primaryKeys.length === 0 && (editedCells.size > 0 || deletedRows.size > 0)) {
+        const hasOnlyInserts = Array.from(editedCells.keys()).every((key) => {
+          const rowIndex = parseInt(key.split('-')[0])
+          return clonedRows.has(rowIndex) || rowIndex === 0
+        })
+
+        if (!hasOnlyInserts) {
+          alert('Cannot update or delete rows: Table has no primary keys defined')
+          return
+        }
       }
 
-      const primaryKeys = schemaResult.schema.primaryKeys
+      // Build bulk operations
+      const operations: Array<{
+        type: 'insert' | 'update' | 'delete'
+        table: string
+        data?: Record<string, any>
+        primaryKey?: Record<string, any>
+        database?: string
+      }> = []
 
-      // Group changes by row
+      // Add delete operations
+      for (const rowIndex of deletedRows) {
+        const row = result?.data?.[rowIndex]
+        if (row && primaryKeys.length > 0) {
+          const primaryKeyValues: Record<string, any> = {}
+          primaryKeys.forEach((pk) => {
+            primaryKeyValues[pk] = row[pk]
+          })
+          operations.push({
+            type: 'delete',
+            table: tableName,
+            primaryKey: primaryKeyValues,
+            database
+          })
+        }
+      }
+
+      // Group edited cells by row
       const changesByRow = new Map<number, Record<string, any>>()
-      const newRows: number[] = []
-
       editedCells.forEach((value, key) => {
         const [rowIndex, column] = key.split('-')
         const index = parseInt(rowIndex)
-
         if (!changesByRow.has(index)) {
           changesByRow.set(index, {})
         }
         changesByRow.get(index)![column] = value
       })
 
-      // Process each row
-      const promises: Promise<any>[] = []
-
-      // Handle deletions first
-      if (deletedRows.size > 0 && primaryKeys.length > 0) {
-        for (const rowIndex of deletedRows) {
-          const row = result?.data?.[rowIndex]
-          if (row) {
-            const primaryKeyValues: Record<string, any> = {}
-            primaryKeys.forEach((pk) => {
-              primaryKeyValues[pk] = row[pk]
-            })
-            promises.push(
-              window.api.database.deleteRow(connectionId, tableName, primaryKeyValues, database)
-            )
-          }
-        }
-      }
-
-      // Handle updates and inserts (including cloned rows)
+      // Add insert and update operations
       for (const [rowIndex, changes] of changesByRow.entries()) {
         // Skip if row is marked for deletion
         if (deletedRows.has(rowIndex)) continue
@@ -384,46 +399,47 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
             columns.every((col) => editedCells.has(`${rowIndex}-${col.name}`)))
 
         if (isNewRow) {
-          // Insert new row
-          promises.push(window.api.database.insertRow(connectionId, tableName, changes, database))
-        } else if (originalRow) {
-          // Update existing row
-          if (primaryKeys.length === 0) {
-            alert('Cannot update: Table has no primary keys defined')
-            continue
-          }
-
+          operations.push({
+            type: 'insert',
+            table: tableName,
+            data: changes,
+            database
+          })
+        } else if (originalRow && primaryKeys.length > 0) {
           const primaryKeyValues: Record<string, any> = {}
           primaryKeys.forEach((pk) => {
             primaryKeyValues[pk] = originalRow[pk]
           })
 
-          promises.push(
-            window.api.database.updateRow(
-              connectionId,
-              tableName,
-              primaryKeyValues,
-              changes,
-              database
-            )
-          )
+          operations.push({
+            type: 'update',
+            table: tableName,
+            primaryKey: primaryKeyValues,
+            data: changes,
+            database
+          })
         }
       }
 
-      const results = await Promise.all(promises)
-      const failures = results.filter((r) => !r.success)
+      // Execute bulk operations
+      const bulkResult = await window.api.database.executeBulkOperations(connectionId, operations)
 
-      if (failures.length > 0) {
-        alert(`Failed to save ${failures.length} change(s)`)
-      } else {
+      if (bulkResult.success) {
         // Clear all pending changes after successful update
         setEditedCells(new Map())
         setDeletedRows(new Set())
         setClonedRows(new Map())
-      }
 
-      // Refresh the table data
-      await executeQuery()
+        // Refresh the table data
+        await executeQuery()
+
+        if (bulkResult.warning && !supportsTransactions) {
+          console.info('Note:', bulkResult.warning)
+        }
+      } else {
+        const failedOps = bulkResult.results.filter((r) => !r.success).length
+        alert(`Failed to apply ${failedOps} operation(s): ${bulkResult.error || 'Unknown error'}`)
+      }
     } catch (error) {
       console.error('Error applying changes:', error)
       alert(
@@ -606,7 +622,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
             cursor: 'text',
             padding: '2px',
             borderRadius: '2px',
-            backgroundColor: isEdited ? 'var(--accent-a4)' : 'transparent',
+            backgroundColor: isEdited ? 'var(--accent-a5)' : 'transparent',
             width: '100%',
             minHeight: '20px'
           }}
@@ -676,13 +692,13 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                 <ContextMenu.Trigger>
                   <Table.Row
                     style={{
-                      opacity: isDeleted ? 0.6 : 1,
+                      opacity: isDeleted ? 0.5 : 1,
                       backgroundColor: isDeleted
-                        ? 'var(--red-a3)'
+                        ? 'var(--red-a4)'
                         : hasEdits
-                          ? 'var(--accent-a2)'
+                          ? 'var(--accent-a3)'
                           : isSelected
-                            ? 'var(--accent-a3)'
+                            ? 'var(--accent-a2)'
                             : 'transparent',
                       cursor: 'pointer'
                     }}
@@ -709,7 +725,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     ))}
                   </Table.Row>
                 </ContextMenu.Trigger>
-                <ContextMenu.Content size="1">
+                <ContextMenu.Content size="1" style={{ minWidth: '120px' }}>
                   <ContextMenu.Item onClick={() => cloneRow(rowIndex)} disabled={isDeleted}>
                     Clone Row
                   </ContextMenu.Item>
@@ -842,12 +858,12 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     </Badge>
                   )}
                   {deletedRows.size > 0 && (
-                    <Badge size="1" variant="soft">
+                    <Badge size="1" variant="soft" color="red">
                       {deletedRows.size} to delete
                     </Badge>
                   )}
                   {clonedRows.size > 0 && (
-                    <Badge size="1" variant="soft">
+                    <Badge size="1" variant="soft" color="green">
                       {clonedRows.size} to insert
                     </Badge>
                   )}
@@ -861,11 +877,25 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                       }
                     })
                     return editedRowsSet.size > 0 ? (
-                      <Badge size="1" variant="soft">
+                      <Badge size="1" variant="soft" color="blue">
                         {editedRowsSet.size} to update
                       </Badge>
                     ) : null
                   })()}
+                  {!isReadOnly && (
+                    <Badge
+                      size="1"
+                      variant="soft"
+                      color={supportsTransactions ? 'green' : 'orange'}
+                      title={
+                        supportsTransactions
+                          ? 'Database supports transactions - changes will be applied atomically'
+                          : 'Database does not support transactions - changes will be applied individually'
+                      }
+                    >
+                      {supportsTransactions ? 'Transactions ✓' : 'No transactions'}
+                    </Badge>
+                  )}
                 </>
               )}
             </Flex>
@@ -892,7 +922,18 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                       title="Apply all pending changes"
                     >
                       <CheckIcon />
-                      Apply Changes ({editedCells.size + deletedRows.size + clonedRows.size})
+                      Apply Changes (
+                      {(() => {
+                        const editedRowsSet = new Set<number>()
+                        editedCells.forEach((_, key) => {
+                          const rowIndex = parseInt(key.split('-')[0])
+                          if (!clonedRows.has(rowIndex)) {
+                            editedRowsSet.add(rowIndex)
+                          }
+                        })
+                        return editedRowsSet.size + deletedRows.size + clonedRows.size
+                      })()}
+                      )
                     </Button>
                   )}
                 </>

@@ -75,6 +75,28 @@ export interface TableSchema {
   uniqueKeys: string[][]
 }
 
+export interface TransactionHandle {
+  id: string
+  commit: () => Promise<void>
+  rollback: () => Promise<void>
+}
+
+export interface BulkOperation {
+  type: 'insert' | 'update' | 'delete'
+  table: string
+  data?: Record<string, any>
+  where?: Record<string, any>
+  primaryKey?: Record<string, any>
+  database?: string
+}
+
+export interface BulkOperationResult {
+  success: boolean
+  results: Array<QueryResult>
+  warning?: string
+  error?: string
+}
+
 export interface DatabaseManagerInterface {
   // Connection management
   connect(config: DatabaseConfig, connectionId: string): Promise<ConnectionResult>
@@ -129,6 +151,17 @@ export interface DatabaseManagerInterface {
   getConnectionInfo(connectionId: string): { host: string; port: number; database: string } | null
   getAllConnections(): string[]
   getCapabilities(): DatabaseCapabilities
+
+  // Transaction support
+  supportsTransactions(connectionId: string): boolean
+  beginTransaction(connectionId: string): Promise<TransactionHandle>
+  executeBulkOperations(
+    connectionId: string,
+    operations: BulkOperation[]
+  ): Promise<BulkOperationResult>
+
+  // Primary key management
+  getPrimaryKeys(connectionId: string, table: string, database?: string): Promise<string[]>
 
   // Cleanup
   cleanup(): Promise<void>
