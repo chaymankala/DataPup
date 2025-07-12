@@ -19,7 +19,7 @@ export function ActiveConnectionLayout({
   onDisconnect
 }: ActiveConnectionLayoutProps) {
   const [isReadOnly, setIsReadOnly] = useState(false)
-  
+
   useEffect(() => {
     const checkReadOnly = async () => {
       try {
@@ -31,7 +31,7 @@ export function ActiveConnectionLayout({
     }
     checkReadOnly()
   }, [connectionId])
-  
+
   const handleOpenTableTab = (database: string, tableName: string) => {
     if (window.openTableTab) {
       window.openTableTab(database, tableName)

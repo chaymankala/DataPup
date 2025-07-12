@@ -109,7 +109,13 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
 
     // Note: This is a basic implementation. Real implementations should use parameterized queries
     const escapedValues = values
-      .map((v) => (typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : v))
+      .map((v) => {
+        if (v === null || v === undefined || v === '') return 'NULL'
+        if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
+        if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`
+        if (typeof v === 'boolean') return v ? '1' : '0'
+        return v
+      })
       .join(', ')
     const finalSql = `INSERT INTO ${qualifiedTable} (${columns.join(', ')}) VALUES (${escapedValues})`
 
@@ -124,14 +130,20 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
     updates: Record<string, any>,
     database?: string
   ): Promise<UpdateResult> {
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined || val === '') return 'NULL'
+      if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
+      if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`
+      if (typeof val === 'boolean') return val ? '1' : '0'
+      return val
+    }
+
     const setClauses = Object.entries(updates).map(([col, val]) => {
-      const escapedVal = typeof val === 'string' ? `'${val.replace(/'/g, "''")}'` : val
-      return `${col} = ${escapedVal}`
+      return `${col} = ${escapeValue(val)}`
     })
 
     const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
-      const escapedVal = typeof val === 'string' ? `'${val.replace(/'/g, "''")}'` : val
-      return `${col} = ${escapedVal}`
+      return `${col} = ${escapeValue(val)}`
     })
 
     const qualifiedTable = database ? `${database}.${table}` : table
@@ -147,9 +159,16 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
     primaryKey: Record<string, any>,
     database?: string
   ): Promise<DeleteResult> {
+    const escapeValue = (val: any) => {
+      if (val === null || val === undefined || val === '') return 'NULL'
+      if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
+      if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`
+      if (typeof val === 'boolean') return val ? '1' : '0'
+      return val
+    }
+
     const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
-      const escapedVal = typeof val === 'string' ? `'${val.replace(/'/g, "''")}'` : val
-      return `${col} = ${escapedVal}`
+      return `${col} = ${escapeValue(val)}`
     })
 
     const qualifiedTable = database ? `${database}.${table}` : table

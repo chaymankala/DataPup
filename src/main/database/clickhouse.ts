@@ -45,11 +45,8 @@ class ClickHouseManager extends BaseDatabaseManager {
       const { createClient } = await import('@clickhouse/client')
 
       // Create ClickHouse client configuration
-      console.log('ClickHouse manager config:', config)
-      console.log('ClickHouse secure flag:', config.secure)
       const protocol = config.secure ? 'https' : 'http'
       const url = `${protocol}://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`
-      console.log('ClickHouse connection URL protocol:', protocol)
 
       const clientConfig = {
         url: url,
@@ -155,9 +152,6 @@ class ClickHouseManager extends BaseDatabaseManager {
       const isDDL = queryType === QueryType.DDL
       const isDML = [QueryType.INSERT, QueryType.UPDATE, QueryType.DELETE].includes(queryType)
 
-      console.log('Executing ClickHouse query:', sql)
-      console.log('Query type:', queryType)
-
       if (isDDL || isDML) {
         // Use command() for DDL/DML queries that don't return data
         await connection.client.command({
@@ -182,8 +176,6 @@ class ClickHouseManager extends BaseDatabaseManager {
 
         // Convert result to plain JavaScript object for IPC serialization
         const rawData = await result.json()
-        console.log('ClickHouse raw result:', rawData)
-        console.log('ClickHouse result type:', typeof rawData)
 
         // Extract the actual data rows from the ClickHouse response
         let data = []
@@ -194,9 +186,6 @@ class ClickHouseManager extends BaseDatabaseManager {
             data = rawData
           }
         }
-
-        console.log('Extracted data:', data)
-        console.log('Data length:', data.length)
 
         return this.createQueryResult(
           true,
@@ -309,6 +298,64 @@ class ClickHouseManager extends BaseDatabaseManager {
 
   getAllConnections(): string[] {
     return Array.from(this.connections.keys())
+  }
+
+  async updateRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    updates: Record<string, any>,
+    database?: string
+  ): Promise<QueryResult> {
+    try {
+      const connection = this.connections.get(connectionId)
+      if (!connection || !connection.isConnected) {
+        return this.createQueryResult(false, 'Not connected to ClickHouse')
+      }
+
+      // ClickHouse requires ALTER TABLE ... UPDATE syntax
+      const escapeValue = (val: any) => {
+        if (val === null || val === undefined || val === '') return 'NULL'
+        if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
+        if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`
+        if (typeof val === 'boolean') return val ? '1' : '0'
+        return val
+      }
+
+      const setClauses = Object.entries(updates).map(([col, val]) => {
+        return `${col} = ${escapeValue(val)}`
+      })
+
+      const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
+        return `${col} = ${escapeValue(val)}`
+      })
+
+      const qualifiedTable = database ? `${database}.${table}` : table
+      const sql = `ALTER TABLE ${qualifiedTable} UPDATE ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`
+
+      // Execute the ALTER TABLE UPDATE command
+      await connection.client.command({
+        query: sql,
+        session_id: connectionId
+      })
+
+      return this.createQueryResult(
+        true,
+        'Row updated successfully',
+        [],
+        undefined,
+        QueryType.UPDATE,
+        1
+      )
+    } catch (error) {
+      console.error('ClickHouse update error:', error)
+      return this.createQueryResult(
+        false,
+        'Update failed',
+        undefined,
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
   }
 
   getCapabilities(): DatabaseCapabilities {

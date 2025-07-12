@@ -9,7 +9,8 @@ import {
   Table,
   Badge,
   Checkbox,
-  DropdownMenu
+  DropdownMenu,
+  ContextMenu
 } from '@radix-ui/themes'
 import {
   PlusCircledIcon,
@@ -70,6 +71,8 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [editedCells, setEditedCells] = useState<Map<string, any>>(new Map())
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string } | null>(null)
   const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' }[]>([])
+  const [deletedRows, setDeletedRows] = useState<Set<number>>(new Set())
+  const [clonedRows, setClonedRows] = useState<Map<number, any>>(new Map())
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Load table schema on mount
@@ -81,6 +84,48 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   useEffect(() => {
     executeQuery()
   }, [connectionId, database, tableName])
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete selected rows when Delete key is pressed
+      if (e.key === 'Delete' && selectedRows.size > 0 && !isReadOnly && !editingCell) {
+        e.preventDefault()
+        selectedRows.forEach((rowIndex) => markRowForDeletion(rowIndex))
+      }
+
+      // Clone selected row when Ctrl/Cmd+D is pressed
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key === 'd' &&
+        selectedRows.size === 1 &&
+        !isReadOnly &&
+        !editingCell
+      ) {
+        e.preventDefault()
+        const selectedRow = Array.from(selectedRows)[0]
+        cloneRow(selectedRow)
+      }
+
+      // Apply changes when Ctrl/Cmd+S is pressed
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && !isReadOnly) {
+        e.preventDefault()
+        if (editedCells.size > 0 || deletedRows.size > 0 || clonedRows.size > 0) {
+          handleApplyChanges()
+        }
+      }
+
+      // Select all rows when Ctrl/Cmd+A is pressed
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !editingCell) {
+        e.preventDefault()
+        const allIndices = new Set(result?.data?.map((_, i) => i) || [])
+        setSelectedRows(allIndices)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedRows, isReadOnly, editingCell, result, editedCells, deletedRows, clonedRows])
 
   // Check if connection is read-only
   useEffect(() => {
@@ -197,23 +242,54 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     onFiltersChange(newFilters)
   }
 
-  const toggleRowSelection = (index: number) => {
+  const toggleRowSelection = (index: number, event?: React.MouseEvent) => {
     const newSelected = new Set(selectedRows)
-    if (newSelected.has(index)) {
-      newSelected.delete(index)
+
+    // If shift key is held, select range
+    if (event?.shiftKey && selectedRows.size > 0) {
+      const lastSelected = Array.from(selectedRows).pop()!
+      const start = Math.min(lastSelected, index)
+      const end = Math.max(lastSelected, index)
+      for (let i = start; i <= end; i++) {
+        newSelected.add(i)
+      }
+    } else if (event?.ctrlKey || event?.metaKey) {
+      // Toggle individual selection
+      if (newSelected.has(index)) {
+        newSelected.delete(index)
+      } else {
+        newSelected.add(index)
+      }
     } else {
+      // Single selection
+      newSelected.clear()
       newSelected.add(index)
     }
+
     setSelectedRows(newSelected)
   }
 
-  const toggleAllRows = () => {
-    if (selectedRows.size === result?.data?.length) {
-      setSelectedRows(new Set())
-    } else {
-      const allIndices = new Set(result?.data?.map((_, i) => i) || [])
-      setSelectedRows(allIndices)
-    }
+  const markRowForDeletion = (index: number) => {
+    const newDeleted = new Set(deletedRows)
+    newDeleted.add(index)
+    setDeletedRows(newDeleted)
+  }
+
+  const cloneRow = (index: number) => {
+    if (!result?.data?.[index]) return
+
+    const originalRow = result.data[index]
+    const clonedRow = { ...originalRow }
+
+    // Add the cloned row to the clonedRows map with a new index
+    const newIndex = result.data.length + clonedRows.size
+    setClonedRows(new Map(clonedRows).set(newIndex, clonedRow))
+
+    // Mark all cells in the cloned row as edited for insert operation
+    columns.forEach((col) => {
+      const key = `${newIndex}-${col.name}`
+      setEditedCells((prev) => new Map(prev).set(key, clonedRow[col.name]))
+    })
   }
 
   const handleCellEdit = (rowIndex: number, column: string, value: any) => {
@@ -242,7 +318,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   }
 
   const handleApplyChanges = async () => {
-    if (editedCells.size === 0) return
+    if (editedCells.size === 0 && deletedRows.size === 0 && clonedRows.size === 0) return
 
     try {
       setIsLoading(true)
@@ -278,13 +354,34 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       // Process each row
       const promises: Promise<any>[] = []
 
-      for (const [rowIndex, changes] of changesByRow.entries()) {
-        const originalRow = result?.data?.[rowIndex]
+      // Handle deletions first
+      if (deletedRows.size > 0 && primaryKeys.length > 0) {
+        for (const rowIndex of deletedRows) {
+          const row = result?.data?.[rowIndex]
+          if (row) {
+            const primaryKeyValues: Record<string, any> = {}
+            primaryKeys.forEach((pk) => {
+              primaryKeyValues[pk] = row[pk]
+            })
+            promises.push(
+              window.api.database.deleteRow(connectionId, tableName, primaryKeyValues, database)
+            )
+          }
+        }
+      }
 
-        // Check if this is a new row (all fields are being edited)
+      // Handle updates and inserts (including cloned rows)
+      for (const [rowIndex, changes] of changesByRow.entries()) {
+        // Skip if row is marked for deletion
+        if (deletedRows.has(rowIndex)) continue
+
+        const originalRow = result?.data?.[rowIndex] || clonedRows.get(rowIndex)
+
+        // Check if this is a new row (including cloned rows)
         const isNewRow =
-          Object.keys(changes).length === columns.length &&
-          columns.every((col) => editedCells.has(`${rowIndex}-${col.name}`))
+          clonedRows.has(rowIndex) ||
+          (Object.keys(changes).length === columns.length &&
+            columns.every((col) => editedCells.has(`${rowIndex}-${col.name}`)))
 
         if (isNewRow) {
           // Insert new row
@@ -319,8 +416,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       if (failures.length > 0) {
         alert(`Failed to save ${failures.length} change(s)`)
       } else {
-        // Clear edited cells after successful update
+        // Clear all pending changes after successful update
         setEditedCells(new Map())
+        setDeletedRows(new Set())
+        setClonedRows(new Map())
       }
 
       // Refresh the table data
@@ -458,6 +557,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     }
 
     const columns = Object.keys(data[0])
+    const allData = [...data, ...Array.from(clonedRows.values())]
 
     const renderCell = (rowIndex: number, column: string, value: any) => {
       const key = `${rowIndex}-${column}`
@@ -506,7 +606,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
             cursor: 'text',
             padding: '2px',
             borderRadius: '2px',
-            backgroundColor: isEdited ? 'var(--amber-3)' : 'transparent',
+            backgroundColor: isEdited ? 'var(--accent-a4)' : 'transparent',
             width: '100%',
             minHeight: '20px'
           }}
@@ -529,11 +629,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         <Table.Header>
           <Table.Row>
             {!isReadOnly && (
-              <Table.ColumnHeaderCell width="40px">
-                <Checkbox
-                  checked={selectedRows.size === data.length && data.length > 0}
-                  onCheckedChange={toggleAllRows}
-                />
+              <Table.ColumnHeaderCell width="50px" style={{ textAlign: 'center' }}>
+                <Text size="1" weight="medium">
+                  #
+                </Text>
               </Table.ColumnHeaderCell>
             )}
             {columns.map((column) => {
@@ -561,21 +660,74 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {data.map((row, rowIndex) => (
-            <Table.Row key={rowIndex}>
-              {!isReadOnly && (
-                <Table.Cell>
-                  <Checkbox
-                    checked={selectedRows.has(rowIndex)}
-                    onCheckedChange={() => toggleRowSelection(rowIndex)}
-                  />
-                </Table.Cell>
-              )}
-              {columns.map((column) => (
-                <Table.Cell key={column}>{renderCell(rowIndex, column, row[column])}</Table.Cell>
-              ))}
-            </Table.Row>
-          ))}
+          {allData.map((row, rowIndex) => {
+            const isDeleted = deletedRows.has(rowIndex)
+            const isCloned = clonedRows.has(rowIndex)
+            const isSelected = selectedRows.has(rowIndex)
+
+            // Check if row has any edits
+            const hasEdits = Array.from(editedCells.keys()).some((key) => {
+              const [editRowIndex] = key.split('-')
+              return parseInt(editRowIndex) === rowIndex && !isCloned
+            })
+
+            return (
+              <ContextMenu.Root key={rowIndex}>
+                <ContextMenu.Trigger>
+                  <Table.Row
+                    style={{
+                      opacity: isDeleted ? 0.6 : 1,
+                      backgroundColor: isDeleted
+                        ? 'var(--red-a3)'
+                        : hasEdits
+                          ? 'var(--accent-a2)'
+                          : isSelected
+                            ? 'var(--accent-a3)'
+                            : 'transparent',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {!isReadOnly && (
+                      <Table.Cell
+                        onClick={(e) => toggleRowSelection(rowIndex, e)}
+                        style={{
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          fontWeight: isSelected ? 'bold' : 'normal'
+                        }}
+                      >
+                        <Text size="1" color={isDeleted ? 'red' : isCloned ? 'green' : undefined}>
+                          {rowIndex + 1}
+                        </Text>
+                      </Table.Cell>
+                    )}
+                    {columns.map((column) => (
+                      <Table.Cell key={column}>
+                        {renderCell(rowIndex, column, row[column])}
+                      </Table.Cell>
+                    ))}
+                  </Table.Row>
+                </ContextMenu.Trigger>
+                <ContextMenu.Content size="1">
+                  <ContextMenu.Item onClick={() => cloneRow(rowIndex)} disabled={isDeleted}>
+                    Clone Row
+                  </ContextMenu.Item>
+                  <ContextMenu.Item
+                    onClick={() => markRowForDeletion(rowIndex)}
+                    disabled={isDeleted || isCloned}
+                    color="red"
+                  >
+                    Delete Row
+                  </ContextMenu.Item>
+                  <ContextMenu.Separator />
+                  <ContextMenu.Item onClick={() => handleStartEdit(rowIndex, columns[0])}>
+                    Edit Row
+                  </ContextMenu.Item>
+                </ContextMenu.Content>
+              </ContextMenu.Root>
+            )
+          })}
         </Table.Body>
       </Table.Root>
     )
@@ -689,6 +841,31 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                       {selectedRows.size} selected
                     </Badge>
                   )}
+                  {deletedRows.size > 0 && (
+                    <Badge size="1" variant="soft">
+                      {deletedRows.size} to delete
+                    </Badge>
+                  )}
+                  {clonedRows.size > 0 && (
+                    <Badge size="1" variant="soft">
+                      {clonedRows.size} to insert
+                    </Badge>
+                  )}
+                  {(() => {
+                    // Count edited rows (excluding cloned rows which are inserts)
+                    const editedRowsSet = new Set<number>()
+                    editedCells.forEach((_, key) => {
+                      const rowIndex = parseInt(key.split('-')[0])
+                      if (!clonedRows.has(rowIndex)) {
+                        editedRowsSet.add(rowIndex)
+                      }
+                    })
+                    return editedRowsSet.size > 0 ? (
+                      <Badge size="1" variant="soft">
+                        {editedRowsSet.size} to update
+                      </Badge>
+                    ) : null
+                  })()}
                 </>
               )}
             </Flex>
@@ -706,28 +883,18 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                   >
                     <PlusCircledIcon />
                   </Button>
-                  {editedCells.size > 0 && (
+                  {(editedCells.size > 0 || deletedRows.size > 0 || clonedRows.size > 0) && (
                     <Button
                       size="1"
                       variant="solid"
                       onClick={handleApplyChanges}
                       disabled={isLoading}
-                      title="Apply changes"
+                      title="Apply all pending changes"
                     >
                       <CheckIcon />
-                      Apply ({editedCells.size})
+                      Apply Changes ({editedCells.size + deletedRows.size + clonedRows.size})
                     </Button>
                   )}
-                  <Button
-                    size="1"
-                    variant="soft"
-                    color="red"
-                    onClick={handleDelete}
-                    disabled={selectedRows.size === 0 || isLoading}
-                    title="Delete selected rows"
-                  >
-                    <TrashIcon />
-                  </Button>
                 </>
               )}
               {result?.success && result.data && result.data.length > 0 && (

@@ -180,9 +180,7 @@ ipcMain.handle('db:disconnect', async (_, connectionId?: string) => {
 
 ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessionId?: string) => {
   try {
-    console.log('Main process: Executing query for connection', connectionId)
     const result = await databaseManager.query(connectionId, query, sessionId)
-    console.log('Main process: Query result', result)
     return result
   } catch (error) {
     console.error('Query execution error:', error)
