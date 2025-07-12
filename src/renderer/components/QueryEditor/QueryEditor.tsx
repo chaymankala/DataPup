@@ -85,6 +85,7 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
   const [result, setResult] = useState<QueryResult | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [currentQueryId, setCurrentQueryId] = useState<string | null>(null)
   const editorRef = useRef<any>(null)
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
@@ -108,7 +109,11 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
       id: 'execute-query',
       label: 'Execute Query',
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-      run: () => handleExecuteQuery()
+      run: () => {
+        if (!isExecuting) {
+          handleExecuteQuery()
+        }
+      }
     })
 
     // Track selected text
@@ -127,11 +132,13 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
       setIsExecuting(true)
       setResult(null)
 
-      const sessionId = uuidv4()
+      const queryId = uuidv4()
+      setCurrentQueryId(queryId)
+
       const queryResult = await window.api.database.query(
         connectionId,
         queryToExecute.trim(),
-        sessionId
+        queryId
       )
       setResult(queryResult)
     } catch (error) {
@@ -143,6 +150,22 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
       })
     } finally {
       setIsExecuting(false)
+      setCurrentQueryId(null)
+    }
+  }
+
+  const handleCancelQuery = async () => {
+    if (!currentQueryId) return
+
+    try {
+      await window.api.database.cancelQuery(connectionId, currentQueryId)
+      setResult({
+        success: false,
+        message: 'Query cancelled by user',
+        error: 'Query execution was cancelled'
+      })
+    } catch (error) {
+      console.error('Failed to cancel query:', error)
     }
   }
 
@@ -173,11 +196,12 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
               Format
             </Button>
             <Button
-              onClick={handleExecuteQuery}
-              disabled={isExecuting || (!query.trim() && !selectedText.trim())}
+              onClick={isExecuting ? handleCancelQuery : handleExecuteQuery}
+              disabled={!isExecuting && !query.trim() && !selectedText.trim()}
               size="2"
+              color={isExecuting ? 'red' : undefined}
             >
-              {isExecuting ? 'Executing...' : 'Execute'}
+              {isExecuting ? 'Cancel' : 'Execute'}
             </Button>
           </Flex>
         </Flex>

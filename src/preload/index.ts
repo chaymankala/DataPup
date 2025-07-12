@@ -9,6 +9,8 @@ const api = {
     disconnect: (connectionId?: string) => ipcRenderer.invoke('db:disconnect', connectionId),
     query: (connectionId: string, sql: string, sessionId?: string) =>
       ipcRenderer.invoke('db:query', connectionId, sql, sessionId),
+    cancelQuery: (connectionId: string, queryId: string) =>
+      ipcRenderer.invoke('db:cancelQuery', connectionId, queryId),
     getDatabases: (connectionId: string) => ipcRenderer.invoke('db:getDatabases', connectionId),
     getTables: (connectionId: string, database?: string) =>
       ipcRenderer.invoke('db:getTables', connectionId, database),
@@ -38,7 +40,13 @@ const api = {
     isConnected: (connectionId: string) => ipcRenderer.invoke('db:isConnected', connectionId),
     isReadOnly: (connectionId: string) => ipcRenderer.invoke('db:isReadOnly', connectionId),
     getSupportedTypes: () => ipcRenderer.invoke('db:getSupportedTypes'),
-    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections')
+    getAllConnections: () => ipcRenderer.invoke('db:getAllConnections'),
+    supportsTransactions: (connectionId: string) =>
+      ipcRenderer.invoke('db:supportsTransactions', connectionId),
+    executeBulkOperations: (connectionId: string, operations: any[]) =>
+      ipcRenderer.invoke('db:executeBulkOperations', connectionId, operations),
+    getPrimaryKeys: (connectionId: string, table: string, database?: string) =>
+      ipcRenderer.invoke('db:getPrimaryKeys', connectionId, table, database)
   },
   connections: {
     getAll: () => ipcRenderer.invoke('connections:getAll'),

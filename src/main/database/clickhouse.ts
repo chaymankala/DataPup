@@ -30,6 +30,7 @@ interface ClickHouseConnection {
 
 class ClickHouseManager extends BaseDatabaseManager {
   protected connections: Map<string, ClickHouseConnection> = new Map()
+  private activeQueries: Map<string, AbortController> = new Map() // Track active queries by queryId
 
   async connect(config: DatabaseConfig, connectionId: string): Promise<ConnectionResult> {
     try {
@@ -45,11 +46,8 @@ class ClickHouseManager extends BaseDatabaseManager {
       const { createClient } = await import('@clickhouse/client')
 
       // Create ClickHouse client configuration
-      console.log('ClickHouse manager config:', config)
-      console.log('ClickHouse secure flag:', config.secure)
       const protocol = config.secure ? 'https' : 'http'
       const url = `${protocol}://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`
-      console.log('ClickHouse connection URL protocol:', protocol)
 
       const clientConfig = {
         url: url,
@@ -120,6 +118,12 @@ class ClickHouseManager extends BaseDatabaseManager {
         await connection.client.close()
       }
 
+      // Cancel any active queries for this connection
+      for (const [queryId, controller] of this.activeQueries.entries()) {
+        controller.abort()
+        this.activeQueries.delete(queryId)
+      }
+
       // Remove from connections map
       this.connections.delete(connectionId)
       this.readonlyConnections.delete(connectionId)
@@ -155,14 +159,11 @@ class ClickHouseManager extends BaseDatabaseManager {
       const isDDL = queryType === QueryType.DDL
       const isDML = [QueryType.INSERT, QueryType.UPDATE, QueryType.DELETE].includes(queryType)
 
-      console.log('Executing ClickHouse query:', sql)
-      console.log('Query type:', queryType)
-
       if (isDDL || isDML) {
         // Use command() for DDL/DML queries that don't return data
         await connection.client.command({
           query: sql,
-          session_id: sessionId || connectionId
+          query_id: sessionId || undefined
         })
 
         return this.createQueryResult(
@@ -175,15 +176,21 @@ class ClickHouseManager extends BaseDatabaseManager {
         )
       } else {
         // Use query() for SELECT and data-returning queries
+        const abortController = new AbortController()
+
+        // Store the abort controller if we have a sessionId
+        if (sessionId) {
+          this.activeQueries.set(sessionId, abortController)
+        }
+
         const result = await connection.client.query({
           query: sql,
-          session_id: sessionId || connectionId
+          query_id: sessionId || undefined,
+          abort_signal: abortController.signal
         })
 
         // Convert result to plain JavaScript object for IPC serialization
         const rawData = await result.json()
-        console.log('ClickHouse raw result:', rawData)
-        console.log('ClickHouse result type:', typeof rawData)
 
         // Extract the actual data rows from the ClickHouse response
         let data = []
@@ -195,8 +202,10 @@ class ClickHouseManager extends BaseDatabaseManager {
           }
         }
 
-        console.log('Extracted data:', data)
-        console.log('Data length:', data.length)
+        // Clean up the abort controller
+        if (sessionId) {
+          this.activeQueries.delete(sessionId)
+        }
 
         return this.createQueryResult(
           true,
@@ -207,13 +216,67 @@ class ClickHouseManager extends BaseDatabaseManager {
         )
       }
     } catch (error) {
+      // Clean up the abort controller on error
+      if (sessionId) {
+        this.activeQueries.delete(sessionId)
+      }
+
       console.error('ClickHouse query error:', error)
+
+      // Check if it was cancelled
+      if (error instanceof Error && error.name === 'AbortError') {
+        return this.createQueryResult(
+          false,
+          'Query was cancelled',
+          undefined,
+          'Query execution was cancelled by user'
+        )
+      }
+
       return this.createQueryResult(
         false,
         'Query execution failed',
         undefined,
         error instanceof Error ? error.message : 'Unknown error'
       )
+    }
+  }
+
+  async cancelQuery(
+    connectionId: string,
+    queryId: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // First try to abort using the abort controller
+      const abortController = this.activeQueries.get(queryId)
+      if (abortController) {
+        abortController.abort()
+        this.activeQueries.delete(queryId)
+      }
+
+      // Also try to kill the query on the server side
+      const connection = this.connections.get(connectionId)
+      if (connection && connection.isConnected) {
+        try {
+          await connection.client.command({
+            query: `KILL QUERY WHERE query_id = '${queryId}'`
+          })
+        } catch (killError) {
+          // Ignore errors from KILL QUERY as the query might have already finished
+          console.log('KILL QUERY error (expected if query already finished):', killError)
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Query cancellation requested'
+      }
+    } catch (error) {
+      console.error('Error cancelling query:', error)
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to cancel query'
+      }
     }
   }
 
@@ -311,15 +374,92 @@ class ClickHouseManager extends BaseDatabaseManager {
     return Array.from(this.connections.keys())
   }
 
+  async updateRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    updates: Record<string, any>,
+    database?: string
+  ): Promise<QueryResult> {
+    try {
+      const connection = this.connections.get(connectionId)
+      if (!connection || !connection.isConnected) {
+        return this.createQueryResult(false, 'Not connected to ClickHouse')
+      }
+
+      // ClickHouse requires ALTER TABLE ... UPDATE syntax
+      const escapeValue = (val: any) => {
+        if (val === null || val === undefined || val === '') return 'NULL'
+        if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
+        if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`
+        if (typeof val === 'boolean') return val ? '1' : '0'
+        return val
+      }
+
+      const setClauses = Object.entries(updates).map(([col, val]) => {
+        return `${col} = ${escapeValue(val)}`
+      })
+
+      const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
+        return `${col} = ${escapeValue(val)}`
+      })
+
+      const qualifiedTable = database ? `${database}.${table}` : table
+      const sql = `ALTER TABLE ${qualifiedTable} UPDATE ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`
+
+      // Execute the ALTER TABLE UPDATE command
+      await connection.client.command({
+        query: sql,
+        session_id: connectionId
+      })
+
+      return this.createQueryResult(
+        true,
+        'Row updated successfully',
+        [],
+        undefined,
+        QueryType.UPDATE,
+        1
+      )
+    } catch (error) {
+      console.error('ClickHouse update error:', error)
+      return this.createQueryResult(
+        false,
+        'Update failed',
+        undefined,
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+    }
+  }
+
   getCapabilities(): DatabaseCapabilities {
     return {
-      supportsTransactions: false, // ClickHouse doesn't support traditional transactions
+      supportsTransactions: false, // ClickHouse has experimental support but requires ZooKeeper
       supportsBatchOperations: true,
       supportsReturning: false,
       supportsUpsert: true, // Via INSERT ... ON DUPLICATE KEY UPDATE
       supportsSchemas: true, // Databases in ClickHouse
       requiresPrimaryKey: false, // ClickHouse doesn't require primary keys
       defaultSchema: 'default'
+    }
+  }
+
+  async supportsTransactions(connectionId: string): Promise<boolean> {
+    try {
+      // Check if experimental transactions are enabled
+      const result = await this.query(
+        connectionId,
+        "SELECT value FROM system.settings WHERE name = 'allow_experimental_transactions'"
+      )
+
+      if (result.success && result.data && result.data.length > 0) {
+        return result.data[0].value === '1' || result.data[0].value === 1
+      }
+
+      return false
+    } catch (error) {
+      // If the query fails, transactions are not supported
+      return false
     }
   }
 

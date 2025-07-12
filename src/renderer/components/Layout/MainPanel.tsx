@@ -95,14 +95,14 @@ export function MainPanel({
     try {
       // Get the full connection with password from secure storage
       const fullConnectionResult = await window.api.connections.getById(connection.id)
-      
+
       if (!fullConnectionResult.success || !fullConnectionResult.connection) {
         alert('Failed to retrieve connection details for testing')
         return
       }
-      
+
       const fullConnection = fullConnectionResult.connection
-      
+
       const result = await window.api.database.testConnection({
         type: fullConnection.type,
         host: fullConnection.host,
