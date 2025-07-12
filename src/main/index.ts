@@ -192,6 +192,20 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessio
   }
 })
 
+ipcMain.handle('db:cancelQuery', async (_, connectionId: string, queryId: string) => {
+  try {
+    const result = await databaseManager.cancelQuery(connectionId, queryId)
+    return result
+  } catch (error) {
+    console.error('Query cancellation error:', error)
+    return {
+      success: false,
+      message: 'Failed to cancel query',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
 // IPC handlers for connection management
 ipcMain.handle('connections:getAll', async () => {
   try {
@@ -300,7 +314,12 @@ ipcMain.handle('db:isReadOnly', async (_, connectionId: string) => {
 })
 
 ipcMain.handle('db:supportsTransactions', async (_, connectionId: string) => {
-  return databaseManager.supportsTransactions(connectionId)
+  try {
+    return await databaseManager.supportsTransactions(connectionId)
+  } catch (error) {
+    console.error('Error checking transaction support:', error)
+    return false
+  }
 })
 
 ipcMain.handle('db:executeBulkOperations', async (_, connectionId: string, operations: any[]) => {

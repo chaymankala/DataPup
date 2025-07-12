@@ -10,8 +10,13 @@ declare global {
         ) => Promise<{ success: boolean; message: string; error?: string }>
         query: (
           connectionId: string,
-          sql: string
+          sql: string,
+          sessionId?: string
         ) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
+        cancelQuery: (
+          connectionId: string,
+          queryId: string
+        ) => Promise<{ success: boolean; message: string }>
         getDatabases: (
           connectionId: string
         ) => Promise<{ success: boolean; databases?: string[]; message: string; error?: string }>
@@ -88,6 +93,7 @@ declare global {
           results: Array<any>
           warning?: string
           error?: string
+          data?: any[]
         }>
         getPrimaryKeys: (
           connectionId: string,

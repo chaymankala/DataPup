@@ -95,6 +95,7 @@ export interface BulkOperationResult {
   results: Array<QueryResult>
   warning?: string
   error?: string
+  data?: any[] // Updated rows after operations
 }
 
 export interface DatabaseManagerInterface {
@@ -106,6 +107,7 @@ export interface DatabaseManagerInterface {
 
   // Query execution
   query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult>
+  cancelQuery(connectionId: string, queryId: string): Promise<{ success: boolean; message: string }>
 
   // CRUD operations
   insertRow(
@@ -153,7 +155,7 @@ export interface DatabaseManagerInterface {
   getCapabilities(): DatabaseCapabilities
 
   // Transaction support
-  supportsTransactions(connectionId: string): boolean
+  supportsTransactions(connectionId: string): Promise<boolean>
   beginTransaction(connectionId: string): Promise<TransactionHandle>
   executeBulkOperations(
     connectionId: string,

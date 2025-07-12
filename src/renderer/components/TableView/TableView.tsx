@@ -430,6 +430,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         setDeletedRows(new Set())
         setClonedRows(new Map())
 
+        // Add a small delay for ClickHouse to ensure data consistency
+        // ClickHouse might have eventual consistency issues where data isn't immediately visible
+        await new Promise((resolve) => setTimeout(resolve, 200))
+
         // Refresh the table data
         await executeQuery()
 
@@ -882,20 +886,6 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                       </Badge>
                     ) : null
                   })()}
-                  {!isReadOnly && (
-                    <Badge
-                      size="1"
-                      variant="soft"
-                      color={supportsTransactions ? 'green' : 'orange'}
-                      title={
-                        supportsTransactions
-                          ? 'Database supports transactions - changes will be applied atomically'
-                          : 'Database does not support transactions - changes will be applied individually'
-                      }
-                    >
-                      {supportsTransactions ? 'Transactions ✓' : 'No transactions'}
-                    </Badge>
-                  )}
                 </>
               )}
             </Flex>

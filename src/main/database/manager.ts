@@ -165,6 +165,28 @@ class DatabaseManager {
     }
   }
 
+  async cancelQuery(
+    connectionId: string,
+    queryId: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found'
+        }
+      }
+
+      return await this.activeConnection.manager.cancelQuery(connectionId, queryId)
+    } catch (error) {
+      console.error('Query cancellation error:', error)
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to cancel query'
+      }
+    }
+  }
+
   async getDatabases(
     connectionId: string
   ): Promise<{ success: boolean; databases?: string[]; message: string }> {
