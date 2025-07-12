@@ -218,9 +218,26 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   }
 
   const handleProviderChange = (newProvider: string) => {
+    console.log('DEBUG: Changing provider to:', newProvider)
     setProvider(newProvider)
     localStorage.setItem('datapup-ai-provider', newProvider)
   }
+
+  // Function to clear corrupted localStorage values
+  const clearCorruptedProvider = () => {
+    const storedProvider = localStorage.getItem('datapup-ai-provider')
+    if (storedProvider && !['gemini', 'openai', 'claude'].includes(storedProvider)) {
+      console.log('DEBUG: Found corrupted provider in localStorage:', storedProvider)
+      localStorage.removeItem('datapup-ai-provider')
+      setProvider('gemini')
+      console.log('DEBUG: Reset provider to gemini')
+    }
+  }
+
+  // Check for corrupted provider on mount
+  useEffect(() => {
+    clearCorruptedProvider()
+  }, [])
 
   const renderToolCall = (toolCall: {
     name: string
