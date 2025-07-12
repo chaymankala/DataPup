@@ -28,6 +28,12 @@ export class GeminiLLM implements LLMInterface {
     try {
       const prompt = this.buildPrompt(request)
 
+      // Log prompt and its length
+      console.log('=== GEMINI PROMPT ===')
+      console.log('Prompt length:', prompt.length, 'characters')
+      console.log('Prompt:', prompt)
+      console.log('=====================')
+
       const result = await this.model.generateContent(prompt)
       const response = await result.response
       const text = response.text()
@@ -57,6 +63,12 @@ Query: ${request.sql}
 
 Response:`
 
+      // Log validation prompt and its length
+      console.log('=== GEMINI VALIDATION PROMPT ===')
+      console.log('Prompt length:', prompt.length, 'characters')
+      console.log('Prompt:', prompt)
+      console.log('================================')
+
       const result = await this.model.generateContent(prompt)
       const response = await result.response
       const text = response.text().trim()
@@ -79,6 +91,12 @@ Response:`
 Query: ${sql}
 
 Provide a brief, clear explanation of what this query does.`
+
+      // Log explanation prompt and its length
+      console.log('=== GEMINI EXPLANATION PROMPT ===')
+      console.log('Prompt length:', prompt.length, 'characters')
+      console.log('Prompt:', prompt)
+      console.log('==================================')
 
       const result = await this.model.generateContent(prompt)
       const response = await result.response

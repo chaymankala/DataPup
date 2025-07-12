@@ -38,6 +38,13 @@ export class OpenAILLM implements LLMInterface {
     try {
       const messages = this.buildMessages(request)
 
+      // Log messages and their total length
+      const totalLength = messages.reduce((sum, msg) => sum + msg.content.length, 0)
+      console.log('=== OPENAI MESSAGES ===')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('Messages:', JSON.stringify(messages, null, 2))
+      console.log('======================')
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -94,6 +101,13 @@ Response:`
         }
       ]
 
+      // Log validation messages and their total length
+      const totalLength = messages.reduce((sum, msg) => sum + msg.content.length, 0)
+      console.log('=== OPENAI VALIDATION MESSAGES ===')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('Messages:', JSON.stringify(messages, null, 2))
+      console.log('==================================')
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -142,6 +156,13 @@ Query: ${sql}
 Provide a brief, clear explanation of what this query does.`
         }
       ]
+
+      // Log explanation messages and their total length
+      const totalLength = messages.reduce((sum, msg) => sum + msg.content.length, 0)
+      console.log('=== OPENAI EXPLANATION MESSAGES ===')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('Messages:', JSON.stringify(messages, null, 2))
+      console.log('====================================')
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',

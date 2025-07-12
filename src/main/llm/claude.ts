@@ -37,6 +37,16 @@ export class ClaudeLLM implements LLMInterface {
     try {
       const { systemPrompt, userMessage } = this.buildPromptMessages(request)
 
+      // Log prompts and their lengths
+      const totalLength = systemPrompt.length + userMessage.length
+      console.log('=== CLAUDE PROMPTS ===')
+      console.log('System prompt length:', systemPrompt.length, 'characters')
+      console.log('User message length:', userMessage.length, 'characters')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('System prompt:', systemPrompt)
+      console.log('User message:', userMessage)
+      console.log('=====================')
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -85,6 +95,23 @@ export class ClaudeLLM implements LLMInterface {
 
   async validateQuery(request: ValidationRequest): Promise<ValidationResponse> {
     try {
+      const systemPrompt = `You are a SQL validator. Validate ${request.databaseType.toUpperCase()} SQL queries for syntax correctness.`
+      const userMessage = `Please validate this SQL query and return only "VALID" if it's syntactically correct, or a brief error message if it's not.
+
+Query: ${request.sql}
+
+Response:`
+
+      // Log validation prompts and their lengths
+      const totalLength = systemPrompt.length + userMessage.length
+      console.log('=== CLAUDE VALIDATION PROMPTS ===')
+      console.log('System prompt length:', systemPrompt.length, 'characters')
+      console.log('User message length:', userMessage.length, 'characters')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('System prompt:', systemPrompt)
+      console.log('User message:', userMessage)
+      console.log('================================')
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -96,15 +123,11 @@ export class ClaudeLLM implements LLMInterface {
           model: this.model,
           max_tokens: 100,
           temperature: 0,
-          system: `You are a SQL validator. Validate ${request.databaseType.toUpperCase()} SQL queries for syntax correctness.`,
+          system: systemPrompt,
           messages: [
             {
               role: 'user',
-              content: `Please validate this SQL query and return only "VALID" if it's syntactically correct, or a brief error message if it's not.
-
-Query: ${request.sql}
-
-Response:`
+              content: userMessage
             }
           ]
         })
@@ -130,6 +153,23 @@ Response:`
 
   async generateExplanation(sql: string, databaseType: string): Promise<string> {
     try {
+      const systemPrompt = 'You are a SQL expert. Explain SQL queries in simple, clear terms.'
+      const userMessage = `Explain this ${databaseType.toUpperCase()} SQL query in simple terms:
+
+Query: ${sql}
+
+Provide a brief, clear explanation of what this query does.`
+
+      // Log explanation prompts and their lengths
+      const totalLength = systemPrompt.length + userMessage.length
+      console.log('=== CLAUDE EXPLANATION PROMPTS ===')
+      console.log('System prompt length:', systemPrompt.length, 'characters')
+      console.log('User message length:', userMessage.length, 'characters')
+      console.log('Total content length:', totalLength, 'characters')
+      console.log('System prompt:', systemPrompt)
+      console.log('User message:', userMessage)
+      console.log('==================================')
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -141,15 +181,11 @@ Response:`
           model: this.model,
           max_tokens: 200,
           temperature: 0.3,
-          system: 'You are a SQL expert. Explain SQL queries in simple, clear terms.',
+          system: systemPrompt,
           messages: [
             {
               role: 'user',
-              content: `Explain this ${databaseType.toUpperCase()} SQL query in simple terms:
-
-Query: ${sql}
-
-Provide a brief, clear explanation of what this query does.`
+              content: userMessage
             }
           ]
         })
