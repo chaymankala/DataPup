@@ -116,6 +116,22 @@ class NaturalLanguageQueryProcessor {
           toolCalls
         }
       }
+      console.log(
+        'DEBUG: Available tables:',
+        schema.tables.map((t) => t.name)
+      )
+
+      // Check if database is empty
+      if (schema.tables.length === 0) {
+        toolCalls[toolCalls.length - 1].status = 'failed'
+        return {
+          success: false,
+          error:
+            'No tables found in the database. Please create some tables first or connect to a database with data.',
+          toolCalls
+        }
+      }
+
       toolCalls[toolCalls.length - 1].status = 'completed'
 
       // Get sample data if requested

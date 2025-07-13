@@ -146,16 +146,18 @@ ${this.formatSampleData(sampleData)}
 
 Please generate a ${databaseType.toUpperCase()} SQL query that answers this question.
 
-IMPORTANT INSTRUCTIONS:
-1. Use only the tables and columns provided in the schema
-2. Follow ${databaseType.toUpperCase()} syntax and best practices
-3. If the query involves aggregations, use appropriate functions (COUNT, SUM, AVG, etc.)
-4. If the query involves date/time operations, use ${databaseType.toUpperCase()} date functions
-5. If the query is ambiguous, make reasonable assumptions and explain them
-6. Always include a brief explanation of what the query does
-7. DO NOT wrap the SQL in markdown code blocks or any other formatting
-8. Consider the conversation context when interpreting the current request
-9. If the user is referring to a previous query or result, use that context
+CRITICAL INSTRUCTIONS:
+1. Use ONLY the tables and columns provided in the schema above
+2. DO NOT assume table names that are not in the schema
+3. If the requested table doesn't exist, suggest the closest available table or explain what's available
+4. Follow ${databaseType.toUpperCase()} syntax and best practices
+5. If the query involves aggregations, use appropriate functions (COUNT, SUM, AVG, etc.)
+6. If the query involves date/time operations, use ${databaseType.toUpperCase()} date functions
+7. If the query is ambiguous, make reasonable assumptions and explain them
+8. Always include a brief explanation of what the query does
+9. DO NOT wrap the SQL in markdown code blocks or any other formatting
+10. Consider the conversation context when interpreting the current request
+11. If the user is referring to a previous query or result, use that context
 
 RESPONSE FORMAT:
 SQL: [Your SQL query here - raw SQL only, no markdown]

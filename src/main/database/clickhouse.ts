@@ -307,10 +307,31 @@ class ClickHouseManager extends BaseDatabaseManager {
     database?: string
   ): Promise<{ success: boolean; tables?: string[]; message: string }> {
     try {
-      const dbClause = database ? `FROM ${database}` : ''
-      const result = await this.query(connectionId, `SHOW TABLES ${dbClause}`)
+      console.log('DEBUG: Getting tables for database:', database)
+
+      // For ClickHouse, we need to use the correct syntax
+      let query: string
+      if (database) {
+        query = `SHOW TABLES FROM ${database}`
+      } else {
+        query = 'SHOW TABLES'
+      }
+
+      console.log('DEBUG: Executing query:', query)
+      const result = await this.query(connectionId, query)
+
+      console.log('DEBUG: Query result:', result)
+
       if (result.success && result.data) {
-        const tables = result.data.map((row: any) => row.name || row.table || row[0])
+        const tables = result.data.map((row: any) => {
+          // ClickHouse returns different column names depending on the version
+          const tableName = row.name || row.table || row[0] || Object.values(row)[0]
+          console.log('DEBUG: Processing table row:', row, '-> tableName:', tableName)
+          return tableName
+        })
+
+        console.log('DEBUG: Found tables:', tables)
+
         return {
           success: true,
           tables,
