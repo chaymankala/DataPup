@@ -3,9 +3,9 @@ import {
   SQLGenerationRequest,
   SQLGenerationResponse,
   ValidationRequest,
-  ValidationResponse,
-  DatabaseSchema
+  ValidationResponse
 } from './interface'
+import { BaseLLM } from './base'
 
 interface ClaudeMessage {
   role: 'user' | 'assistant'
@@ -19,18 +19,19 @@ interface ClaudeResponse {
   }>
 }
 
-export class ClaudeLLM implements LLMInterface {
+export class ClaudeLLM extends BaseLLM implements LLMInterface {
   private apiKey: string
   private model: string
   private apiUrl = 'https://api.anthropic.com/v1/messages'
 
   constructor(apiKey: string, model?: string) {
+    super()
     if (!apiKey) {
       throw new Error('Claude API key is required')
     }
 
     this.apiKey = apiKey
-    this.model = model || 'claude-3-opus-20240229'
+    this.model = model || 'claude-3-5-sonnet-20241022'
   }
 
   async generateSQL(request: SQLGenerationRequest): Promise<SQLGenerationResponse> {
@@ -39,13 +40,12 @@ export class ClaudeLLM implements LLMInterface {
 
       // Log prompts and their lengths
       const totalLength = systemPrompt.length + userMessage.length
-      console.log('=== CLAUDE PROMPTS ===')
-      console.log('System prompt length:', systemPrompt.length, 'characters')
-      console.log('User message length:', userMessage.length, 'characters')
-      console.log('Total content length:', totalLength, 'characters')
-      console.log('System prompt:', systemPrompt)
-      console.log('User message:', userMessage)
-      console.log('=====================')
+      this.logPrompt(
+        'CLAUDE',
+        'PROMPTS',
+        `System: ${systemPrompt}\n\nUser: ${userMessage}`,
+        totalLength
+      )
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',
@@ -69,15 +69,14 @@ export class ClaudeLLM implements LLMInterface {
       })
 
       if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`Claude API error: ${response.status} - ${error}`)
+        throw new Error(`Claude API error: ${response.status}`)
       }
 
       const data: ClaudeResponse = await response.json()
-      const content = data.content[0]?.text || ''
+      const text = data.content[0]?.text?.trim() || ''
 
       // Parse the response to extract SQL and explanation
-      const parsed = this.parseResponse(content)
+      const parsed = this.parseResponse(text)
 
       return {
         success: true,
@@ -95,22 +94,20 @@ export class ClaudeLLM implements LLMInterface {
 
   async validateQuery(request: ValidationRequest): Promise<ValidationResponse> {
     try {
-      const systemPrompt = `You are a SQL validator. Validate ${request.databaseType.toUpperCase()} SQL queries for syntax correctness.`
-      const userMessage = `Please validate this SQL query and return only "VALID" if it's syntactically correct, or a brief error message if it's not.
+      const prompt = this.getValidationPrompt(request.databaseType, request.sql)
 
-Query: ${request.sql}
-
-Response:`
+      const systemPrompt =
+        'You are a SQL validator. Return only "VALID" if the query is syntactically correct, or a brief error message if not.'
+      const userMessage = prompt
 
       // Log validation prompts and their lengths
       const totalLength = systemPrompt.length + userMessage.length
-      console.log('=== CLAUDE VALIDATION PROMPTS ===')
-      console.log('System prompt length:', systemPrompt.length, 'characters')
-      console.log('User message length:', userMessage.length, 'characters')
-      console.log('Total content length:', totalLength, 'characters')
-      console.log('System prompt:', systemPrompt)
-      console.log('User message:', userMessage)
-      console.log('================================')
+      this.logPrompt(
+        'CLAUDE',
+        'VALIDATION PROMPTS',
+        `System: ${systemPrompt}\n\nUser: ${userMessage}`,
+        totalLength
+      )
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',
@@ -153,22 +150,19 @@ Response:`
 
   async generateExplanation(sql: string, databaseType: string): Promise<string> {
     try {
+      const prompt = this.getExplanationPrompt(databaseType, sql)
+
       const systemPrompt = 'You are a SQL expert. Explain SQL queries in simple, clear terms.'
-      const userMessage = `Explain this ${databaseType.toUpperCase()} SQL query in simple terms:
-
-Query: ${sql}
-
-Provide a brief, clear explanation of what this query does.`
+      const userMessage = prompt
 
       // Log explanation prompts and their lengths
       const totalLength = systemPrompt.length + userMessage.length
-      console.log('=== CLAUDE EXPLANATION PROMPTS ===')
-      console.log('System prompt length:', systemPrompt.length, 'characters')
-      console.log('User message length:', userMessage.length, 'characters')
-      console.log('Total content length:', totalLength, 'characters')
-      console.log('System prompt:', systemPrompt)
-      console.log('User message:', userMessage)
-      console.log('==================================')
+      this.logPrompt(
+        'CLAUDE',
+        'EXPLANATION PROMPTS',
+        `System: ${systemPrompt}\n\nUser: ${userMessage}`,
+        totalLength
+      )
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',
@@ -235,122 +229,22 @@ Provide a brief, clear explanation of what this query does.`
     systemPrompt: string
     userMessage: string
   } {
-    const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } =
-      request
+    const basePrompt = this.buildBasePrompt(request)
 
-    const systemPrompt = `You are Claude, a SQL expert specializing in ${databaseType.toUpperCase()} databases.
-Your task is to convert natural language queries into accurate SQL statements.
-
-IMPORTANT INSTRUCTIONS:
-1. Use only the tables and columns provided in the schema
-2. Follow ${databaseType.toUpperCase()} syntax and best practices
-3. If the query involves aggregations, use appropriate functions (COUNT, SUM, AVG, etc.)
-4. If the query involves date/time operations, use ${databaseType.toUpperCase()} date functions
-5. If the query is ambiguous, make reasonable assumptions and explain them
-6. Always include a brief explanation of what the query does
-7. DO NOT wrap the SQL in markdown code blocks or any other formatting
-8. Consider the conversation context when interpreting the current request
-
-RESPONSE FORMAT:
-SQL: [Your SQL query here - raw SQL only, no markdown]
-Explanation: [Brief explanation of what the query does]`
-
-    const userMessage = `${
-      conversationContext
-        ? `CONVERSATION CONTEXT:
-${conversationContext}
-
-`
-        : ''
-    }DATABASE SCHEMA:
-${this.formatSchema(databaseSchema)}
-
-${
-  sampleData
-    ? `SAMPLE DATA:
-${this.formatSampleData(sampleData)}
-
-`
-    : ''
-}NATURAL LANGUAGE QUERY:
-"${naturalLanguageQuery}"
-
-Please generate a ${databaseType.toUpperCase()} SQL query that answers this question.`
+    // Split the base prompt into system and user parts for Claude
+    const systemPrompt = `You are Claude, a SQL expert. Follow the instructions carefully and respond in the exact format requested.`
+    const userMessage = basePrompt
 
     return { systemPrompt, userMessage }
   }
 
-  private formatSchema(schema: DatabaseSchema): string {
-    let formatted = `Database: ${schema.database}\n\n`
-
-    for (const table of schema.tables) {
-      formatted += `Table: ${table.name}\n`
-      for (const column of table.columns) {
-        const nullable =
-          column.nullable !== undefined ? (column.nullable ? 'NULL' : 'NOT NULL') : ''
-        const defaultValue = column.default ? ` DEFAULT ${column.default}` : ''
-        formatted += `  - ${column.name}: ${column.type}${nullable}${defaultValue}\n`
-      }
-      formatted += '\n'
-    }
-
-    return formatted
-  }
-
-  private formatSampleData(sampleData: Record<string, any[]>): string {
-    let formatted = ''
-
-    for (const [tableName, rows] of Object.entries(sampleData)) {
-      if (rows.length > 0) {
-        formatted += `Table: ${tableName}\n`
-        const columns = Object.keys(rows[0])
-        formatted += `Columns: ${columns.join(', ')}\n`
-        formatted += 'Sample rows:\n'
-
-        const sampleRows = rows.slice(0, 3)
-        for (const row of sampleRows) {
-          const values = columns.map((col) => row[col]).join(', ')
-          formatted += `  [${values}]\n`
-        }
-        formatted += '\n'
-      }
-    }
-
-    return formatted
-  }
-
   private parseResponse(response: string): { sql: string; explanation: string } {
-    const lines = response.split('\n')
-    let sql = ''
-    let explanation = ''
-    let inSqlSection = false
-    let inExplanationSection = false
+    // Extract SQL and explanation from the response
+    const sqlMatch = response.match(/SQL:\s*(.*?)(?=\nExplanation:|\n\n|$)/s)
+    const explanationMatch = response.match(/Explanation:\s*(.*?)(?=\n\n|$)/s)
 
-    for (const line of lines) {
-      const trimmedLine = line.trim()
-
-      if (trimmedLine.startsWith('SQL:')) {
-        inSqlSection = true
-        inExplanationSection = false
-        sql = trimmedLine.substring(4).trim()
-      } else if (trimmedLine.startsWith('Explanation:')) {
-        inSqlSection = false
-        inExplanationSection = true
-        explanation = trimmedLine.substring(12).trim()
-      } else if (inSqlSection && trimmedLine) {
-        sql += ' ' + trimmedLine
-      } else if (inExplanationSection && trimmedLine) {
-        explanation += ' ' + trimmedLine
-      }
-    }
-
-    // Clean up SQL if needed
-    if (sql) {
-      sql = sql
-        .replace(/```sql\s*/g, '')
-        .replace(/```\s*$/g, '')
-        .trim()
-    }
+    const sql = sqlMatch ? sqlMatch[1].trim() : ''
+    const explanation = explanationMatch ? explanationMatch[1].trim() : ''
 
     return { sql, explanation }
   }

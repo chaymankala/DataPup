@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
 import { MessageRenderer } from './MessageRenderer'
 import './AIAssistant.css'
+import { aiTools } from '../../ai/aiTools'
 
 interface Message {
   id: string
@@ -97,6 +98,31 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     )
   }
 
+  // Add this function to parse tool call instructions from LLM output
+  function parseToolCall(text: string): { tool: string; args: string[] } | null {
+    console.log('🔍 Parsing tool call from text:', text)
+    // Example: 'call getSampleRows on table users in database stackoverflow limit 5'
+    const toolCallRegex = /call\s+(\w+)\s*(.*)/i
+    const match = text.match(toolCallRegex)
+    if (!match) {
+      console.log('❌ No tool call pattern found in text')
+      return null
+    }
+    const tool = match[1]
+    const argsText = match[2]
+    console.log('✅ Tool call detected:', { tool, argsText })
+    // Split args by 'on', 'in', 'limit', etc. (very basic for now)
+    const args = argsText
+      .replace(/on table /i, '')
+      .replace(/in database /i, ',')
+      .replace(/limit /i, ',')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    console.log('📋 Parsed arguments:', args)
+    return { tool, args }
+  }
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
@@ -144,6 +170,67 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       if (result.success) {
         sqlQuery = result.sqlQuery
         response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
+
+        // Tool call detection and execution
+        if (result.explanation) {
+          console.log('🔍 Checking LLM explanation for tool calls:', result.explanation)
+          const toolCall = parseToolCall(result.explanation)
+          if (toolCall && toolCall.tool in aiTools) {
+            console.log('🔍 Tool call detected in LLM output:', toolCall)
+            console.log('🔧 Available tools:', Object.keys(aiTools))
+            console.log('✅ Tool found in aiTools:', toolCall.tool)
+            // Add a tool message
+            const toolMessageId = addToolMessage({
+              name: toolCall.tool,
+              description: `Calling ${toolCall.tool} with args: ${toolCall.args.join(', ')}`,
+              status: 'running'
+            })
+            try {
+              console.log(
+                `⚙️ Executing tool: ${toolCall.tool} with args: ${toolCall.args.join(', ')}`
+              )
+              console.log('🔗 Context:', {
+                connectionId: context.connectionId,
+                database: context.database
+              })
+              // Call the tool with dynamic args
+              // (Assume connectionId and database are in context)
+              const toolResult = await (aiTools as any)[toolCall.tool](
+                context.connectionId,
+                ...(toolCall.args || [])
+              )
+              console.log(`✅ Tool ${toolCall.tool} completed successfully. Result:`, toolResult)
+              // Add tool result as assistant message
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `tool-result-${Date.now()}`,
+                  role: 'assistant',
+                  content: `Tool ${toolCall.tool} result:\n${JSON.stringify(toolResult, null, 2)}`,
+                  timestamp: new Date()
+                }
+              ])
+              updateToolMessage(toolMessageId, 'completed')
+            } catch (err) {
+              console.error(`❌ Tool ${toolCall.tool} execution failed. Error:`, err)
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `tool-error-${Date.now()}`,
+                  role: 'assistant',
+                  content: `Error calling tool ${toolCall.tool}: ${err instanceof Error ? err.message : String(err)}`,
+                  timestamp: new Date()
+                }
+              ])
+              updateToolMessage(toolMessageId, 'failed')
+            }
+          } else if (toolCall) {
+            console.log('❌ Tool not found in aiTools:', toolCall.tool)
+            console.log('🔧 Available tools:', Object.keys(aiTools))
+          } else {
+            console.log('ℹ️ No tool call detected in LLM explanation')
+          }
+        }
 
         // If there's an onExecuteQuery callback, offer to execute the query
         if (onExecuteQuery) {
@@ -278,7 +365,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
               <Flex align="center" gap="2">
                 <Text size="1">Provider:</Text>
                 <Select.Root value={provider} onValueChange={handleProviderChange}>
-                  <Select.Trigger size="1" />
+                  <Select.Trigger />
                   <Select.Content>
                     <Select.Item value="openai">OpenAI</Select.Item>
                     <Select.Item value="claude">Claude</Select.Item>
@@ -342,7 +429,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         </Flex>
         <Flex align="center" gap="2">
           <Select.Root value={provider} onValueChange={handleProviderChange}>
-            <Select.Trigger size="1" />
+            <Select.Trigger />
             <Select.Content>
               <Select.Item value="openai">OpenAI</Select.Item>
               <Select.Item value="claude">Claude</Select.Item>
