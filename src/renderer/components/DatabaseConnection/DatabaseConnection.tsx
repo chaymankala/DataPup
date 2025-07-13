@@ -31,6 +31,8 @@ export function DatabaseConnection({
     secure: false,
     readonly: false
   })
+  const [availableDatabases, setAvailableDatabases] = useState<string[]>([])
+  const [isDiscoveringDatabases, setIsDiscoveringDatabases] = useState(false)
 
   // Update port when secure connection is toggled
   useEffect(() => {
@@ -138,6 +140,43 @@ export function DatabaseConnection({
       alert('Connection error occurred')
     } finally {
       setIsConnecting(false)
+    }
+  }
+
+  const handleDiscoverDatabases = async () => {
+    try {
+      setIsDiscoveringDatabases(true)
+      setAvailableDatabases([])
+
+      // Test connection first
+      const testResult = await window.api.database.testConnection({
+        type: dbType,
+        ...connectionData,
+        port: parseInt(connectionData.port)
+      })
+
+      if (testResult.success) {
+        // If test succeeds, try to get databases
+        const result = await window.api.database.connect({
+          type: dbType,
+          ...connectionData,
+          port: parseInt(connectionData.port),
+          saveConnection: false
+        })
+
+        if (result.success && result.connectionId) {
+          const databasesResult = await window.api.database.getDatabases(result.connectionId)
+          if (databasesResult.success && databasesResult.databases) {
+            setAvailableDatabases(databasesResult.databases)
+          }
+          // Disconnect the test connection
+          await window.api.database.disconnect(result.connectionId)
+        }
+      }
+    } catch (error) {
+      console.error('Error discovering databases:', error)
+    } finally {
+      setIsDiscoveringDatabases(false)
     }
   }
 

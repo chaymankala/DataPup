@@ -4,6 +4,7 @@ import { SchemaIntrospector } from './schemaIntrospector'
 import { DatabaseManager } from '../database/manager'
 import { QueryResult } from '../database/interface'
 import { SecureStorage } from '../secureStorage'
+import { ApiBasedEmbedding } from '../llm/LlamaIndexEmbedding'
 
 interface NaturalLanguageQueryRequest {
   connectionId: string
@@ -44,6 +45,7 @@ class NaturalLanguageQueryProcessor {
     request: NaturalLanguageQueryRequest
   ): Promise<NaturalLanguageQueryResponse> {
     try {
+      console.log('DEBUG: Received request with provider:', request.provider)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -52,6 +54,16 @@ class NaturalLanguageQueryProcessor {
         maxSampleRows = 3,
         provider = 'gemini'
       } = request
+
+      // Validate provider
+      const validProviders = ['gemini', 'openai', 'claude']
+      if (provider && !validProviders.includes(provider)) {
+        console.error('DEBUG: Invalid provider received:', provider)
+        return {
+          success: false,
+          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
+        }
+      }
       const toolCalls: Array<{
         name: string
         description: string
@@ -104,6 +116,22 @@ class NaturalLanguageQueryProcessor {
           toolCalls
         }
       }
+      console.log(
+        'DEBUG: Available tables:',
+        schema.tables.map((t) => t.name)
+      )
+
+      // Check if database is empty
+      if (schema.tables.length === 0) {
+        toolCalls[toolCalls.length - 1].status = 'failed'
+        return {
+          success: false,
+          error:
+            'No tables found in the database. Please create some tables first or connect to a database with data.',
+          toolCalls
+        }
+      }
+
       toolCalls[toolCalls.length - 1].status = 'completed'
 
       // Get sample data if requested
@@ -130,6 +158,27 @@ class NaturalLanguageQueryProcessor {
       const databaseType = connectionInfo
         ? this.getDatabaseTypeFromConnection(connectionInfo)
         : 'clickhouse'
+
+      // Set up API-based embedding using the active LLM
+      toolCalls.push({
+        name: 'Setup Embedding Model',
+        description: `Setting up ${provider} embedding model...`,
+        status: 'running'
+      })
+      const llmInstance = this.llmManager.getLlmInstance(llmConnectionId)
+      if (!llmInstance) {
+        toolCalls[toolCalls.length - 1].status = 'failed'
+        return {
+          success: false,
+          error: 'LLM not connected',
+          toolCalls
+        }
+      }
+
+      // Create API-based embedding instance
+      const embeddingModel = new ApiBasedEmbedding(llmInstance)
+      console.log(`Embedding model set to use ${provider} API.`)
+      toolCalls[toolCalls.length - 1].status = 'completed'
 
       // Generate SQL query using LLM
       toolCalls.push({
@@ -200,6 +249,7 @@ class NaturalLanguageQueryProcessor {
     }
   > {
     try {
+      console.log('DEBUG: generateSQLOnly received request with provider:', request.provider)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -208,6 +258,16 @@ class NaturalLanguageQueryProcessor {
         maxSampleRows = 3,
         provider = 'gemini'
       } = request
+
+      // Validate provider
+      const validProviders = ['gemini', 'openai', 'claude']
+      if (provider && !validProviders.includes(provider)) {
+        console.error('DEBUG: Invalid provider received in generateSQLOnly:', provider)
+        return {
+          success: false,
+          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
+        }
+      }
       const toolCalls: Array<{
         name: string
         description: string

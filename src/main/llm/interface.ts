@@ -67,6 +67,7 @@ export interface LLMInterface {
   generateSQL(request: SQLGenerationRequest): Promise<SQLGenerationResponse>
   validateQuery(request: ValidationRequest): Promise<ValidationResponse>
   generateExplanation(sql: string, databaseType: string): Promise<string>
+  embedQuery(text: string): Promise<number[]>
   cleanup?(): Promise<void>
 }
 
