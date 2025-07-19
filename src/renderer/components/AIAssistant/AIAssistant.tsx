@@ -311,7 +311,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         } else {
           // Text-only response (no tool calls or SQL)
           console.log('[AIAssistant] Text response:', result)
-          response = result.explanation || "I couldn't generate a response. Please try rephrasing your question."
+          response =
+            result.explanation ||
+            "I couldn't generate a response. Please try rephrasing your question."
         }
       } else {
         response = `Error: ${result.error}`
