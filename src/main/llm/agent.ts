@@ -1,10 +1,10 @@
-import { LLMManager } from '../llm/manager'
-import { SQLGenerationRequest, SQLGenerationResponse, DatabaseSchema } from '../llm/interface'
-import { SchemaIntrospector } from './schemaIntrospector'
+import { LLMManager } from './manager'
+import { SQLGenerationRequest, SQLGenerationResponse, DatabaseSchema } from './interface'
+import { SchemaIntrospector } from './tools/schemaIntrospector'
 import { DatabaseManager } from '../database/manager'
 import { QueryResult } from '../database/interface'
 import { SecureStorage } from '../secureStorage'
-import { ApiBasedEmbedding } from '../llm/LlamaIndexEmbedding'
+import { ApiBasedEmbedding } from './LlamaIndexEmbedding'
 import { logger } from '../utils/logger'
 
 interface AgentRequest {
