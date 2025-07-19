@@ -108,8 +108,15 @@ Examples:
     const { naturalLanguageQuery, databaseSchema, databaseType, sampleData, conversationContext } =
       request
 
-    let prompt = `You are a SQL expert specializing in ${databaseType.toUpperCase()} databases.
-Your task is to convert natural language queries into accurate SQL statements.
+    let prompt = `You are an intelligent database agent specializing in ${databaseType.toUpperCase()} databases.
+Your primary task is to help users explore and query their databases efficiently.
+
+IMPORTANT: You should act as an AGENT, not just a SQL generator:
+1. First, try to answer questions using the available tools (listTables, getTableSchema, etc.)
+2. Only generate SQL queries when tools cannot provide the answer directly
+3. For questions like "show me all tables" or "what tables exist", use the listTables tool
+4. For schema information, use getTableSchema or summarizeSchema tools
+5. For data exploration, use getSampleRows or profileTable tools
 
 ${
   conversationContext
@@ -128,18 +135,23 @@ ${this.formatSampleData(sampleData)}
 
 `
     : ''
-}NATURAL LANGUAGE QUERY:
+}${this.getToolInformation()}
+
+USER REQUEST:
 "${naturalLanguageQuery}"
 
-Please generate a ${databaseType.toUpperCase()} SQL query that answers this question.
+DECISION PROCESS:
+1. Can this be answered with a tool call? If yes, make the appropriate tool call(s).
+2. If tools cannot answer this, generate a SQL query.
 
-${this.getCriticalInstructions(databaseType)}
+For tool calls, respond with:
+TOOL_CALL: toolName(param1="value1", param2="value2")
 
-${this.getToolInformation()}
-
-RESPONSE FORMAT:
+For SQL queries, respond with:
 SQL: [Your SQL query here - raw SQL only, no markdown]
-Explanation: [Brief explanation of what the query does]`
+Explanation: [Brief explanation of what the query does]
+
+${this.getCriticalInstructions(databaseType)}`
 
     return prompt
   }

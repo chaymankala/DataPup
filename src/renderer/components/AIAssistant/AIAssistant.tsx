@@ -108,7 +108,8 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     toolCalls: Array<{ name: string; args: Record<string, unknown> }>,
     connectionId: string,
     database?: string
-  ) {
+  ): Promise<Array<{ tool: string; result: unknown }>> {
+    const results: Array<{ tool: string; result: unknown }> = []
     for (const toolCall of toolCalls) {
       const toolMessageId = addToolMessage({
         name: toolCall.name,
@@ -136,65 +137,68 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             toolResult = await aiTools.listDatabases(connectionId)
             break
           case 'listTables':
-            toolResult = await aiTools.listTables(connectionId, toolCall.args.database || database)
+            toolResult = await aiTools.listTables(
+              connectionId,
+              (toolCall.args.database as string) || database
+            )
             break
           case 'getTableSchema':
             toolResult = await aiTools.getTableSchema(
               connectionId,
-              toolCall.args.table,
-              toolCall.args.database || database
+              toolCall.args.table as string,
+              (toolCall.args.database as string) || database
             )
             break
           case 'getSampleRows':
             toolResult = await aiTools.getSampleRows(
               connectionId,
-              toolCall.args.database || database || '',
-              toolCall.args.table,
-              toolCall.args.limit || 5
+              (toolCall.args.database as string) || database || '',
+              toolCall.args.table as string,
+              (toolCall.args.limit as number) || 5
             )
             break
           case 'searchTables':
             toolResult = await aiTools.searchTables(
               connectionId,
-              toolCall.args.pattern,
-              toolCall.args.database || database
+              toolCall.args.pattern as string,
+              (toolCall.args.database as string) || database
             )
             break
           case 'searchColumns':
             toolResult = await aiTools.searchColumns(
               connectionId,
-              toolCall.args.pattern,
-              toolCall.args.database || database
+              toolCall.args.pattern as string,
+              (toolCall.args.database as string) || database
             )
             break
           case 'summarizeSchema':
             toolResult = await aiTools.summarizeSchema(
               connectionId,
-              toolCall.args.database || database
+              (toolCall.args.database as string) || database
             )
             break
           case 'summarizeTable':
             toolResult = await aiTools.summarizeTable(
               connectionId,
-              toolCall.args.table,
-              toolCall.args.database || database
+              toolCall.args.table as string,
+              (toolCall.args.database as string) || database
             )
             break
           case 'profileTable':
             toolResult = await aiTools.profileTable(
               connectionId,
-              toolCall.args.table,
-              toolCall.args.database || database
+              toolCall.args.table as string,
+              (toolCall.args.database as string) || database
             )
             break
           case 'executeQuery':
-            toolResult = await aiTools.executeQuery(connectionId, toolCall.args.sql)
+            toolResult = await aiTools.executeQuery(connectionId, toolCall.args.sql as string)
             break
           case 'getLastError':
             toolResult = await aiTools.getLastError(connectionId)
             break
           case 'getDocumentation':
-            toolResult = await aiTools.getDocumentation(toolCall.args.topic)
+            toolResult = await aiTools.getDocumentation(toolCall.args.topic as string)
             break
           default:
             throw new Error(`Unknown tool: ${toolCall.name}`)
@@ -204,6 +208,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         if (process.env.NODE_ENV === 'development') {
           console.log(`✅ Tool ${toolCall.name} completed successfully. Result:`, toolResult)
         }
+
+        // Store the result
+        results.push({ tool: toolCall.name, result: toolResult })
 
         // Add tool result as assistant message
         setMessages((prev) => [
@@ -230,6 +237,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
         updateToolMessage(toolMessageId, 'failed')
       }
     }
+    return results
   }
 
   const handleSendMessage = async () => {
@@ -271,15 +279,40 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       if (result.success) {
         // Process tool calls from the LLM response
         if (result.toolCalls && result.toolCalls.length > 0) {
-          await processToolCalls(result.toolCalls, context.connectionId || '', context.database)
-        }
+          // Agent mode: execute tools and get results
+          const toolResults = await processToolCalls(
+            result.toolCalls,
+            context.connectionId || '',
+            context.database
+          )
 
-        sqlQuery = result.sqlQuery
-        response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
+          // If we got tool results, we may not need SQL
+          if (!result.sqlQuery) {
+            response = result.explanation || 'Here are the results from the tools:'
+          } else {
+            // Both tool results and SQL were generated
+            sqlQuery = result.sqlQuery
+            response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
 
-        // If there's an onExecuteQuery callback, offer to execute the query
-        if (onExecuteQuery) {
-          response += '\n\n**Would you like me to execute this query?**'
+            // If there's an onExecuteQuery callback, offer to execute the query
+            if (onExecuteQuery) {
+              response += '\n\n**Would you like me to execute this query?**'
+            }
+          }
+        } else if (result.sqlQuery) {
+          // Only SQL was generated (no tool calls)
+          sqlQuery = result.sqlQuery
+          response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
+
+          // If there's an onExecuteQuery callback, offer to execute the query
+          if (onExecuteQuery) {
+            response += '\n\n**Would you like me to execute this query?**'
+          }
+        } else {
+          // Neither tool calls nor SQL (this shouldn't happen)
+          response =
+            result.explanation ||
+            "I couldn't generate a response. Please try rephrasing your question."
         }
       } else {
         response = `Error: ${result.error}`

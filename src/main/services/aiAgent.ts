@@ -7,9 +7,9 @@ import { SecureStorage } from '../secureStorage'
 import { ApiBasedEmbedding } from '../llm/LlamaIndexEmbedding'
 import { logger } from '../utils/logger'
 
-interface NaturalLanguageQueryRequest {
+interface AgentRequest {
   connectionId: string
-  naturalLanguageQuery: string
+  query: string
   database?: string
   includeSampleData?: boolean
   maxSampleRows?: number
@@ -17,7 +17,10 @@ interface NaturalLanguageQueryRequest {
   provider?: 'openai' | 'claude' | 'gemini'
 }
 
-interface NaturalLanguageQueryResponse {
+// Keep old interface name for compatibility
+type NaturalLanguageQueryRequest = AgentRequest
+
+interface AgentResponse {
   success: boolean
   sqlQuery?: string
   explanation?: string
@@ -25,12 +28,19 @@ interface NaturalLanguageQueryResponse {
   error?: string
   toolCalls?: Array<{
     name: string
+    args: Record<string, unknown>
+  }>
+  operations?: Array<{
+    name: string
     description: string
     status: 'running' | 'completed' | 'failed'
   }>
 }
 
-class NaturalLanguageQueryProcessor {
+// Keep old interface name for compatibility
+type NaturalLanguageQueryResponse = AgentResponse
+
+class AIAgent {
   private llmManager: LLMManager
   private schemaIntrospector: SchemaIntrospector
   private databaseManager: DatabaseManager
@@ -42,14 +52,12 @@ class NaturalLanguageQueryProcessor {
     this.llmManager = new LLMManager(secureStorage)
   }
 
-  async processNaturalLanguageQuery(
-    request: NaturalLanguageQueryRequest
-  ): Promise<NaturalLanguageQueryResponse> {
+  async processQuery(request: AgentRequest): Promise<AgentResponse> {
     try {
       logger.debug(`Received request with provider: ${request.provider}`)
       const {
         connectionId,
-        naturalLanguageQuery,
+        query,
         database,
         includeSampleData = true,
         maxSampleRows = 3,
@@ -186,7 +194,7 @@ class NaturalLanguageQueryProcessor {
       })
       logger.info(`Generating SQL query with ${provider}...`)
       const generationRequest: SQLGenerationRequest = {
-        naturalLanguageQuery,
+        naturalLanguageQuery: query,
         databaseSchema: schema,
         databaseType,
         sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined,
@@ -226,7 +234,8 @@ class NaturalLanguageQueryProcessor {
         sqlQuery: generationResponse.sqlQuery,
         explanation: generationResponse.explanation,
         queryResult,
-        toolCalls
+        toolCalls: generationResponse.toolCalls,
+        operations: toolCalls
       }
     } catch (error) {
       logger.error('Error processing natural language query:', error)
@@ -237,20 +246,22 @@ class NaturalLanguageQueryProcessor {
     }
   }
 
-  async generateSQLOnly(request: NaturalLanguageQueryRequest): Promise<
-    SQLGenerationResponse & {
-      toolCalls?: Array<{
-        name: string
-        description: string
-        status: 'running' | 'completed' | 'failed'
-      }>
-    }
-  > {
+  // Backwards compatibility wrapper
+  async processNaturalLanguageQuery(
+    request: NaturalLanguageQueryRequest
+  ): Promise<NaturalLanguageQueryResponse> {
+    return this.processQuery({
+      ...request,
+      query: request.naturalLanguageQuery
+    })
+  }
+
+  async generateSQL(request: AgentRequest): Promise<AgentResponse> {
     try {
       logger.debug(`generateSQLOnly received request with provider: ${request.provider}`)
       const {
         connectionId,
-        naturalLanguageQuery,
+        query,
         database,
         includeSampleData = true,
         maxSampleRows = 3,
@@ -351,7 +362,7 @@ class NaturalLanguageQueryProcessor {
         status: 'running'
       })
       const generationRequest: SQLGenerationRequest = {
-        naturalLanguageQuery,
+        naturalLanguageQuery: query,
         databaseSchema: schema,
         databaseType,
         sampleData: Object.keys(sampleData).length > 0 ? sampleData : undefined,
@@ -361,7 +372,7 @@ class NaturalLanguageQueryProcessor {
       const result = await this.llmManager.generateSQL(llmConnectionId, generationRequest)
       toolCalls[toolCalls.length - 1].status = result.success ? 'completed' : 'failed'
 
-      return { ...result, toolCalls }
+      return { ...result, operations: toolCalls }
     } catch (error) {
       logger.error('Error generating SQL only:', error)
       return {
@@ -369,6 +380,16 @@ class NaturalLanguageQueryProcessor {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       }
     }
+  }
+
+  // Backwards compatibility wrapper
+  async generateSQLOnly(
+    request: NaturalLanguageQueryRequest
+  ): Promise<NaturalLanguageQueryResponse> {
+    return this.generateSQL({
+      ...request,
+      query: request.naturalLanguageQuery
+    })
   }
 
   async getDatabaseSchema(connectionId: string, database?: string): Promise<DatabaseSchema | null> {
@@ -423,5 +444,5 @@ class NaturalLanguageQueryProcessor {
   }
 }
 
-export { NaturalLanguageQueryProcessor }
+export { AIAgent }
 export type { NaturalLanguageQueryRequest, NaturalLanguageQueryResponse }
