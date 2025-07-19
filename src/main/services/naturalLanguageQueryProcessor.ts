@@ -5,6 +5,7 @@ import { DatabaseManager } from '../database/manager'
 import { QueryResult } from '../database/interface'
 import { SecureStorage } from '../secureStorage'
 import { ApiBasedEmbedding } from '../llm/LlamaIndexEmbedding'
+import { logger } from '../utils/logger'
 
 interface NaturalLanguageQueryRequest {
   connectionId: string
@@ -45,7 +46,7 @@ class NaturalLanguageQueryProcessor {
     request: NaturalLanguageQueryRequest
   ): Promise<NaturalLanguageQueryResponse> {
     try {
-      console.log('DEBUG: Received request with provider:', request.provider)
+      logger.debug(`Received request with provider: ${request.provider}`)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -58,7 +59,7 @@ class NaturalLanguageQueryProcessor {
       // Validate provider
       const validProviders = ['gemini', 'openai', 'claude']
       if (provider && !validProviders.includes(provider)) {
-        console.error('DEBUG: Invalid provider received:', provider)
+        logger.error(`Invalid provider received: ${provider}`)
         return {
           success: false,
           error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
@@ -106,7 +107,7 @@ class NaturalLanguageQueryProcessor {
         description: 'Getting database schema...',
         status: 'running'
       })
-      console.log('Getting database schema...')
+      logger.info('Getting database schema...')
       const schema = await this.schemaIntrospector.getDatabaseSchema(connectionId, database)
       if (!schema) {
         toolCalls[toolCalls.length - 1].status = 'failed'
@@ -116,10 +117,7 @@ class NaturalLanguageQueryProcessor {
           toolCalls
         }
       }
-      console.log(
-        'DEBUG: Available tables:',
-        schema.tables.map((t) => t.name)
-      )
+      logger.debug(`Available tables: ${schema.tables.map((t) => t.name).join(', ')}`)
 
       // Check if database is empty
       if (schema.tables.length === 0) {
@@ -142,7 +140,7 @@ class NaturalLanguageQueryProcessor {
           description: 'Getting sample data...',
           status: 'running'
         })
-        console.log('Getting sample data...')
+        logger.info('Getting sample data...')
         const tableNames = schema.tables.map((table) => table.name)
         sampleData = await this.schemaIntrospector.getSampleData(
           connectionId,
@@ -177,7 +175,7 @@ class NaturalLanguageQueryProcessor {
 
       // Create API-based embedding instance
       const embeddingModel = new ApiBasedEmbedding(llmInstance)
-      console.log(`Embedding model set to use ${provider} API.`)
+      logger.debug(`Embedding model set to use ${provider} API.`)
       toolCalls[toolCalls.length - 1].status = 'completed'
 
       // Generate SQL query using LLM
@@ -186,7 +184,7 @@ class NaturalLanguageQueryProcessor {
         description: `Generating SQL with ${provider}...`,
         status: 'running'
       })
-      console.log(`Generating SQL query with ${provider}...`)
+      logger.info(`Generating SQL query with ${provider}...`)
       const generationRequest: SQLGenerationRequest = {
         naturalLanguageQuery,
         databaseSchema: schema,
@@ -216,7 +214,7 @@ class NaturalLanguageQueryProcessor {
         description: 'Executing SQL query...',
         status: 'running'
       })
-      console.log('Executing generated SQL query...')
+      logger.info('Executing generated SQL query...')
       const queryResult = await this.databaseManager.query(
         connectionId,
         generationResponse.sqlQuery
@@ -231,7 +229,7 @@ class NaturalLanguageQueryProcessor {
         toolCalls
       }
     } catch (error) {
-      console.error('Error processing natural language query:', error)
+      logger.error('Error processing natural language query:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -249,7 +247,7 @@ class NaturalLanguageQueryProcessor {
     }
   > {
     try {
-      console.log('DEBUG: generateSQLOnly received request with provider:', request.provider)
+      logger.debug(`generateSQLOnly received request with provider: ${request.provider}`)
       const {
         connectionId,
         naturalLanguageQuery,
@@ -262,7 +260,7 @@ class NaturalLanguageQueryProcessor {
       // Validate provider
       const validProviders = ['gemini', 'openai', 'claude']
       if (provider && !validProviders.includes(provider)) {
-        console.error('DEBUG: Invalid provider received in generateSQLOnly:', provider)
+        logger.error(`Invalid provider received in generateSQLOnly: ${provider}`)
         return {
           success: false,
           error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`
@@ -365,7 +363,7 @@ class NaturalLanguageQueryProcessor {
 
       return { ...result, toolCalls }
     } catch (error) {
-      console.error('Error generating SQL only:', error)
+      logger.error('Error generating SQL only:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -401,7 +399,7 @@ class NaturalLanguageQueryProcessor {
 
       return await this.llmManager.validateQuery(llmConnectionId, { sql, databaseType })
     } catch (error) {
-      console.error('Error validating query:', error)
+      logger.error('Error validating query:', error)
       return { isValid: false, error: 'Failed to validate query' }
     }
   }
