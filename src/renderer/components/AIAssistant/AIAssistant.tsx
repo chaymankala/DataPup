@@ -294,8 +294,8 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             sqlQuery = result.sqlQuery
             response = `Generated SQL Query:\n\`\`\`sql\n${result.sqlQuery}\n\`\`\`\n\n${result.explanation || ''}`
 
-            // If there's an onExecuteQuery callback, offer to execute the query
-            if (onExecuteQuery) {
+            // If there's an onExecuteQuery callback AND we have SQL, offer to execute the query
+            if (onExecuteQuery && sqlQuery) {
               response += '\n\n**Would you like me to execute this query?**'
             }
           }
