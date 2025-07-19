@@ -309,11 +309,9 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             response += '\n\n**Would you like me to execute this query?**'
           }
         } else {
-          console.log('result;;', result)
-          // Neither tool calls nor SQL (this shouldn't happen)
-          response =
-            result.explanation ||
-            "I couldn't generate a response. Please try rephrasing your question."
+          // Text-only response (no tool calls or SQL)
+          console.log('[AIAssistant] Text response:', result)
+          response = result.explanation || "I couldn't generate a response. Please try rephrasing your question."
         }
       } else {
         response = `Error: ${result.error}`

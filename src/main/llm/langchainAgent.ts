@@ -229,20 +229,46 @@ Current database context: ${database || 'default'}`
         input: query
       })
       console.log('2, result', result)
-      // Parse the output
-      const output = result.output as string
+      // Parse the output - it can be a string or array of message objects
+      let outputText = ''
 
+      if (typeof result.output === 'string') {
+        outputText = result.output
+      } else if (Array.isArray(result.output)) {
+        // Handle array of message objects
+        outputText = result.output
+          .filter((msg: any) => msg.type === 'text')
+          .map((msg: any) => msg.text)
+          .join('\n')
+      } else if (result.output && typeof result.output === 'object' && 'text' in result.output) {
+        outputText = result.output.text
+      }
+      console.log('3, outputText', outputText)
       // Check if SQL was generated
-      const sqlMatch = output.match(/```sql\n([\s\S]*?)\n```/)
+      const sqlMatch = outputText.match(/```sql\n([\s\S]*?)\n```/)
       const sqlQuery = sqlMatch ? sqlMatch[1].trim() : undefined
 
-      // Extract explanation
-      const explanation = output.replace(/```sql\n[\s\S]*?\n```/g, '').trim()
+      // Extract explanation (remove SQL blocks if any)
+      const explanation = outputText.replace(/```sql\n[\s\S]*?\n```/g, '').trim()
+
+      // Extract tool calls if they exist in the intermediateSteps
+      const toolCalls: Array<{ name: string; args: Record<string, unknown> }> = []
+      if (result.intermediateSteps && Array.isArray(result.intermediateSteps)) {
+        for (const step of result.intermediateSteps) {
+          if (step && step.action && step.action.tool) {
+            toolCalls.push({
+              name: step.action.tool,
+              args: step.action.toolInput || {}
+            })
+          }
+        }
+      }
 
       return {
         success: true,
         sqlQuery,
-        explanation
+        explanation,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
       }
     } catch (error) {
       logger.error('Error processing query:', error)
