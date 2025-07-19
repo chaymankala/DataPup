@@ -265,7 +265,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
       if (process.env.NODE_ENV === 'development') {
         console.log('[AIAssistant] Sending provider to backend:', provider)
       }
-      const result = await window.api.naturalLanguageQuery.generateSQL({
+      const result = await window.api.ai.generateSQL({
         naturalLanguageQuery: userInput,
         connectionId: context.connectionId || '',
         database: context.database || undefined,
@@ -485,9 +485,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                   Choose AI Provider
                 </Text>
                 <Select.Root value={provider} onValueChange={handleProviderChange}>
-                  <Select.Trigger style={{ width: '100%' }}>
-                    <Select.Value />
-                  </Select.Trigger>
+                  <Select.Trigger style={{ width: '100%' }} />
                   <Select.Content>
                     <Select.Item value="openai">
                       <Flex direction="column" align="start">

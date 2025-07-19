@@ -22,7 +22,12 @@ export class AITools {
     return await this.databaseManager.getTableSchema(connectionId, tableName, database)
   }
 
-  async getSampleRows(connectionId: string, database: string, tableName: string, limit: number = 5) {
+  async getSampleRows(
+    connectionId: string,
+    database: string,
+    tableName: string,
+    limit: number = 5
+  ) {
     try {
       const query = `SELECT * FROM ${database}.${tableName} LIMIT ${limit}`
       return await this.databaseManager.query(connectionId, query)
@@ -89,7 +94,11 @@ export class AITools {
       const matchingColumns: Array<{ table: string; column: string; type: string }> = []
 
       for (const table of tablesResult.tables) {
-        const schemaResult = await this.databaseManager.getTableSchema(connectionId, table, database)
+        const schemaResult = await this.databaseManager.getTableSchema(
+          connectionId,
+          table,
+          database
+        )
         if (schemaResult.success && schemaResult.schema) {
           for (const col of schemaResult.schema) {
             const columnName = col.name || col.field || col[0]
@@ -127,7 +136,11 @@ export class AITools {
 
       for (const table of tablesResult.tables.slice(0, 10)) {
         // Limit to first 10 tables
-        const schemaResult = await this.databaseManager.getTableSchema(connectionId, table, database)
+        const schemaResult = await this.databaseManager.getTableSchema(
+          connectionId,
+          table,
+          database
+        )
         if (schemaResult.success && schemaResult.schema) {
           tableSummaries.push(`- ${table} (${schemaResult.schema.length} columns)`)
         }
@@ -195,7 +208,8 @@ export class AITools {
         tableName,
         database
       )
-      const columnCount = schemaResult.success && schemaResult.schema ? schemaResult.schema.length : 0
+      const columnCount =
+        schemaResult.success && schemaResult.schema ? schemaResult.schema.length : 0
 
       return {
         success: true,

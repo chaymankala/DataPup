@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SecureStorage, DatabaseConnection } from './secureStorage'
 import { DatabaseManager } from './database/manager'
 import { DatabaseConfig } from './database/interface'
-import { AIAgent } from './llm/agent'
+import { LangChainAgent } from './llm/langchainAgent'
 import { AITools } from './llm/tools'
 import * as fs from 'fs'
 
@@ -47,7 +47,7 @@ const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
 // Initialize natural language query processor and AI tools
-const aiAgent = new AIAgent(databaseManager, secureStorage)
+const aiAgent = new LangChainAgent(databaseManager, secureStorage)
 const aiTools = new AITools(databaseManager)
 
 app.whenReady().then(() => {
@@ -367,7 +367,7 @@ ipcMain.handle('db:getAllConnections', async () => {
 })
 
 // IPC handlers for natural language queries
-ipcMain.handle('nlq:process', async (_, request) => {
+ipcMain.handle('ai:process', async (_, request) => {
   try {
     console.log('Processing natural language query:', request.naturalLanguageQuery)
     const result = await aiAgent.processNaturalLanguageQuery(request)
@@ -382,7 +382,7 @@ ipcMain.handle('nlq:process', async (_, request) => {
   }
 })
 
-ipcMain.handle('nlq:generateSQL', async (_, request) => {
+ipcMain.handle('ai:generateSQL', async (_, request) => {
   try {
     console.log('Generating SQL from natural language:', request.naturalLanguageQuery)
     const result = await aiAgent.generateSQLOnly(request)
@@ -397,7 +397,7 @@ ipcMain.handle('nlq:generateSQL', async (_, request) => {
   }
 })
 
-ipcMain.handle('nlq:getSchema', async (_, connectionId: string, database?: string) => {
+ipcMain.handle('ai:getSchema', async (_, connectionId: string, database?: string) => {
   try {
     const schema = await aiAgent.getDatabaseSchema(connectionId, database)
     if (schema) {
@@ -421,7 +421,7 @@ ipcMain.handle('nlq:getSchema', async (_, connectionId: string, database?: strin
   }
 })
 
-ipcMain.handle('nlq:validateQuery', async (_, sql: string, connectionId: string) => {
+ipcMain.handle('ai:validateQuery', async (_, sql: string, connectionId: string) => {
   try {
     const result = await aiAgent.validateGeneratedQuery(sql, connectionId)
     return result
