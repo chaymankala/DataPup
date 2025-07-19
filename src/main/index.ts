@@ -5,7 +5,6 @@ import { SecureStorage, DatabaseConnection } from './secureStorage'
 import { DatabaseManager } from './database/manager'
 import { DatabaseConfig } from './database/interface'
 import { LangChainAgent } from './llm/langchainAgent'
-import { AITools } from './llm/tools'
 import * as fs from 'fs'
 
 function createWindow(): void {
@@ -46,9 +45,8 @@ function createWindow(): void {
 const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
 
-// Initialize natural language query processor and AI tools
+// Initialize AI agent
 const aiAgent = new LangChainAgent(databaseManager, secureStorage)
-const aiTools = new AITools(databaseManager)
 
 app.whenReady().then(() => {
   // Set the app name for macOS menu bar
@@ -366,69 +364,17 @@ ipcMain.handle('db:getAllConnections', async () => {
   }
 })
 
-// IPC handlers for natural language queries
+// IPC handler for AI processing
 ipcMain.handle('ai:process', async (_, request) => {
   try {
-    console.log('Processing natural language query:', request.naturalLanguageQuery)
-    const result = await aiAgent.processNaturalLanguageQuery(request)
-    console.log('Natural language query result:', result)
+    console.log('Processing AI query:', request.query)
+    const result = await aiAgent.processQuery(request)
+    console.log('AI query result:', result)
     return result
   } catch (error) {
-    console.error('Natural language query error:', error)
+    console.error('AI query error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }
-  }
-})
-
-ipcMain.handle('ai:generateSQL', async (_, request) => {
-  try {
-    console.log('Generating SQL from natural language:', request.naturalLanguageQuery)
-    const result = await aiAgent.generateSQLOnly(request)
-    console.log('SQL generation result:', result)
-    return result
-  } catch (error) {
-    console.error('SQL generation error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }
-  }
-})
-
-ipcMain.handle('ai:getSchema', async (_, connectionId: string, database?: string) => {
-  try {
-    const schema = await aiAgent.getDatabaseSchema(connectionId, database)
-    if (schema) {
-      return {
-        success: true,
-        schema,
-        formattedSchema: aiAgent.formatSchemaForDisplay(schema)
-      }
-    } else {
-      return {
-        success: false,
-        error: 'Failed to retrieve database schema'
-      }
-    }
-  } catch (error) {
-    console.error('Schema retrieval error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }
-  }
-})
-
-ipcMain.handle('ai:validateQuery', async (_, sql: string, connectionId: string) => {
-  try {
-    const result = await aiAgent.validateGeneratedQuery(sql, connectionId)
-    return result
-  } catch (error) {
-    console.error('Query validation error:', error)
-    return {
-      isValid: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     }
   }
@@ -552,48 +498,3 @@ ipcMain.handle(
     }
   }
 )
-
-// AI Tools IPC handlers
-
-ipcMain.handle('ai:listDatabases', async (_, connectionId) => {
-  return await aiTools.listDatabases(connectionId)
-})
-ipcMain.handle('ai:listTables', async (_, connectionId, database) => {
-  return await aiTools.listTables(connectionId, database)
-})
-ipcMain.handle('ai:getTableSchema', async (_, connectionId, tableName, database) => {
-  return await aiTools.getTableSchema(connectionId, tableName, database)
-})
-ipcMain.handle('ai:getSampleRows', async (_, connectionId, database, tableName, limit = 5) => {
-  return await aiTools.getSampleRows(connectionId, database, tableName, limit)
-})
-ipcMain.handle('ai:executeQuery', async (_, connectionId, sql) => {
-  return await aiTools.executeQuery(connectionId, sql)
-})
-ipcMain.handle('ai:getLastError', async (_, connectionId) => {
-  return await aiTools.getLastError(connectionId)
-})
-ipcMain.handle('ai:searchTables', async (_, connectionId, pattern, database) => {
-  return await aiTools.searchTables(connectionId, pattern, database)
-})
-ipcMain.handle('ai:searchColumns', async (_, connectionId, pattern, database) => {
-  return await aiTools.searchColumns(connectionId, pattern, database)
-})
-ipcMain.handle('ai:summarizeSchema', async (_, connectionId, database) => {
-  return await aiTools.summarizeSchema(connectionId, database)
-})
-ipcMain.handle('ai:summarizeTable', async (_, connectionId, tableName, database) => {
-  return await aiTools.summarizeTable(connectionId, tableName, database)
-})
-ipcMain.handle('ai:profileTable', async (_, connectionId, tableName, database) => {
-  return await aiTools.profileTable(connectionId, tableName, database)
-})
-ipcMain.handle('ai:getConversationContext', async (_, sessionId) => {
-  return await aiTools.getConversationContext(sessionId)
-})
-ipcMain.handle('ai:setConversationContext', async (_, sessionId, context) => {
-  return await aiTools.setConversationContext(sessionId, context)
-})
-ipcMain.handle('ai:getDocumentation', async (_, topic) => {
-  return await aiTools.getDocumentation(topic)
-})

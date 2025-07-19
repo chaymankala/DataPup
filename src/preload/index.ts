@@ -55,44 +55,21 @@ const api = {
     updateLastUsed: (id: string) => ipcRenderer.invoke('connections:updateLastUsed', id)
   },
   ai: {
-    process: (request: any) => ipcRenderer.invoke('ai:process', request),
-    generateSQL: (request: any) => ipcRenderer.invoke('ai:generateSQL', request),
-    getSchema: (connectionId: string, database?: string) =>
-      ipcRenderer.invoke('ai:getSchema', connectionId, database),
-    validateQuery: (sql: string, connectionId: string) =>
-      ipcRenderer.invoke('ai:validateQuery', sql, connectionId)
+    process: (request: any) => ipcRenderer.invoke('ai:process', request)
+  },
+  on: (channel: string, callback: (event: any, ...args: any[]) => void) => {
+    const validChannels = ['ai:toolCall']
+    if (validChannels.includes(channel)) {
+      const listener = (_event: any, ...args: any[]) => callback(_event, ...args)
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+    return () => {}
   },
   secureStorage: {
     get: (key: string) => ipcRenderer.invoke('secureStorage:get', key),
     set: (key: string, value: string) => ipcRenderer.invoke('secureStorage:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('secureStorage:delete', key)
-  },
-  aiTools: {
-    listDatabases: (connectionId: string) => ipcRenderer.invoke('ai:listDatabases', connectionId),
-    listTables: (connectionId: string, database?: string) =>
-      ipcRenderer.invoke('ai:listTables', connectionId, database),
-    getTableSchema: (connectionId: string, tableName: string, database?: string) =>
-      ipcRenderer.invoke('ai:getTableSchema', connectionId, tableName, database),
-    getSampleRows: (connectionId: string, database: string, tableName: string, limit?: number) =>
-      ipcRenderer.invoke('ai:getSampleRows', connectionId, database, tableName, limit),
-    executeQuery: (connectionId: string, sql: string) =>
-      ipcRenderer.invoke('ai:executeQuery', connectionId, sql),
-    getLastError: (connectionId: string) => ipcRenderer.invoke('ai:getLastError', connectionId),
-    searchTables: (connectionId: string, pattern: string, database?: string) =>
-      ipcRenderer.invoke('ai:searchTables', connectionId, pattern, database),
-    searchColumns: (connectionId: string, pattern: string, database?: string) =>
-      ipcRenderer.invoke('ai:searchColumns', connectionId, pattern, database),
-    summarizeSchema: (connectionId: string, database?: string) =>
-      ipcRenderer.invoke('ai:summarizeSchema', connectionId, database),
-    summarizeTable: (connectionId: string, tableName: string, database?: string) =>
-      ipcRenderer.invoke('ai:summarizeTable', connectionId, tableName, database),
-    profileTable: (connectionId: string, tableName: string, database?: string) =>
-      ipcRenderer.invoke('ai:profileTable', connectionId, tableName, database),
-    getConversationContext: (sessionId: string) =>
-      ipcRenderer.invoke('ai:getConversationContext', sessionId),
-    setConversationContext: (sessionId: string, context: any) =>
-      ipcRenderer.invoke('ai:setConversationContext', sessionId, context),
-    getDocumentation: (topic: string) => ipcRenderer.invoke('ai:getDocumentation', topic)
   }
 }
 

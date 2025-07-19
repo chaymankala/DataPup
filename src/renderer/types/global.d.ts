@@ -111,81 +111,20 @@ declare global {
         updateLastUsed: (id: string) => Promise<{ success: boolean }>
       }
       ai: {
-        process: (request: any) => Promise<{
+        process: (request: {
+          query: string
+          connectionId: string
+          database?: string
+          provider?: 'openai' | 'claude' | 'gemini'
+        }) => Promise<{
           success: boolean
+          message?: string
           sqlQuery?: string
           explanation?: string
-          queryResult?: any
           error?: string
         }>
-        generateSQL: (
-          request: any
-        ) => Promise<{ success: boolean; sqlQuery?: string; explanation?: string; error?: string }>
-        getSchema: (
-          connectionId: string,
-          database?: string
-        ) => Promise<{ success: boolean; schema?: any; formattedSchema?: string; error?: string }>
-        validateQuery: (
-          sql: string,
-          connectionId: string
-        ) => Promise<{ isValid: boolean; error?: string }>
       }
-      aiTools: {
-        listDatabases: (
-          connectionId: string
-        ) => Promise<{ success: boolean; databases?: string[]; message?: string; error?: string }>
-        listTables: (
-          connectionId: string,
-          database?: string
-        ) => Promise<{ success: boolean; tables?: string[]; message?: string; error?: string }>
-        getTableSchema: (
-          connectionId: string,
-          tableName: string,
-          database?: string
-        ) => Promise<{ success: boolean; schema?: any[]; message?: string; error?: string }>
-        getSampleRows: (
-          connectionId: string,
-          database: string,
-          tableName: string,
-          limit?: number
-        ) => Promise<{ success: boolean; data?: any[]; message?: string; error?: string }>
-        executeQuery: (
-          connectionId: string,
-          sql: string
-        ) => Promise<{ success: boolean; data?: any[]; message?: string; error?: string }>
-        getLastError: (connectionId: string) => Promise<{ error: string | null }>
-        searchTables: (
-          connectionId: string,
-          pattern: string,
-          database?: string
-        ) => Promise<{ success: boolean; tables?: string[]; error?: string }>
-        searchColumns: (
-          connectionId: string,
-          pattern: string,
-          database?: string
-        ) => Promise<{
-          success: boolean
-          columns?: Array<{ table: string; column: string }>
-          error?: string
-        }>
-        summarizeSchema: (
-          connectionId: string,
-          database?: string
-        ) => Promise<{ success: boolean; summary?: string; error?: string }>
-        summarizeTable: (
-          connectionId: string,
-          tableName: string,
-          database?: string
-        ) => Promise<{ success: boolean; summary?: string; error?: string }>
-        profileTable: (
-          connectionId: string,
-          tableName: string,
-          database?: string
-        ) => Promise<{ success: boolean; profile?: any; error?: string }>
-        getConversationContext: (sessionId: string) => Promise<{ context: any }>
-        setConversationContext: (sessionId: string, context: any) => Promise<{ success: boolean }>
-        getDocumentation: (topic: string) => Promise<{ doc: string }>
-      }
+      on: (channel: string, callback: (event: any, ...args: any[]) => void) => () => void
     }
   }
 }

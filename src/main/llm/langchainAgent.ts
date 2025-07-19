@@ -9,6 +9,7 @@ import { DatabaseManager } from '../database/manager'
 import { SecureStorage } from '../secureStorage'
 import { AITools } from './tools'
 import { logger } from '../utils/logger'
+import { BrowserWindow } from 'electron'
 
 interface AgentRequest {
   connectionId: string
@@ -19,8 +20,9 @@ interface AgentRequest {
 
 interface AgentResponse {
   success: boolean
-  sqlQuery?: string
-  explanation?: string
+  message?: string // The complete formatted response
+  sqlQuery?: string // Extracted SQL for backwards compatibility
+  explanation?: string // Deprecated, use message instead
   queryResult?: any
   error?: string
   toolCalls?: Array<{
@@ -71,6 +73,13 @@ export class LangChainAgent {
     }
   }
 
+  private emitToolEvent(event: string, data: any) {
+    // Send to all renderer windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send(event, data)
+    })
+  }
+
   private createTools(connectionId: string, database?: string) {
     const tools = [
       new DynamicStructuredTool({
@@ -78,8 +87,17 @@ export class LangChainAgent {
         description: 'Get all available databases',
         schema: z.object({}),
         func: async () => {
-          console.log('3, listDatabases')
+          this.emitToolEvent('ai:toolCall', {
+            name: 'listDatabases',
+            status: 'running',
+            args: {}
+          })
           const result = await this.aiTools.listDatabases(connectionId)
+          this.emitToolEvent('ai:toolCall', {
+            name: 'listDatabases',
+            status: 'completed',
+            result
+          })
           return JSON.stringify(result)
         }
       }),
@@ -90,7 +108,6 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ database: db }) => {
-          console.log('4, listTables')
           const result = await this.aiTools.listTables(connectionId, db || database)
           return JSON.stringify(result)
         }
@@ -103,7 +120,6 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ table, database: db }) => {
-          console.log('5, getTableSchema')
           const result = await this.aiTools.getTableSchema(connectionId, table, db || database)
           return JSON.stringify(result)
         }
@@ -117,7 +133,6 @@ export class LangChainAgent {
           limit: z.number().optional().default(5).describe('Number of rows to return')
         }),
         func: async ({ table, database: db, limit }) => {
-          console.log('6, getSampleRows')
           const result = await this.aiTools.getSampleRows(
             connectionId,
             db || database || '',
@@ -135,7 +150,6 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ pattern, database: db }) => {
-          console.log('7, searchTables')
           const result = await this.aiTools.searchTables(connectionId, pattern, db || database)
           return JSON.stringify(result)
         }
@@ -148,20 +162,7 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ pattern, database: db }) => {
-          console.log('8, searchColumns')
           const result = await this.aiTools.searchColumns(connectionId, pattern, db || database)
-          return JSON.stringify(result)
-        }
-      }),
-      new DynamicStructuredTool({
-        name: 'executeQuery',
-        description: 'Execute a SQL query and get results',
-        schema: z.object({
-          sql: z.string().describe('SQL query to execute')
-        }),
-        func: async ({ sql }) => {
-          console.log('9, executeQuery')
-          const result = await this.aiTools.executeQuery(connectionId, sql)
           return JSON.stringify(result)
         }
       })
@@ -224,11 +225,11 @@ Current database context: ${database || 'default'}`
       }
 
       // Execute the agent
-      logger.info(`1, Processing query with ${provider}: ${query}`)
+      logger.info(`Processing query with ${provider}: ${query}`)
       const result = await agent.invoke({
         input: query
       })
-      console.log('2, result', result)
+      logger.debug('Agent result:', result)
       // Parse the output - it can be a string or array of message objects
       let outputText = ''
 
@@ -243,21 +244,21 @@ Current database context: ${database || 'default'}`
       } else if (result.output && typeof result.output === 'object' && 'text' in result.output) {
         outputText = result.output.text
       }
-      console.log('3, outputText', outputText)
-      // Check if SQL was generated
+      // Format the complete response as markdown
+      let formattedResponse = outputText
+
+      // Extract SQL for backwards compatibility
       const sqlMatch = outputText.match(/```sql\n([\s\S]*?)\n```/)
       const sqlQuery = sqlMatch ? sqlMatch[1].trim() : undefined
 
-      // Extract explanation (remove SQL blocks if any)
-      const explanation = outputText.replace(/```sql\n[\s\S]*?\n```/g, '').trim()
-
-      // Extract tool calls if they exist in the intermediateSteps
-      const toolCalls: Array<{ name: string; args: Record<string, unknown> }> = []
+      // If we have intermediate steps, emit tool events
       if (result.intermediateSteps && Array.isArray(result.intermediateSteps)) {
         for (const step of result.intermediateSteps) {
           if (step && step.action && step.action.tool) {
-            toolCalls.push({
+            // Emit completed tool event
+            this.emitToolEvent('ai:toolCall', {
               name: step.action.tool,
+              status: 'completed',
               args: step.action.toolInput || {}
             })
           }
@@ -266,9 +267,9 @@ Current database context: ${database || 'default'}`
 
       return {
         success: true,
-        sqlQuery,
-        explanation,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+        message: formattedResponse,
+        sqlQuery, // For backwards compatibility
+        explanation: formattedResponse // Deprecated, use message instead
       }
     } catch (error) {
       logger.error('Error processing query:', error)
