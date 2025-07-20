@@ -82,7 +82,7 @@ export class LangChainAgent {
       case 'gemini':
         return new ChatGoogleGenerativeAI({
           apiKey,
-          model: 'gemini-1.5-pro',
+          model: 'gemini-2.0-flash',
           temperature: 0.1
         })
       default:
@@ -263,6 +263,8 @@ export class LangChainAgent {
         // Create memory with chat history
         const memory = new BufferMemory({
           memoryKey: 'chat_history',
+          inputKey: 'input',
+          outputKey: 'output',
           returnMessages: true
         })
 
@@ -277,13 +279,7 @@ IMPORTANT RULES:
 3. For questions about tables/schemas, use tools like listTables, getTableSchema
 4. For data queries, generate appropriate SQL
 5. Always verify table exists before generating SQL for it
-6. If a table doesn't exist in current database, explore other databases
-
-Current session state:
-- Current database: {currentDatabase}
-- Available databases: {availableDatabases}
-- Explored tables: {exploredTables}
-- Previous query: {lastQuery}`
+6. If a table doesn't exist in current database, explore other databases`
           ],
           new MessagesPlaceholder('chat_history'),
           ['human', '{input}'],
@@ -313,14 +309,27 @@ Current session state:
       }
       session.state.lastQuery = query
 
+      // Build context-aware input
+      const contextInfo = []
+      if (session.state.currentDatabase) {
+        contextInfo.push(`Current database: ${session.state.currentDatabase}`)
+      }
+      if (session.state.availableDatabases.length > 0) {
+        contextInfo.push(`Available databases: ${session.state.availableDatabases.join(', ')}`)
+      }
+      if (session.state.exploredTables.size > 0) {
+        contextInfo.push(
+          `Previously explored tables: ${Array.from(session.state.exploredTables).join(', ')}`
+        )
+      }
+
+      const contextualInput =
+        contextInfo.length > 0 ? `[Context: ${contextInfo.join('. ')}]\n\n${query}` : query
+
       // Execute the agent with state context
       logger.info(`Processing query with ${provider}: ${query}`)
       const result = await session.agent.invoke({
-        input: query,
-        currentDatabase: session.state.currentDatabase || 'default',
-        availableDatabases: session.state.availableDatabases.join(', ') || 'not yet explored',
-        exploredTables: Array.from(session.state.exploredTables).join(', ') || 'none',
-        lastQuery: session.state.lastQuery || 'none'
+        input: contextualInput
       })
       logger.debug('Agent result:', result)
       // Parse the output - it can be a string or array of message objects
