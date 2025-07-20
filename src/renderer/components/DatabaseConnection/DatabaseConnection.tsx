@@ -3,8 +3,6 @@ import { Button, Input, Label, Dialog, Flex, Select, Text, Card } from '../ui'
 import { TextField, Checkbox } from '@radix-ui/themes'
 import './DatabaseConnection.css'
 
-const isElectron = typeof window !== 'undefined' && window.process?.type === 'renderer'
-
 interface DatabaseConnectionProps {
   onConnectionSuccess?: (connection: any) => void
   onCancel?: () => void
