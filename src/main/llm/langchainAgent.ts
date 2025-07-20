@@ -76,8 +76,9 @@ export class LangChainAgent {
       case 'claude':
         return new ChatAnthropic({
           apiKey,
-          modelName: 'claude-3-5-sonnet-20241022',
-          temperature: 0.1
+          model: 'claude-3-5-sonnet-20241022',
+          temperature: 0.1,
+          maxTokens: 4096
         })
       case 'gemini':
         return new ChatGoogleGenerativeAI({
@@ -261,11 +262,15 @@ export class LangChainAgent {
         const tools = this.createTools(connectionId, state)
 
         // Create memory with chat history
+        // For Claude, we need to be careful about message formatting
         const memory = new BufferMemory({
           memoryKey: 'chat_history',
           inputKey: 'input',
           outputKey: 'output',
-          returnMessages: true
+          returnMessages: true,
+          // Add AI prefix to help with formatting
+          aiPrefix: 'Assistant',
+          humanPrefix: 'Human'
         })
 
         const prompt = ChatPromptTemplate.fromMessages([
@@ -296,7 +301,9 @@ IMPORTANT RULES:
           agent: agentModel,
           tools,
           memory,
-          maxIterations: 5
+          maxIterations: 5,
+          handleParsingErrors: true,
+          verbose: true
         })
 
         session = { agent, memory, state }
@@ -328,10 +335,66 @@ IMPORTANT RULES:
 
       // Execute the agent with state context
       logger.info(`Processing query with ${provider}: ${query}`)
-      const result = await session.agent.invoke({
-        input: contextualInput
-      })
+
+      logger.debug('Invoking agent with input:', contextualInput)
+      const memoryVars = await session.memory.loadMemoryVariables({})
+      logger.debug('Memory state:', JSON.stringify(memoryVars, null, 2))
+
+      let result
+      try {
+        result = await session.agent.invoke({
+          input: contextualInput
+        })
+      } catch (invokeError: any) {
+        logger.error('Error during agent invoke:', invokeError)
+        logger.error('Error stack:', invokeError.stack)
+
+        // Check if this is a Claude-specific message formatting error
+        if (provider === 'claude' && invokeError.message?.includes("reading 'map'")) {
+          logger.warn('Claude message formatting error detected, attempting without memory')
+
+          // Create a new agent without memory for this request
+          const modelWithoutMemory = await this.getModel(provider)
+          const toolsWithoutMemory = this.createTools(connectionId, session.state)
+
+          const promptWithoutMemory = ChatPromptTemplate.fromMessages([
+            [
+              'system',
+              `You are an intelligent database agent. Your job is to help users explore and query their databases.
+
+IMPORTANT RULES:
+1. For questions about tables/schemas, use tools like listTables, getTableSchema
+2. For data queries, generate appropriate SQL
+3. Always verify table exists before generating SQL for it
+4. If a table doesn't exist in current database, explore other databases`
+            ],
+            ['human', '{input}'],
+            ['placeholder', '{agent_scratchpad}']
+          ])
+
+          const agentWithoutMemory = createToolCallingAgent({
+            llm: modelWithoutMemory,
+            tools: toolsWithoutMemory,
+            prompt: promptWithoutMemory
+          })
+
+          const executorWithoutMemory = new AgentExecutor({
+            agent: agentWithoutMemory,
+            tools: toolsWithoutMemory,
+            maxIterations: 5,
+            handleParsingErrors: true
+          })
+
+          result = await executorWithoutMemory.invoke({
+            input: contextualInput
+          })
+        } else {
+          throw invokeError
+        }
+      }
+
       logger.debug('Agent result:', result)
+
       // Parse the output - it can be a string or array of message objects
       let outputText = ''
 
