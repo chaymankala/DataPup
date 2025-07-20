@@ -3,7 +3,8 @@ import { ChatAnthropic } from '@langchain/anthropic'
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
 import { DynamicStructuredTool } from '@langchain/core/tools'
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents'
-import { ChatPromptTemplate } from '@langchain/core/prompts'
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts'
+import { BufferMemory } from 'langchain/memory'
 import { z } from 'zod'
 import { DatabaseManager } from '../database/manager'
 import { SecureStorage } from '../secureStorage'
@@ -16,6 +17,7 @@ interface AgentRequest {
   query: string
   database?: string
   provider?: 'openai' | 'claude' | 'gemini'
+  sessionId?: string // For maintaining conversation context
 }
 
 interface AgentResponse {
@@ -31,11 +33,26 @@ interface AgentResponse {
   }>
 }
 
+interface AgentState {
+  currentDatabase?: string
+  availableDatabases?: string[]
+  exploredTables: Set<string>
+  toolResultsCache: Map<string, any>
+  lastQuery?: string
+  conversationId: string
+}
+
+interface AgentSession {
+  agent: AgentExecutor
+  memory: BufferMemory
+  state: AgentState
+}
+
 export class LangChainAgent {
   private databaseManager: DatabaseManager
   private secureStorage: SecureStorage
   private aiTools: AITools
-  private agents: Map<string, AgentExecutor> = new Map()
+  private sessions: Map<string, AgentSession> = new Map()
 
   constructor(databaseManager: DatabaseManager, secureStorage: SecureStorage) {
     this.databaseManager = databaseManager
@@ -80,19 +97,34 @@ export class LangChainAgent {
     })
   }
 
-  private createTools(connectionId: string, database?: string) {
+  private createTools(connectionId: string, state: AgentState) {
     const tools = [
       new DynamicStructuredTool({
         name: 'listDatabases',
         description: 'Get all available databases',
         schema: z.object({}),
         func: async () => {
+          const cacheKey = 'listDatabases'
+
+          // Check cache first
+          if (state.toolResultsCache.has(cacheKey)) {
+            logger.debug('Using cached result for listDatabases')
+            return JSON.stringify(state.toolResultsCache.get(cacheKey))
+          }
+
           this.emitToolEvent('ai:toolCall', {
             name: 'listDatabases',
             status: 'running',
             args: {}
           })
           const result = await this.aiTools.listDatabases(connectionId)
+
+          // Cache the result
+          if (result.success && result.databases) {
+            state.toolResultsCache.set(cacheKey, result)
+            state.availableDatabases = result.databases
+          }
+
           this.emitToolEvent('ai:toolCall', {
             name: 'listDatabases',
             status: 'completed',
@@ -108,7 +140,35 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ database: db }) => {
-          const result = await this.aiTools.listTables(connectionId, db || database)
+          const targetDb = db || state.currentDatabase
+          const cacheKey = `listTables:${targetDb || 'default'}`
+
+          // Check cache first
+          if (state.toolResultsCache.has(cacheKey)) {
+            logger.debug(`Using cached result for listTables in ${targetDb}`)
+            return JSON.stringify(state.toolResultsCache.get(cacheKey))
+          }
+
+          this.emitToolEvent('ai:toolCall', {
+            name: 'listTables',
+            status: 'running',
+            args: { database: targetDb }
+          })
+
+          const result = await this.aiTools.listTables(connectionId, targetDb)
+
+          // Cache the result and track explored tables
+          if (result.success && result.tables) {
+            state.toolResultsCache.set(cacheKey, result)
+            result.tables.forEach((table) => state.exploredTables.add(table))
+          }
+
+          this.emitToolEvent('ai:toolCall', {
+            name: 'listTables',
+            status: 'completed',
+            result
+          })
+
           return JSON.stringify(result)
         }
       }),
@@ -173,7 +233,7 @@ export class LangChainAgent {
 
   async processQuery(request: AgentRequest): Promise<AgentResponse> {
     try {
-      const { connectionId, query, database, provider = 'openai' } = request
+      const { connectionId, query, database, provider = 'openai', sessionId } = request
 
       // Check if connection is active
       if (!this.databaseManager.isConnected(connectionId)) {
@@ -183,28 +243,49 @@ export class LangChainAgent {
         }
       }
 
-      // Get or create agent for this provider
-      const agentKey = `${provider}-${connectionId}`
-      let agent = this.agents.get(agentKey)
+      // Get or create session
+      const sessionKey = sessionId || `${provider}-${connectionId}-default`
+      let session = this.sessions.get(sessionKey)
 
-      if (!agent) {
+      if (!session) {
+        // Create new session with state
+        const state: AgentState = {
+          currentDatabase: database,
+          availableDatabases: [],
+          exploredTables: new Set(),
+          toolResultsCache: new Map(),
+          conversationId: sessionKey
+        }
+
         const model = await this.getModel(provider)
-        const tools = this.createTools(connectionId, database)
+        const tools = this.createTools(connectionId, state)
+
+        // Create memory with chat history
+        const memory = new BufferMemory({
+          memoryKey: 'chat_history',
+          returnMessages: true
+        })
 
         const prompt = ChatPromptTemplate.fromMessages([
           [
             'system',
-            `You are an intelligent database agent. Your job is to help users explore and query their databases.
+            `You are an intelligent database agent with memory of our conversation. Your job is to help users explore and query their databases.
 
 IMPORTANT RULES:
-1. Use tools to explore the database before generating SQL
-2. For questions about tables/schemas, use tools like listTables, getTableSchema
-3. For data queries, generate appropriate SQL
-4. Always verify table exists before generating SQL for it
-5. If a table doesn't exist in current database, explore other databases
+1. Remember what we've already discussed - don't repeat tool calls unnecessarily
+2. Use cached information when available
+3. For questions about tables/schemas, use tools like listTables, getTableSchema
+4. For data queries, generate appropriate SQL
+5. Always verify table exists before generating SQL for it
+6. If a table doesn't exist in current database, explore other databases
 
-Current database context: ${database || 'default'}`
+Current session state:
+- Current database: {currentDatabase}
+- Available databases: {availableDatabases}
+- Explored tables: {exploredTables}
+- Previous query: {lastQuery}`
           ],
+          new MessagesPlaceholder('chat_history'),
           ['human', '{input}'],
           ['placeholder', '{agent_scratchpad}']
         ])
@@ -215,19 +296,31 @@ Current database context: ${database || 'default'}`
           prompt
         })
 
-        agent = new AgentExecutor({
+        const agent = new AgentExecutor({
           agent: agentModel,
           tools,
+          memory,
           maxIterations: 5
         })
 
-        this.agents.set(agentKey, agent)
+        session = { agent, memory, state }
+        this.sessions.set(sessionKey, session)
       }
 
-      // Execute the agent
+      // Update state with current context
+      if (database) {
+        session.state.currentDatabase = database
+      }
+      session.state.lastQuery = query
+
+      // Execute the agent with state context
       logger.info(`Processing query with ${provider}: ${query}`)
-      const result = await agent.invoke({
-        input: query
+      const result = await session.agent.invoke({
+        input: query,
+        currentDatabase: session.state.currentDatabase || 'default',
+        availableDatabases: session.state.availableDatabases.join(', ') || 'not yet explored',
+        exploredTables: Array.from(session.state.exploredTables).join(', ') || 'none',
+        lastQuery: session.state.lastQuery || 'none'
       })
       logger.debug('Agent result:', result)
       // Parse the output - it can be a string or array of message objects
@@ -305,7 +398,11 @@ Current database context: ${database || 'default'}`
   }
 
   async cleanup(): Promise<void> {
-    this.agents.clear()
+    this.sessions.clear()
+  }
+
+  async clearSession(sessionId: string): Promise<void> {
+    this.sessions.delete(sessionId)
   }
 
   // Additional methods for compatibility

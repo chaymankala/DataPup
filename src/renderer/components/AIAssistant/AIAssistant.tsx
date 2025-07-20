@@ -43,6 +43,10 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Generate session ID that persists for the lifetime of this component
+  const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+  const sessionId = sessionIdRef.current
+
   // Check for API key on mount and when provider changes
   useEffect(() => {
     const checkApiKey = async () => {
@@ -132,12 +136,13 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     setMessages((prev) => [...prev, userMessage])
 
     try {
-      // Use single AI process method
+      // Use single AI process method with session ID
       const result = await window.api.ai.process({
         query: userInput,
         connectionId: context.connectionId || '',
         database: context.database || undefined,
-        provider: provider
+        provider: provider,
+        sessionId: sessionId
       })
 
       if (result.success) {
