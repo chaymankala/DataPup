@@ -822,6 +822,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     placeholder="Value"
                     className="filter-input"
                     size="1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        executeQuery()
+                      }
+                    }}
                   />
                 )}
 
