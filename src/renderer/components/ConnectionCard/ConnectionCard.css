@@ -54,6 +54,10 @@
 
 .connection-name {
   transition: color 0.3s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 
 .connection-card:hover .connection-name {
@@ -144,4 +148,9 @@
 
 .connection-card:hover::before {
   opacity: 1;
+}
+
+.menu-button {
+  flex-shrink: 0;
+  margin-left: var(--space-2);
 }

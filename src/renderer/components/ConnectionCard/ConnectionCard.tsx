@@ -92,14 +92,16 @@ export function ConnectionCard({
       <Box className="card-glow" />
 
       <Flex direction="column" gap="2" className="card-content">
-        <Flex justify="between" align="center">
-          <Flex align="center" gap="2">
+        <Flex justify="between" align="center" gap="2">
+          <Flex align="center" gap="2" style={{ flex: 1, minWidth: 0 }}>
             <Text size="3" className="database-icon">
               {getDatabaseIcon(connection.type)}
             </Text>
-            <Text size="2" weight="medium" className="connection-name">
-              {connection.name}
-            </Text>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text size="2" weight="medium" className="connection-name" title={connection.name}>
+                {connection.name}
+              </Text>
+            </Box>
           </Flex>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
