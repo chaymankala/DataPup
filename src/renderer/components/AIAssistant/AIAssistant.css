@@ -136,6 +136,7 @@
 /* Markdown content styles */
 .ai-message pre {
   margin: 0;
+  overflow-x: auto;
 }
 
 .ai-message code {
@@ -150,10 +151,42 @@
   padding: 0;
 }
 
+/* Text wrapping */
+.ai-message-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.ai-message-content p,
+.ai-message-content li {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure code blocks have horizontal scroll */
+.ai-message-content pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 @media (max-width: 800px) {
   .ai-message-user,
   .ai-message-assistant {
     margin-left: 0;
     margin-right: 0;
+  }
+}
+
+/* Pulse animation for running status */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }

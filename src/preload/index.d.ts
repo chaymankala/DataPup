@@ -41,37 +41,22 @@ declare global {
         delete: (id: string) => Promise<{ success: boolean }>
         updateLastUsed: (id: string) => Promise<{ success: boolean }>
       }
-      naturalLanguageQuery: {
-        process: (request: any) => Promise<{
+      ai: {
+        process: (request: {
+          query: string
+          connectionId: string
+          database?: string
+          provider?: 'openai' | 'claude' | 'gemini'
+          sessionId?: string
+        }) => Promise<{
           success: boolean
+          message?: string
           sqlQuery?: string
           explanation?: string
-          queryResult?: any
-          error?: string
-        }>
-        generateSQL: (request: any) => Promise<{
-          success: boolean
-          sql?: string
-          explanation?: string
-          error?: string
-        }>
-        getSchema: (
-          connectionId: string,
-          database?: string
-        ) => Promise<{
-          success: boolean
-          schema?: any
-          error?: string
-        }>
-        validateQuery: (
-          sql: string,
-          connectionId: string
-        ) => Promise<{
-          success: boolean
-          isValid: boolean
           error?: string
         }>
       }
+      on: (channel: string, callback: (event: any, ...args: any[]) => void) => () => void
       secureStorage: {
         get: (key: string) => Promise<{ success: boolean; value: string | null }>
         set: (key: string, value: string) => Promise<{ success: boolean }>
