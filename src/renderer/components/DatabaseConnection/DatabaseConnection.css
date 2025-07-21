@@ -1,3 +1,15 @@
 .full-width {
   width: 100%;
 }
+
+.card-web {
+  padding: 24px;
+  margin-top: -40px;
+  transform-origin: center;
+}
+
+.card-electron {
+  margin-top: -60px;
+  transform: scale(0.9);
+  transform-origin: center;
+}

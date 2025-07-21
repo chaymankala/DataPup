@@ -211,10 +211,14 @@ export function DatabaseConnection({
     }
   }
 
+  const isElectron = () => {
+    return navigator.userAgent.toLowerCase().includes('electron')
+  }
+
   // Inline form mode
   if (inline) {
     return (
-      <Card style={{ padding: '24px' }}>
+      <Card className={isElectron() ? 'card-electron' : 'card-web'}>
         <Flex direction="column" gap="4">
           <Text size="4" weight="medium">
             Connect to Database
