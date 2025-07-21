@@ -301,7 +301,7 @@ IMPORTANT RULES:
           agent: agentModel,
           tools,
           memory,
-          maxIterations: 5,
+          maxIterations: 15,
           handleParsingErrors: true,
           verbose: true
         })
