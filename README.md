@@ -5,15 +5,33 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+⭐ **If you find Data-Pup useful, please consider giving it a star on GitHub!** ⭐
+
 Data-Pup is an open-source database client designed to make database management intuitive and enjoyable. With AI-powered query assistance and a beautiful, accessible interface, it's the database tool that developers actually want to use.
+
+## 📸 Screenshots
+
+### AI-Powered Query Assistant
+![AI Assistant helping write SQL queries](docs/images/ai-assistant-screenshot.png)
+*Get intelligent help writing SQL queries with the built-in AI assistant*
+
+### Advanced Query Filtering
+![Query results with advanced filtering](docs/images/query-filter-screenshot.png)
+*Filter and explore your data with powerful, intuitive controls*
+
+### Beautiful Themes
+![Theme switcher showing multiple theme options](docs/images/themes-screenshot.png)
+*Choose from multiple beautiful themes including Light, Dark, and colorful variants*
 
 ## ✨ Features
 
-- 🔌 Connect to multiple database types (PostgreSQL, MySQL, SQLite, ClickHouse)
-- 🎨 Modern UI with Radix components and dark mode
-- 🚀 Fast and responsive with Electron IPC
-- 🔒 Secure credential handling
-- 📦 Cross-platform (macOS, Windows, Linux)
+- 🤖 **AI-Powered Assistant** - Get help writing SQL queries with intelligent suggestions
+- 🔌 **Multi-Database Support** - Connect to PostgreSQL, MySQL, SQLite, ClickHouse, and more
+- 🎨 **Beautiful Themes** - Multiple themes including Light, Dark, Dark Violet, Dark Green, Light Pink, and High Contrast
+- 🔍 **Advanced Filtering** - Powerful query result filtering with intuitive controls
+- 🚀 **Fast & Responsive** - Built with Electron IPC for optimal performance
+- 🔒 **Secure** - Safe credential handling with no exposed ports
+- 📦 **Cross-platform** - Works on macOS, Windows, and Linux
 
 ## Development
 
@@ -95,6 +113,7 @@ This project is [MIT](LICENSE) licensed - use it however you want! See the [LICE
 - Built with [Electron](https://www.electronjs.org/)
 - UI powered by [Radix UI](https://www.radix-ui.com/)
 - Bundled with [Vite](https://vitejs.dev/)
+- AI assistance powered by [LangChain](https://www.langchain.com/)
 
 ## 📬 Contact
 
