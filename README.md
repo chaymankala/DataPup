@@ -12,15 +12,18 @@ Data-Pup is an open-source database client designed to make database management 
 ## 📸 Screenshots
 
 ### AI-Powered Query Assistant
-![AI Assistant helping write SQL queries](docs/images/ai-assistant-screenshot.png)
+<img src="docs/images/ai-assistant-screenshot.png" alt="AI Assistant helping write SQL queries" width="800">
+
 *Get intelligent help writing SQL queries with the built-in AI assistant*
 
 ### Advanced Query Filtering
-![Query results with advanced filtering](docs/images/query-filter-screenshot.png)
+<img src="docs/images/query-filter-screenshot.png" alt="Query results with advanced filtering" width="800">
+
 *Filter and explore your data with powerful, intuitive controls*
 
 ### Beautiful Themes
-![Theme switcher showing multiple theme options](docs/images/themes-screenshot.png)
+<img src="docs/images/themes-screenshot.png" alt="Theme switcher showing multiple theme options" width="800">
+
 *Choose from multiple beautiful themes including Light, Dark, and colorful variants*
 
 ## ✨ Features
