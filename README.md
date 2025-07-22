@@ -5,8 +5,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-⭐ **If you find Data-Pup useful, please consider giving it a star on GitHub!** ⭐
-
 Data-Pup is an open-source database client designed to make database management intuitive and enjoyable. With AI-powered query assistance and a beautiful, accessible interface, it's the database tool that developers actually want to use.
 
 ## 📸 Screenshots
@@ -125,6 +123,9 @@ Data-Pup uses Electron IPC for communication between the main process and render
 ## 🤝 Contributing
 
 We love your input! Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+
+⭐ **If you find Data-Pup useful, please consider giving it a star on GitHub!** ⭐
 
 ## 📝 License
 
