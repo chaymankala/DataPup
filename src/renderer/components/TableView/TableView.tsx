@@ -194,7 +194,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       query += ` WHERE ${whereClauses.join(' AND ')}`
     }
 
-    query += ' LIMIT 1000'
+    query += ' LIMIT 100'
     return query
   }
 
