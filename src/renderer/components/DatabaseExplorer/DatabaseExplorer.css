@@ -52,11 +52,21 @@
   background: var(--gray-3);
 }
 
+.database-reload-button {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.database-item:hover .database-reload-button {
+  opacity: 1;
+}
+
 .expand-icon {
   transition: transform 0.2s;
   display: inline-block;
-  width: 12px;
   color: var(--gray-10);
+  width: 16px;
+  height: 16px;
 }
 
 .object-list {

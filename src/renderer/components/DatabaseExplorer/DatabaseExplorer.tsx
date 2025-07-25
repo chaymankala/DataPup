@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react'
 import { Box, Flex, ScrollArea, Text, Button } from '@radix-ui/themes'
 import { Badge, Skeleton } from '../ui'
 import './DatabaseExplorer.css'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { 
+  ReloadIcon, 
+  ChevronRightIcon, 
+  ChevronDownIcon,
+  TableIcon
+} from '@radix-ui/react-icons'
 
 interface DatabaseExplorerProps {
   connectionId: string
@@ -45,7 +50,7 @@ interface Database {
 const getObjectIcon = (type: DatabaseObject['type']) => {
   switch (type) {
     case 'table':
-      return '▦'
+      return <TableIcon />
     case 'view':
       return '👁️'
     case 'function':
@@ -267,14 +272,13 @@ export function DatabaseExplorer({
                   className={`database-item ${db.expanded ? 'expanded' : ''}`}
                   p="2"
                 >
-                  <Text 
-                    size="1" 
+                  <Box 
                     className="expand-icon"
                     onClick={() => toggleDatabase(db.name)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                   >
-                    {db.expanded ? '▼' : '▶'}
-                  </Text>
+                    {db.expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                  </Box>
                   <Flex align="center" justify="between" style={{ flex: 1 }}>
                     <Text size="1" style={{ fontWeight: 500 }}>
                       {db.name}
@@ -282,6 +286,7 @@ export function DatabaseExplorer({
                     <Button
                       size="1"
                       variant="ghost"
+                      className="database-reload-button"
                       onClick={async (e) => {
                         e.stopPropagation()
                         // Refresh tables for this database
@@ -342,16 +347,17 @@ export function DatabaseExplorer({
                           style={{ cursor: obj.type === 'table' ? 'pointer' : 'default' }}
                         >
                           {obj.type === 'table' && (
-                            <Text 
-                              size="1" 
+                            <Box 
                               className="expand-icon"
                               onClick={() => toggleTable(db.name, obj.name)}
-                              style={{ cursor: 'pointer' }}
+                              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                             >
-                              {obj.expanded ? '▼' : '▶'}
-                            </Text>
+                              {obj.expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                            </Box>
                           )}
-                          <Text size="1">{getObjectIcon(obj.type)}</Text>
+                          <Box style={{ display: 'flex', alignItems: 'center' }}>
+                            {getObjectIcon(obj.type)}
+                          </Box>
                           <Text size="1" className="object-name">
                             {obj.name}
                           </Text>
