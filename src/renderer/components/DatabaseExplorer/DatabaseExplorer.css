@@ -3,6 +3,7 @@
   background: var(--gray-1);
   border-right: 1px solid var(--gray-4);
   overflow: hidden;
+  user-select: none;
 }
 
 .explorer-header {
@@ -68,6 +69,7 @@
   border-radius: var(--radius-2);
   transition: all 0.2s;
   margin-left: 8px;
+  user-select: none;
 }
 
 .object-item:hover {

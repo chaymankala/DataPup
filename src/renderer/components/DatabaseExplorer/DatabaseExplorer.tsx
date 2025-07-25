@@ -266,9 +266,13 @@ export function DatabaseExplorer({
                   gap="2"
                   className={`database-item ${db.expanded ? 'expanded' : ''}`}
                   p="2"
-                  onClick={() => toggleDatabase(db.name)}
                 >
-                  <Text size="1" className="expand-icon">
+                  <Text 
+                    size="1" 
+                    className="expand-icon"
+                    onClick={() => toggleDatabase(db.name)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {db.expanded ? '▼' : '▶'}
                   </Text>
                   <Flex align="center" justify="between" style={{ flex: 1 }}>
@@ -330,7 +334,6 @@ export function DatabaseExplorer({
                           gap="2"
                           className={`object-item ${obj.expanded ? 'expanded' : ''}`}
                           p="1"
-                          onClick={() => obj.type === 'table' && toggleTable(db.name, obj.name)}
                           onDoubleClick={() => {
                             if (obj.type === 'table' && onTableDoubleClick) {
                               onTableDoubleClick(db.name, obj.name)
@@ -339,7 +342,12 @@ export function DatabaseExplorer({
                           style={{ cursor: obj.type === 'table' ? 'pointer' : 'default' }}
                         >
                           {obj.type === 'table' && (
-                            <Text size="1" className="expand-icon">
+                            <Text 
+                              size="1" 
+                              className="expand-icon"
+                              onClick={() => toggleTable(db.name, obj.name)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               {obj.expanded ? '▼' : '▶'}
                             </Text>
                           )}
