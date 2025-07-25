@@ -48,7 +48,9 @@ const api = {
     executeBulkOperations: (connectionId: string, operations: any[]) =>
       ipcRenderer.invoke('db:executeBulkOperations', connectionId, operations),
     getPrimaryKeys: (connectionId: string, table: string, database?: string) =>
-      ipcRenderer.invoke('db:getPrimaryKeys', connectionId, table, database)
+      ipcRenderer.invoke('db:getPrimaryKeys', connectionId, table, database),
+    getConnectionInfo: (connectionId: string) =>
+      ipcRenderer.invoke('db:getConnectionInfo', connectionId)
   },
   connections: {
     getAll: () => ipcRenderer.invoke('connections:getAll'),

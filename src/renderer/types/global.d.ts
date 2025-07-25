@@ -131,6 +131,10 @@ declare global {
           table: string,
           database?: string
         ) => Promise<string[]>
+        getConnectionInfo: (connectionId: string) => Promise<{
+          success: boolean
+          info: { host: string; port: number; database: string; type: string } | null
+        }>
       }
       connections: {
         getAll: () => Promise<{ success: boolean; connections: any[] }>

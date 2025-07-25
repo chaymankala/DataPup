@@ -1,10 +1,12 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button, Flex, Text, Card, Box } from '@radix-ui/themes'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { Skeleton } from '../ui'
 import { useTheme } from '../../hooks/useTheme'
 import './QueryEditor.css'
 import { v4 as uuidv4 } from 'uuid'
+import { createIntellisenseProvider } from '../../lib/intellisense'
+import type { IntellisenseProvider } from '../../lib/intellisense'
 
 interface QueryEditorProps {
   connectionId: string
@@ -87,22 +89,73 @@ export function QueryEditor({ connectionId, connectionName }: QueryEditorProps) 
   const [selectedText, setSelectedText] = useState('')
   const [currentQueryId, setCurrentQueryId] = useState<string | null>(null)
   const editorRef = useRef<any>(null)
+  const intellisenseProviderRef = useRef<IntellisenseProvider | null>(null)
+  const completionDisposableRef = useRef<any>(null)
+  const [databaseType, setDatabaseType] = useState<string>('clickhouse')
+
+  useEffect(() => {
+    const fetchDatabaseType = async () => {
+      try {
+        const connInfo = await window.api.database.getConnectionInfo(connectionId)
+        if (connInfo && connInfo.type) {
+          setDatabaseType(connInfo.type)
+        }
+      } catch (error) {
+        console.error('Error fetching database type:', error)
+      }
+    }
+    fetchDatabaseType()
+  }, [connectionId])
+
+  useEffect(() => {
+    return () => {
+      if (completionDisposableRef.current) {
+        completionDisposableRef.current.dispose()
+      }
+      if (intellisenseProviderRef.current) {
+        intellisenseProviderRef.current.dispose()
+      }
+    }
+  }, [])
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor
 
-    // Configure SQL language settings
-    monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: (model, position) => {
-        const suggestions = sqlKeywords.map((keyword) => ({
-          label: keyword,
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: keyword,
-          documentation: `SQL keyword: ${keyword}`
-        }))
-        return { suggestions }
+    // Initialize intellisense provider
+    try {
+      if (completionDisposableRef.current) {
+        completionDisposableRef.current.dispose()
       }
-    })
+
+      intellisenseProviderRef.current = createIntellisenseProvider(monaco, {
+        connectionId,
+        databaseType,
+        currentDatabase: 'default'
+      })
+
+      completionDisposableRef.current = monaco.languages.registerCompletionItemProvider('sql', {
+        provideCompletionItems: async (model, position) => {
+          if (!intellisenseProviderRef.current) {
+            return { suggestions: [] }
+          }
+          return await intellisenseProviderRef.current.provideCompletionItems(model, position)
+        }
+      })
+    } catch (error) {
+      console.error('Error initializing intellisense:', error)
+      // Fallback to basic keyword completion
+      completionDisposableRef.current = monaco.languages.registerCompletionItemProvider('sql', {
+        provideCompletionItems: (model, position) => {
+          const suggestions = sqlKeywords.map((keyword) => ({
+            label: keyword,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: keyword,
+            documentation: `SQL keyword: ${keyword}`
+          }))
+          return { suggestions }
+        }
+      })
+    }
 
     // Add keyboard shortcuts
     editor.addAction({
