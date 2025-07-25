@@ -33,11 +33,12 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
+  const executeQueryRef = useRef<() => void>()
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
 
-  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+  const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
     editorRef.current = editor
 
     // Add keyboard shortcuts
@@ -51,10 +52,12 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
       contextMenuGroupId: 'navigation',
       contextMenuOrder: 1.5,
       run: () => {
-        handleExecuteQuery()
+        if (executeQueryRef.current) {
+          executeQueryRef.current()
+        }
       }
     })
-  }
+  }, [])
 
   // Tab management functions
   const handleNewTab = useCallback(() => {
@@ -128,40 +131,43 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
     }
   }, [openTableTab, onOpenTableTab])
 
-  const executeQuery = async (queryToExecute: string) => {
-    if (!activeTab || activeTab.type !== 'query') return
+  const executeQuery = useCallback(
+    async (queryToExecute: string) => {
+      if (!activeTab || activeTab.type !== 'query') return
 
-    if (!queryToExecute.trim()) return
+      if (!queryToExecute.trim()) return
 
-    try {
-      setIsExecuting(true)
-      const startTime = Date.now()
+      try {
+        setIsExecuting(true)
+        const startTime = Date.now()
 
-      const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
-      const executionTime = Date.now() - startTime
+        const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
+        const executionTime = Date.now() - startTime
 
-      const result: QueryExecutionResult = {
-        ...queryResult,
-        executionTime,
-        rowCount: queryResult.data?.length || 0
-      }
-
-      setResults({ ...results, [activeTab.id]: result })
-    } catch (error) {
-      setResults({
-        ...results,
-        [activeTab.id]: {
-          success: false,
-          message: 'Query execution failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
+        const result: QueryExecutionResult = {
+          ...queryResult,
+          executionTime,
+          rowCount: queryResult.data?.length || 0
         }
-      })
-    } finally {
-      setIsExecuting(false)
-    }
-  }
 
-  const handleExecuteQuery = async () => {
+        setResults({ ...results, [activeTab.id]: result })
+      } catch (error) {
+        setResults({
+          ...results,
+          [activeTab.id]: {
+            success: false,
+            message: 'Query execution failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        })
+      } finally {
+        setIsExecuting(false)
+      }
+    },
+    [activeTab, results, connectionId]
+  )
+
+  const handleExecuteQuery = useCallback(async () => {
     if (!activeTab || activeTab.type !== 'query') return
 
     let queryToExecute = ''
@@ -176,7 +182,12 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
     }
 
     await executeQuery(queryToExecute)
-  }
+  }, [activeTab, selectedText, executeQuery])
+
+  // Update the ref whenever handleExecuteQuery changes
+  useEffect(() => {
+    executeQueryRef.current = handleExecuteQuery
+  }, [handleExecuteQuery])
 
   const handleExecuteQueryFromAI = async (sqlQuery: string) => {
     // Update the editor content with the SQL query

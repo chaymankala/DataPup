@@ -28,7 +28,8 @@ export abstract class IntellisenseProvider {
   abstract getColumnSuggestions(
     context: SQLContext,
     schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[]
 
   async provideCompletionItems(model: any, position: Position): Promise<CompletionList> {
@@ -36,6 +37,15 @@ export abstract class IntellisenseProvider {
 
     const schema = await this.schemaCache.getSchema()
     const context = this.contextParser.parseContext(model, position)
+
+    // Get the word range at the current position for proper text replacement
+    const wordInfo = model.getWordUntilPosition(position)
+    const range = {
+      startLineNumber: position.lineNumber,
+      startColumn: wordInfo.startColumn,
+      endLineNumber: position.lineNumber,
+      endColumn: wordInfo.endColumn
+    }
 
     console.log('Context:', {
       type: context.type,
@@ -48,22 +58,22 @@ export abstract class IntellisenseProvider {
 
     switch (context.type) {
       case 'keyword':
-        suggestions.push(...this.getKeywordSuggestions(context, schema, position))
+        suggestions.push(...this.getKeywordSuggestions(context, schema, position, range))
         break
       case 'from':
-        suggestions.push(...this.getTableSuggestions(context, schema, position))
+        suggestions.push(...this.getTableSuggestions(context, schema, position, range))
         break
       case 'column':
       case 'select':
       case 'where':
-        suggestions.push(...this.getColumnSuggestions(context, schema, position))
-        suggestions.push(...this.getFunctionSuggestions(context, schema, position))
+        suggestions.push(...this.getColumnSuggestions(context, schema, position, range))
+        suggestions.push(...this.getFunctionSuggestions(context, schema, position, range))
         break
       case 'function':
-        suggestions.push(...this.getFunctionSuggestions(context, schema, position))
+        suggestions.push(...this.getFunctionSuggestions(context, schema, position, range))
         break
       default:
-        suggestions.push(...this.getGeneralSuggestions(context, schema, position))
+        suggestions.push(...this.getGeneralSuggestions(context, schema, position, range))
     }
 
     console.log('Total suggestions before filtering:', suggestions.length)
@@ -76,7 +86,8 @@ export abstract class IntellisenseProvider {
   protected getKeywordSuggestions(
     _context: SQLContext,
     _schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[] {
     const keywords = [
       'SELECT',
@@ -115,19 +126,15 @@ export abstract class IntellisenseProvider {
       insertText: keyword,
       detail: 'SQL Keyword',
       sortText: '0' + keyword,
-      range: {
-        startLineNumber: position.lineNumber,
-        startColumn: position.column,
-        endLineNumber: position.lineNumber,
-        endColumn: position.column
-      }
+      range
     }))
   }
 
   protected getTableSuggestions(
     _context: SQLContext,
     schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[] {
     const suggestions: Monaco.languages.CompletionItem[] = []
 
@@ -143,12 +150,7 @@ export abstract class IntellisenseProvider {
         detail: `Table in ${database}`,
         documentation: `Columns: ${table.columns.map((c) => c.name).join(', ')}`,
         sortText: '1' + tableName,
-        range: {
-          startLineNumber: position.lineNumber,
-          startColumn: position.column,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column
-        }
+        range
       })
 
       if (database !== this.options.currentDatabase) {
@@ -175,7 +177,8 @@ export abstract class IntellisenseProvider {
   protected getFunctionSuggestions(
     _context: SQLContext,
     _schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[] {
     const functions = [
       { name: 'COUNT', signature: 'COUNT(expression)', description: 'Returns the number of rows' },
@@ -207,19 +210,15 @@ export abstract class IntellisenseProvider {
       detail: 'SQL Function',
       documentation: func.description,
       sortText: '3' + func.name,
-      range: {
-        startLineNumber: position.lineNumber,
-        startColumn: position.column,
-        endLineNumber: position.lineNumber,
-        endColumn: position.column
-      }
+      range
     }))
   }
 
   protected getGeneralSuggestions(
     context: SQLContext,
     schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[] {
     const suggestions: Monaco.languages.CompletionItem[] = []
 

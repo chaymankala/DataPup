@@ -149,7 +149,8 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
   getColumnSuggestions(
     context: SQLContext,
     schema: DatabaseSchema,
-    position: Position
+    position: Position,
+    range: any
   ): Monaco.languages.CompletionItem[] {
     const suggestions: Monaco.languages.CompletionItem[] = []
     const processedColumns = new Set<string>()
@@ -169,12 +170,7 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
                 detail: `${column.type}${column.nullable ? ' (nullable)' : ' NOT NULL'}`,
                 documentation: `Column from ${tableName}`,
                 sortText: '4' + column.name,
-                range: {
-                  startLineNumber: position.lineNumber,
-                  startColumn: position.column,
-                  endLineNumber: position.lineNumber,
-                  endColumn: position.column
-                }
+                range
               })
               processedColumns.add(column.name)
             }
@@ -210,12 +206,7 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
                 detail: column.type,
                 documentation: `Column from ${tableName} (aliased as ${alias})`,
                 sortText: '6' + aliasedName,
-                range: {
-                  startLineNumber: position.lineNumber,
-                  startColumn: position.column,
-                  endLineNumber: position.lineNumber,
-                  endColumn: position.column
-                }
+                range
               })
             })
           }
