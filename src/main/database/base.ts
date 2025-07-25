@@ -11,7 +11,9 @@ import {
   DatabaseCapabilities,
   TransactionHandle,
   BulkOperation,
-  BulkOperationResult
+  BulkOperationResult,
+  TableQueryOptions,
+  TableFilter
 } from './interface'
 
 export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
@@ -106,6 +108,81 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
       success: false,
       message: 'Query cancellation not supported by this database'
     }
+  }
+
+  async queryTable(
+    connectionId: string,
+    options: TableQueryOptions,
+    sessionId?: string
+  ): Promise<QueryResult> {
+    // Default implementation - build a basic SQL query
+    // This can be overridden by specific database implementations
+    const { database, table, filters, orderBy, limit, offset } = options
+
+    // Escape identifiers (basic implementation - should be overridden)
+    const qualifiedTable = database ? `"${database}"."${table}"` : `"${table}"`
+
+    let sql = `SELECT * FROM ${qualifiedTable}`
+
+    // Add WHERE clause if filters exist
+    if (filters && filters.length > 0) {
+      const whereClauses = filters.map((filter) => this.buildWhereClause(filter)).filter(Boolean)
+      if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`
+      }
+    }
+
+    // Add ORDER BY clause
+    if (orderBy && orderBy.length > 0) {
+      const orderClauses = orderBy.map((o) => `"${o.column}" ${o.direction.toUpperCase()}`)
+      sql += ` ORDER BY ${orderClauses.join(', ')}`
+    }
+
+    // Add LIMIT and OFFSET
+    if (limit) {
+      sql += ` LIMIT ${limit}`
+    }
+    if (offset) {
+      sql += ` OFFSET ${offset}`
+    }
+
+    return this.query(connectionId, sql, sessionId)
+  }
+
+  protected buildWhereClause(filter: TableFilter): string {
+    const { column, operator, value } = filter
+
+    // Handle NULL operators
+    if (operator === 'IS NULL' || operator === 'IS NOT NULL') {
+      return `"${column}" ${operator}`
+    }
+
+    // Handle IN and NOT IN operators
+    if ((operator === 'IN' || operator === 'NOT IN') && Array.isArray(value)) {
+      const values = value.map((v) => this.escapeValue(v)).join(', ')
+      return `"${column}" ${operator} (${values})`
+    }
+
+    // Handle LIKE operators
+    if (operator === 'LIKE' || operator === 'NOT LIKE') {
+      return `"${column}" ${operator} ${this.escapeValue(`%${value}%`)}`
+    }
+
+    // Handle other operators
+    if (value !== undefined && value !== null) {
+      return `"${column}" ${operator} ${this.escapeValue(value)}`
+    }
+
+    return ''
+  }
+
+  protected escapeValue(value: any): string {
+    if (value === null || value === undefined) return 'NULL'
+    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`
+    if (typeof value === 'number') return value.toString()
+    if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
+    if (value instanceof Date) return `'${value.toISOString()}'`
+    return `'${String(value).replace(/'/g, "''")}'`
   }
 
   async insertRow(

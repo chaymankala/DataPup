@@ -175,43 +175,32 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     }
   }
 
-  const buildQuery = () => {
-    let query = `SELECT * FROM ${database}.${tableName}`
-
-    const validFilters = filters.filter(
+  const getValidFilters = () => {
+    return filters.filter(
       (f) =>
         f.column &&
         f.operator &&
         (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
     )
-
-    if (validFilters.length > 0) {
-      const whereClauses = validFilters.map((filter) => {
-        if (filter.operator === 'IS NULL' || filter.operator === 'IS NOT NULL') {
-          return `${filter.column} ${filter.operator}`
-        } else if (filter.operator === 'LIKE' || filter.operator === 'NOT LIKE') {
-          return `${filter.column} ${filter.operator} '%${filter.value}%'`
-        } else {
-          // Check if value is numeric
-          const isNumeric = !isNaN(Number(filter.value))
-          return `${filter.column} ${filter.operator} ${isNumeric ? filter.value : `'${filter.value}'`}`
-        }
-      })
-      query += ` WHERE ${whereClauses.join(' AND ')}`
-    }
-
-    query += ' LIMIT 100'
-    return query
   }
 
   const executeQuery = async () => {
     try {
       setIsLoading(true)
       const startTime = Date.now()
-      const query = buildQuery()
+      const validFilters = getValidFilters()
 
       const sessionId = uuidv4()
-      const queryResult = await window.api.database.query(connectionId, query, sessionId)
+      const queryResult = await window.api.database.queryTable(
+        connectionId,
+        {
+          database,
+          table: tableName,
+          filters: validFilters,
+          limit: 100
+        },
+        sessionId
+      )
       const executionTime = Date.now() - startTime
 
       setResult({

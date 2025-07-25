@@ -98,6 +98,33 @@ export interface BulkOperationResult {
   data?: any[] // Updated rows after operations
 }
 
+export interface TableFilter {
+  column: string
+  operator:
+    | '='
+    | '!='
+    | '>'
+    | '<'
+    | '>='
+    | '<='
+    | 'LIKE'
+    | 'NOT LIKE'
+    | 'IN'
+    | 'NOT IN'
+    | 'IS NULL'
+    | 'IS NOT NULL'
+  value?: string | string[] | number | number[]
+}
+
+export interface TableQueryOptions {
+  database: string
+  table: string
+  filters?: TableFilter[]
+  orderBy?: Array<{ column: string; direction: 'asc' | 'desc' }>
+  limit?: number
+  offset?: number
+}
+
 export interface DatabaseManagerInterface {
   // Connection management
   connect(config: DatabaseConfig, connectionId: string): Promise<ConnectionResult>
@@ -108,6 +135,13 @@ export interface DatabaseManagerInterface {
   // Query execution
   query(connectionId: string, sql: string, sessionId?: string): Promise<QueryResult>
   cancelQuery(connectionId: string, queryId: string): Promise<{ success: boolean; message: string }>
+
+  // Table query with filters
+  queryTable(
+    connectionId: string,
+    options: TableQueryOptions,
+    sessionId?: string
+  ): Promise<QueryResult>
 
   // CRUD operations
   insertRow(

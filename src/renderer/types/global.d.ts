@@ -16,6 +16,34 @@ declare global {
           sql: string,
           sessionId?: string
         ) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
+        queryTable: (
+          connectionId: string,
+          options: {
+            database: string
+            table: string
+            filters?: Array<{
+              column: string
+              operator:
+                | '='
+                | '!='
+                | '>'
+                | '<'
+                | '>='
+                | '<='
+                | 'LIKE'
+                | 'NOT LIKE'
+                | 'IN'
+                | 'NOT IN'
+                | 'IS NULL'
+                | 'IS NOT NULL'
+              value?: string | string[] | number | number[]
+            }>
+            orderBy?: Array<{ column: string; direction: 'asc' | 'desc' }>
+            limit?: number
+            offset?: number
+          },
+          sessionId?: string
+        ) => Promise<{ success: boolean; data?: any[]; message: string; error?: string }>
         cancelQuery: (
           connectionId: string,
           queryId: string

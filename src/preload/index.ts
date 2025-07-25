@@ -9,6 +9,8 @@ const api = {
     disconnect: (connectionId?: string) => ipcRenderer.invoke('db:disconnect', connectionId),
     query: (connectionId: string, sql: string, sessionId?: string) =>
       ipcRenderer.invoke('db:query', connectionId, sql, sessionId),
+    queryTable: (connectionId: string, options: any, sessionId?: string) =>
+      ipcRenderer.invoke('db:queryTable', connectionId, options, sessionId),
     cancelQuery: (connectionId: string, queryId: string) =>
       ipcRenderer.invoke('db:cancelQuery', connectionId, queryId),
     getDatabases: (connectionId: string) => ipcRenderer.invoke('db:getDatabases', connectionId),

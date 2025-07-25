@@ -27,6 +27,7 @@ export interface TableFilter {
     | '>='
     | '<='
     | 'LIKE'
+    | 'NOT LIKE'
     | 'IN'
     | 'NOT IN'
     | 'IS NULL'
