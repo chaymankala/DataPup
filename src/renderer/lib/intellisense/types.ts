@@ -12,6 +12,10 @@ export interface CompletionItem {
   range?: any
 }
 
+export interface CompletionList {
+  suggestions: Monaco.languages.CompletionItem[]
+}
+
 export interface Position {
   lineNumber: number
   column: number

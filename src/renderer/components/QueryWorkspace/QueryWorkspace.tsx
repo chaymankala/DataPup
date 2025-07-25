@@ -1,91 +1,23 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Box, Button, Flex, Text, Table } from '@radix-ui/themes'
-import Editor, { Monaco } from '@monaco-editor/react'
-import { Skeleton, Badge } from '../ui'
+import { Monaco } from '@monaco-editor/react'
+import { Badge } from '../ui'
 import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
-import { useTheme } from '../../hooks/useTheme'
+import { SqlEditor } from './SqlEditor'
 
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
 import './QueryWorkspace.css'
-import { v4 as uuidv4 } from 'uuid'
 
 interface QueryWorkspaceProps {
   connectionId: string
-  connectionName: string
   onOpenTableTab?: (database: string, tableName: string) => void
 }
 
-// SQL keywords for autocomplete
-const sqlKeywords = [
-  'SELECT',
-  'FROM',
-  'WHERE',
-  'JOIN',
-  'LEFT',
-  'RIGHT',
-  'INNER',
-  'OUTER',
-  'ON',
-  'GROUP',
-  'BY',
-  'ORDER',
-  'HAVING',
-  'LIMIT',
-  'OFFSET',
-  'INSERT',
-  'INTO',
-  'VALUES',
-  'UPDATE',
-  'SET',
-  'DELETE',
-  'CREATE',
-  'TABLE',
-  'ALTER',
-  'DROP',
-  'INDEX',
-  'VIEW',
-  'PROCEDURE',
-  'FUNCTION',
-  'TRIGGER',
-  'AS',
-  'DISTINCT',
-  'COUNT',
-  'SUM',
-  'AVG',
-  'MIN',
-  'MAX',
-  'CASE',
-  'WHEN',
-  'THEN',
-  'ELSE',
-  'END',
-  'AND',
-  'OR',
-  'NOT',
-  'IN',
-  'EXISTS',
-  'BETWEEN',
-  'LIKE',
-  'IS',
-  'NULL',
-  'ASC',
-  'DESC',
-  'UNION',
-  'ALL',
-  'ANY',
-  'SOME'
-]
-
-export function QueryWorkspace({
-  connectionId,
-  connectionName,
-  onOpenTableTab
-}: QueryWorkspaceProps) {
-  const { theme } = useTheme()
+export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceProps) {
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: '1',
@@ -104,84 +36,9 @@ export function QueryWorkspace({
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
-  console.log(activeResult)
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor
-
-    // Define light theme
-    monaco.editor.defineTheme('data-pup-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: '0000FF', fontStyle: 'bold' },
-        { token: 'string', foreground: 'A31515' },
-        { token: 'string.sql', foreground: 'A31515' },
-        { token: 'number', foreground: '098658' },
-        { token: 'comment', foreground: '008000', fontStyle: 'italic' },
-        { token: 'operator', foreground: '000000' },
-        { token: 'delimiter', foreground: '000000' },
-        { token: 'identifier', foreground: '001080' },
-        { token: '', foreground: '000000' } // default text
-      ],
-      colors: {
-        'editor.foreground': '#000000',
-        'editor.background': '#00000000', // transparent
-        'editor.selectionBackground': '#ADD6FF',
-        'editor.lineHighlightBackground': '#00000000', // transparent - no highlight
-        'editor.lineHighlightBorder': '#00000000', // transparent - no border
-        'editorCursor.foreground': '#000000',
-        'editorWhitespace.foreground': '#CCCCCC'
-      }
-    })
-
-    // Define dark theme
-    monaco.editor.defineTheme('data-pup-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: '569CD6', fontStyle: 'bold' },
-        { token: 'string', foreground: 'CE9178' },
-        { token: 'string.sql', foreground: 'CE9178' },
-        { token: 'number', foreground: 'B5CEA8' },
-        { token: 'comment', foreground: '608B4E', fontStyle: 'italic' },
-        { token: 'operator', foreground: 'D4D4D4' },
-        { token: 'delimiter', foreground: 'D4D4D4' },
-        { token: 'identifier', foreground: '9CDCFE' },
-        { token: '', foreground: 'D4D4D4' } // default text
-      ],
-      colors: {
-        'editor.foreground': '#D4D4D4',
-        'editor.background': '#00000000', // transparent
-        'editor.selectionBackground': '#264F78',
-        'editor.lineHighlightBackground': '#00000000', // transparent - no highlight
-        'editor.lineHighlightBorder': '#00000000', // transparent - no border
-        'editorCursor.foreground': '#D4D4D4',
-        'editorWhitespace.foreground': '#3B3B3B'
-      }
-    })
-
-    // Apply theme based on current app theme
-    monaco.editor.setTheme(theme.appearance === 'dark' ? 'data-pup-dark' : 'data-pup-light')
-
-    // Configure SQL language settings
-    monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: (model, position) => {
-        const suggestions = sqlKeywords.map((keyword) => ({
-          label: keyword,
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: keyword,
-          documentation: `SQL keyword: ${keyword}`,
-          range: {
-            startLineNumber: position.lineNumber,
-            startColumn: position.column,
-            endLineNumber: position.lineNumber,
-            endColumn: position.column
-          }
-        }))
-        return { suggestions }
-      }
-    })
 
     // Add keyboard shortcuts
     editor.addAction({
@@ -196,13 +53,6 @@ export function QueryWorkspace({
       run: () => {
         handleExecuteQuery()
       }
-    })
-
-    // Track selected text
-    editor.onDidChangeCursorSelection(() => {
-      const selection = editor.getSelection()
-      const text = editor.getModel().getValueInRange(selection)
-      setSelectedText(text)
     })
   }
 
@@ -277,16 +127,6 @@ export function QueryWorkspace({
       window.openTableTab = openTableTab
     }
   }, [openTableTab, onOpenTableTab])
-
-  // Update Monaco theme when app theme changes
-  React.useEffect(() => {
-    if (editorRef.current) {
-      const monaco = (window as any).monaco
-      if (monaco) {
-        monaco.editor.setTheme(theme.appearance === 'dark' ? 'data-pup-dark' : 'data-pup-light')
-      }
-    }
-  }, [theme.appearance])
 
   const executeQuery = async (queryToExecute: string) => {
     if (!activeTab || activeTab.type !== 'query') return
@@ -492,10 +332,8 @@ export function QueryWorkspace({
                 <Box className="editor-container">
                   <PanelGroup direction="horizontal">
                     <Panel defaultSize={showAIPanel ? 70 : 100} minSize={50}>
-                      <Editor
-                        height="100%"
-                        defaultLanguage="sql"
-                        theme={theme.appearance === 'dark' ? 'data-pup-dark' : 'data-pup-light'}
+                      <SqlEditor
+                        connectionId={connectionId}
                         value={activeTab.query}
                         onChange={(value) =>
                           handleUpdateTabContent(activeTab.id, {
@@ -504,30 +342,8 @@ export function QueryWorkspace({
                           })
                         }
                         onMount={handleEditorDidMount}
-                        loading={<Skeleton height="100%" />}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 13,
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          wordWrap: 'on',
-                          formatOnPaste: true,
-                          formatOnType: true,
-                          automaticLayout: true,
-                          suggestOnTriggerCharacters: true,
-                          quickSuggestions: {
-                            other: true,
-                            comments: false,
-                            strings: false
-                          },
-                          parameterHints: {
-                            enabled: true
-                          },
-                          padding: { top: 12, bottom: 12 },
-                          lineNumbersMinChars: 3,
-                          renderLineHighlight: 'none',
-                          renderLineHighlightOnlyWhenFocus: false
-                        }}
+                        onSelectionChange={setSelectedText}
+                        height="100%"
                       />
                     </Panel>
                     {showAIPanel && (
@@ -536,14 +352,6 @@ export function QueryWorkspace({
                         <Panel defaultSize={30} minSize={20} maxSize={50}>
                           <AIAssistant
                             context={{
-                              query:
-                                activeTab.type === 'query'
-                                  ? editorRef.current?.getValue() || activeTab.query
-                                  : undefined,
-                              selectedText: selectedText || undefined,
-                              results: activeResult?.success ? activeResult.data : undefined,
-                              error: activeResult?.error,
-                              filters: undefined,
                               connectionId: connectionId,
                               database: undefined
                             }}

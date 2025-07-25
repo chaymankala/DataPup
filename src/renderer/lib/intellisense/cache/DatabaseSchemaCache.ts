@@ -37,10 +37,13 @@ export class DatabaseSchemaCache {
 
   private async fetchSchema(): Promise<DatabaseSchema> {
     try {
+      console.log('Fetching schema for connection:', this.connectionId)
       const [databasesResult, tablesMap] = await Promise.all([
         window.api.database.getDatabases(this.connectionId),
         this.fetchAllTables()
       ])
+
+      console.log('Databases result:', databasesResult)
 
       const databases =
         databasesResult.success && databasesResult.databases ? databasesResult.databases : []
@@ -52,6 +55,10 @@ export class DatabaseSchemaCache {
         keywords: []
       }
 
+      console.log('Schema fetched:', {
+        databases: schema.databases.length,
+        tables: schema.tables.size
+      })
       return schema
     } catch (error) {
       console.error('Error fetching schema:', error)

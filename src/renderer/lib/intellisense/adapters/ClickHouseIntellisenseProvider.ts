@@ -1,5 +1,6 @@
 import { IntellisenseProvider } from '../IntellisenseProvider'
-import type { CompletionItem, SQLContext, DatabaseSchema } from '../types'
+import type { SQLContext, DatabaseSchema, Position } from '../types'
+import { Monaco } from '@monaco-editor/react'
 
 export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
   getDatabaseSpecificKeywords(): string[] {
@@ -145,8 +146,12 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
     return `\`${identifier}\``
   }
 
-  getColumnSuggestions(context: SQLContext, schema: DatabaseSchema): CompletionItem[] {
-    const suggestions: CompletionItem[] = []
+  getColumnSuggestions(
+    context: SQLContext,
+    schema: DatabaseSchema,
+    position: Position
+  ): Monaco.languages.CompletionItem[] {
+    const suggestions: Monaco.languages.CompletionItem[] = []
     const processedColumns = new Set<string>()
 
     if (context.availableTables.length > 0) {
@@ -163,7 +168,13 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
                 insertText: this.formatIdentifier(column.name),
                 detail: `${column.type}${column.nullable ? ' (nullable)' : ' NOT NULL'}`,
                 documentation: `Column from ${tableName}`,
-                sortText: '4' + column.name
+                sortText: '4' + column.name,
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column
+                }
               })
               processedColumns.add(column.name)
             }
@@ -174,7 +185,13 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
               insertText: `${this.formatIdentifier(tableName)}.${this.formatIdentifier(column.name)}`,
               detail: column.type,
               documentation: `Fully qualified column name`,
-              sortText: '5' + qualifiedName
+              sortText: '5' + qualifiedName,
+              range: {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+              }
             })
           })
         }
@@ -192,7 +209,13 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
                 insertText: `${this.formatIdentifier(alias)}.${this.formatIdentifier(column.name)}`,
                 detail: column.type,
                 documentation: `Column from ${tableName} (aliased as ${alias})`,
-                sortText: '6' + aliasedName
+                sortText: '6' + aliasedName,
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column
+                }
               })
             })
           }
@@ -228,7 +251,13 @@ export class ClickHouseIntellisenseProvider extends IntellisenseProvider {
         insertText: agg.name,
         detail: 'ClickHouse Aggregate Function',
         documentation: agg.detail,
-        sortText: '7' + agg.name
+        sortText: '7' + agg.name,
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        }
       })
     })
 
