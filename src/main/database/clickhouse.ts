@@ -6,7 +6,9 @@ import {
   QueryType,
   DatabaseCapabilities,
   TableSchema,
-  ColumnSchema
+  ColumnSchema,
+  TableQueryOptions,
+  TableFilter
 } from './interface'
 
 interface ClickHouseConfig {
@@ -277,6 +279,82 @@ class ClickHouseManager extends BaseDatabaseManager {
         message: error instanceof Error ? error.message : 'Failed to cancel query'
       }
     }
+  }
+
+  async queryTable(
+    connectionId: string,
+    options: TableQueryOptions,
+    sessionId?: string
+  ): Promise<QueryResult> {
+    // ClickHouse-specific implementation
+    const { database, table, filters, orderBy, limit, offset } = options
+
+    // ClickHouse uses backticks for identifiers
+    const qualifiedTable = database ? `\`${database}\`.\`${table}\`` : `\`${table}\``
+
+    let sql = `SELECT * FROM ${qualifiedTable}`
+
+    // Add WHERE clause if filters exist
+    if (filters && filters.length > 0) {
+      const whereClauses = filters
+        .map((filter) => this.buildClickHouseWhereClause(filter))
+        .filter(Boolean)
+      if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`
+      }
+    }
+
+    // Add ORDER BY clause
+    if (orderBy && orderBy.length > 0) {
+      const orderClauses = orderBy.map((o) => `\`${o.column}\` ${o.direction.toUpperCase()}`)
+      sql += ` ORDER BY ${orderClauses.join(', ')}`
+    }
+
+    // Add LIMIT and OFFSET
+    if (limit) {
+      sql += ` LIMIT ${limit}`
+    }
+    if (offset) {
+      sql += ` OFFSET ${offset}`
+    }
+
+    return this.query(connectionId, sql, sessionId)
+  }
+
+  private buildClickHouseWhereClause(filter: TableFilter): string {
+    const { column, operator, value } = filter
+
+    // Handle NULL operators
+    if (operator === 'IS NULL' || operator === 'IS NOT NULL') {
+      return `\`${column}\` ${operator}`
+    }
+
+    // Handle IN and NOT IN operators
+    if ((operator === 'IN' || operator === 'NOT IN') && Array.isArray(value)) {
+      const values = value.map((v) => this.escapeClickHouseValue(v)).join(', ')
+      return `\`${column}\` ${operator} (${values})`
+    }
+
+    // Handle LIKE operators - ClickHouse is case-sensitive by default
+    if (operator === 'LIKE' || operator === 'NOT LIKE') {
+      return `\`${column}\` ${operator} ${this.escapeClickHouseValue(`%${value}%`)}`
+    }
+
+    // Handle other operators
+    if (value !== undefined && value !== null) {
+      return `\`${column}\` ${operator} ${this.escapeClickHouseValue(value)}`
+    }
+
+    return ''
+  }
+
+  private escapeClickHouseValue(value: any): string {
+    if (value === null || value === undefined) return 'NULL'
+    if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`
+    if (typeof value === 'number') return value.toString()
+    if (typeof value === 'boolean') return value ? '1' : '0'
+    if (value instanceof Date) return `'${value.toISOString()}'`
+    return `'${String(value).replace(/'/g, "\\'")}'`
   }
 
   async getDatabases(

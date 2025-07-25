@@ -10,7 +10,8 @@ import {
   DatabaseCapabilities,
   TransactionHandle,
   BulkOperation,
-  BulkOperationResult
+  BulkOperationResult,
+  TableQueryOptions
 } from './interface'
 import { DatabaseManagerFactory } from './factory'
 
@@ -183,6 +184,31 @@ class DatabaseManager {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to cancel query'
+      }
+    }
+  }
+
+  async queryTable(
+    connectionId: string,
+    options: TableQueryOptions,
+    sessionId?: string
+  ): Promise<QueryResult> {
+    try {
+      if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+        return {
+          success: false,
+          message: 'Connection not found. Please connect first.',
+          error: 'No active connection'
+        }
+      }
+
+      return await this.activeConnection.manager.queryTable(connectionId, options, sessionId)
+    } catch (error) {
+      console.error('Table query error:', error)
+      return {
+        success: false,
+        message: 'Table query execution failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
       }
     }
   }

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SecureStorage, DatabaseConnection } from './secureStorage'
 import { DatabaseManager } from './database/manager'
-import { DatabaseConfig } from './database/interface'
+import { DatabaseConfig, TableQueryOptions } from './database/interface'
 import { LangChainAgent } from './llm/langchainAgent'
 import * as fs from 'fs'
 
@@ -188,6 +188,23 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessio
     }
   }
 })
+
+ipcMain.handle(
+  'db:queryTable',
+  async (_, connectionId: string, options: TableQueryOptions, sessionId?: string) => {
+    try {
+      const result = await databaseManager.queryTable(connectionId, options, sessionId)
+      return result
+    } catch (error) {
+      console.error('Table query execution error:', error)
+      return {
+        success: false,
+        message: 'Table query execution failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+)
 
 ipcMain.handle('db:cancelQuery', async (_, connectionId: string, queryId: string) => {
   try {
