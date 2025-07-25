@@ -77,10 +77,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [clonedRows, setClonedRows] = useState<Map<number, any>>(new Map())
   const [supportsTransactions, setSupportsTransactions] = useState(false)
   const [isJsonViewerOpen, setIsJsonViewerOpen] = useState(false)
-  const [jsonViewerContent, setJsonViewerContent] = useState('')
-  const [jsonEditorValue, setJsonEditorValue] = useState('')
   const [jsonEditorError, setJsonEditorError] = useState<string | null>(null)
+  const [jsonViewerInitialValue, setJsonViewerInitialValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const jsonEditorRef = useRef<any>(null)
 
   // Load table schema on mount
   useEffect(() => {
@@ -599,7 +599,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           <TextField.Root
             ref={inputRef}
             size="1"
-            value={isJsonObject ? JSON.stringify(displayValue, null, 2) : displayValue ?? ''}
+            value={isJsonObject ? JSON.stringify(displayValue, null, 2) : (displayValue ?? '')}
             onChange={(e) => {
               let newValue: string | object = e.target.value
               try {
@@ -774,8 +774,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   }
 
   const handleOpenJsonViewer = (value: any) => {
-    setJsonViewerContent(JSON.stringify(value, null, 2))
-    setJsonEditorValue(JSON.stringify(value, null, 2))
+    setJsonViewerInitialValue(JSON.stringify(value, null, 2))
     setJsonEditorError(null)
     setIsJsonViewerOpen(true)
   }
@@ -872,7 +871,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         </Box>
 
         {/* Results Section */}
-        <Box className="results-section" flex="1">
+        <Box className="results-section">
           <Flex justify="between" align="center" p="2" className="results-header">
             <Flex align="center" gap="3">
               <Text size="2" weight="medium">
@@ -1026,48 +1025,62 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         </Box>
       </Flex>
       <Dialog.Root open={isJsonViewerOpen} onOpenChange={setIsJsonViewerOpen}>
-        <Dialog.Content style={{ maxWidth: 800 }}>
-          <Dialog.Title>JSON Value</Dialog.Title>
-          <Dialog.Description>Full JSON content for the selected cell.</Dialog.Description>
-          <Box mt="4" style={{ maxHeight: '60vh', overflow: 'auto', background: 'var(--gray-2)', borderRadius: 'var(--radius-3)', padding: 'var(--space-3)' }}>
+        <Dialog.Content style={{ maxWidth: 600 }}>
+          <Dialog.Title>
+            <Text size="1">JSON</Text>
+          </Dialog.Title>
+          <Box
+            mt="3"
+            style={{
+              maxHeight: '50vh',
+              overflow: 'auto',
+              background: 'var(--gray-2)',
+              borderRadius: 'var(--radius-2)',
+              padding: 'var(--space-2)'
+            }}
+          >
             <Editor
-              height="300px"
+              key={jsonViewerInitialValue}
+              height="400px"
               defaultLanguage="json"
-              value={jsonEditorValue}
-              onChange={(val) => setJsonEditorValue(val || '')}
+              defaultValue={jsonViewerInitialValue}
+              onMount={(editor) => {
+                jsonEditorRef.current = editor
+              }}
               options={{
                 readOnly: isReadOnly,
                 minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
+                fontSize: 12,
+                lineNumbers: 'off',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',
                 formatOnPaste: true,
                 formatOnType: true,
                 automaticLayout: true,
-                padding: { top: 12, bottom: 12 },
-                lineNumbersMinChars: 3,
+                padding: { top: 8, bottom: 8 },
                 renderLineHighlight: 'none',
                 renderLineHighlightOnlyWhenFocus: false
               }}
               theme={document.body.classList.contains('dark') ? 'vs-dark' : 'vs'}
             />
             {jsonEditorError && (
-              <Text color="red" mt="2">{jsonEditorError}</Text>
+              <Text color="red" mt="2" size="1">
+                {jsonEditorError}
+              </Text>
             )}
           </Box>
-          <Flex gap="3" mt="4" justify="end">
+          <Flex gap="2" mt="3" justify="end">
             {!isReadOnly && (
               <Button
+                size="1"
                 variant="solid"
                 onClick={() => {
+                  if (!jsonEditorRef.current) return
                   try {
-                    const parsed = JSON.parse(jsonEditorValue)
+                    const editorValue = jsonEditorRef.current.getValue()
+                    JSON.parse(editorValue)
                     setJsonEditorError(null)
-                    // Save logic: update the cell value in the table
-                    // Find the cell and update editedCells
-                    // (You may want to store row/col in state if needed)
-                    // For now, just close the dialog
+                    // FIXME: save the updates to DB
                     setIsJsonViewerOpen(false)
                   } catch (e: any) {
                     setJsonEditorError('Invalid JSON: ' + e.message)
@@ -1078,7 +1091,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               </Button>
             )}
             <Dialog.Close>
-              <Button variant="soft">Cancel</Button>
+              <Button size="1" variant="soft">
+                Close
+              </Button>
             </Dialog.Close>
           </Flex>
         </Dialog.Content>
