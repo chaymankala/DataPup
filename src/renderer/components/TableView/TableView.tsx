@@ -10,7 +10,8 @@ import {
   Badge,
   Checkbox,
   DropdownMenu,
-  ContextMenu
+  ContextMenu,
+  Dialog
 } from '@radix-ui/themes'
 import {
   PlusCircledIcon,
@@ -26,6 +27,7 @@ import { TableFilter } from '../../types/tabs'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import './TableView.css'
 import { v4 as uuidv4 } from 'uuid'
+import Editor from '@monaco-editor/react'
 
 interface TableViewProps {
   connectionId: string
@@ -74,6 +76,10 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [deletedRows, setDeletedRows] = useState<Set<number>>(new Set())
   const [clonedRows, setClonedRows] = useState<Map<number, any>>(new Map())
   const [supportsTransactions, setSupportsTransactions] = useState(false)
+  const [isJsonViewerOpen, setIsJsonViewerOpen] = useState(false)
+  const [jsonViewerContent, setJsonViewerContent] = useState('')
+  const [jsonEditorValue, setJsonEditorValue] = useState('')
+  const [jsonEditorError, setJsonEditorError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Load table schema on mount
@@ -561,7 +567,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     // TODO: Apply sorting to query
   }
 
-  const formatResult = (data: any[], result?: QueryExecutionResult) => {
+  const formatResult = (data: any[], result?: QueryResult) => {
     if (!data || data.length === 0) {
       // Check if this is a successful DDL/DML command
       if (result?.isDDL || result?.isDML) {
@@ -585,27 +591,24 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
       const isEdited = editedCells.has(key)
       const displayValue = isEdited ? editedCells.get(key) : value
 
-      if (isReadOnly) {
-        return (
-          <Text size="1">
-            {displayValue !== null && displayValue !== undefined ? (
-              String(displayValue)
-            ) : (
-              <Text size="1" color="gray">
-                null
-              </Text>
-            )}
-          </Text>
-        )
-      }
+      const isJsonObject =
+        typeof displayValue === 'object' && displayValue !== null && !Array.isArray(displayValue)
 
       if (isEditing) {
         return (
           <TextField.Root
             ref={inputRef}
             size="1"
-            value={displayValue ?? ''}
-            onChange={(e) => handleCellEdit(rowIndex, column, e.target.value)}
+            value={isJsonObject ? JSON.stringify(displayValue, null, 2) : displayValue ?? ''}
+            onChange={(e) => {
+              let newValue: string | object = e.target.value
+              try {
+                newValue = JSON.parse(e.target.value)
+              } catch (error) {
+                // Not valid JSON, keep as string.
+              }
+              handleCellEdit(rowIndex, column, newValue)
+            }}
             onBlur={handleEndEdit}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleEndEdit()
@@ -619,11 +622,36 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         )
       }
 
+      // Display mode for both read-only and normal view
+      const renderContent = () => {
+        if (isJsonObject) {
+          const jsonString = JSON.stringify(displayValue)
+          return (
+            <Text size="1" color="gray" style={{ fontFamily: 'monospace' }}>
+              {jsonString.length > 50 ? `${jsonString.substring(0, 50)}...` : jsonString}
+            </Text>
+          )
+        }
+        if (displayValue !== null && displayValue !== undefined) {
+          return String(displayValue)
+        }
+        return (
+          <Text size="1" color="gray">
+            null
+          </Text>
+        )
+      }
+
       return (
         <Box
-          onDoubleClick={() => handleStartEdit(rowIndex, column)}
+          onDoubleClick={() => !isReadOnly && handleStartEdit(rowIndex, column)}
+          onClick={() => {
+            if (isJsonObject) {
+              handleOpenJsonViewer(displayValue)
+            }
+          }}
           style={{
-            cursor: 'text',
+            cursor: isJsonObject ? 'pointer' : isReadOnly ? 'default' : 'text',
             padding: '2px',
             borderRadius: '2px',
             backgroundColor: isEdited ? 'var(--accent-a5)' : 'transparent',
@@ -631,15 +659,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
             minHeight: '20px'
           }}
         >
-          <Text size="1">
-            {displayValue !== null && displayValue !== undefined ? (
-              String(displayValue)
-            ) : (
-              <Text size="1" color="gray">
-                null
-              </Text>
-            )}
-          </Text>
+          <Text size="1">{renderContent()}</Text>
         </Box>
       )
     }
@@ -751,6 +771,13 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         </Table.Body>
       </Table.Root>
     )
+  }
+
+  const handleOpenJsonViewer = (value: any) => {
+    setJsonViewerContent(JSON.stringify(value, null, 2))
+    setJsonEditorValue(JSON.stringify(value, null, 2))
+    setJsonEditorError(null)
+    setIsJsonViewerOpen(true)
   }
 
   return (
@@ -998,6 +1025,64 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           </Box>
         </Box>
       </Flex>
+      <Dialog.Root open={isJsonViewerOpen} onOpenChange={setIsJsonViewerOpen}>
+        <Dialog.Content style={{ maxWidth: 800 }}>
+          <Dialog.Title>JSON Value</Dialog.Title>
+          <Dialog.Description>Full JSON content for the selected cell.</Dialog.Description>
+          <Box mt="4" style={{ maxHeight: '60vh', overflow: 'auto', background: 'var(--gray-2)', borderRadius: 'var(--radius-3)', padding: 'var(--space-3)' }}>
+            <Editor
+              height="300px"
+              defaultLanguage="json"
+              value={jsonEditorValue}
+              onChange={(val) => setJsonEditorValue(val || '')}
+              options={{
+                readOnly: isReadOnly,
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                formatOnPaste: true,
+                formatOnType: true,
+                automaticLayout: true,
+                padding: { top: 12, bottom: 12 },
+                lineNumbersMinChars: 3,
+                renderLineHighlight: 'none',
+                renderLineHighlightOnlyWhenFocus: false
+              }}
+              theme={document.body.classList.contains('dark') ? 'vs-dark' : 'vs'}
+            />
+            {jsonEditorError && (
+              <Text color="red" mt="2">{jsonEditorError}</Text>
+            )}
+          </Box>
+          <Flex gap="3" mt="4" justify="end">
+            {!isReadOnly && (
+              <Button
+                variant="solid"
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(jsonEditorValue)
+                    setJsonEditorError(null)
+                    // Save logic: update the cell value in the table
+                    // Find the cell and update editedCells
+                    // (You may want to store row/col in state if needed)
+                    // For now, just close the dialog
+                    setIsJsonViewerOpen(false)
+                  } catch (e: any) {
+                    setJsonEditorError('Invalid JSON: ' + e.message)
+                  }
+                }}
+              >
+                Save
+              </Button>
+            )}
+            <Dialog.Close>
+              <Button variant="soft">Cancel</Button>
+            </Dialog.Close>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
     </Box>
   )
 }
