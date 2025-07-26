@@ -2,12 +2,7 @@ import { useState, useEffect } from 'react'
 import { Box, Flex, ScrollArea, Text, Button } from '@radix-ui/themes'
 import { Badge, Skeleton } from '../ui'
 import './DatabaseExplorer.css'
-import { 
-  ReloadIcon, 
-  ChevronRightIcon, 
-  ChevronDownIcon,
-  TableIcon
-} from '@radix-ui/react-icons'
+import { ReloadIcon, ChevronRightIcon, ChevronDownIcon, TableIcon } from '@radix-ui/react-icons'
 
 interface DatabaseExplorerProps {
   connectionId: string
@@ -272,7 +267,7 @@ export function DatabaseExplorer({
                   className={`database-item ${db.expanded ? 'expanded' : ''}`}
                   p="2"
                 >
-                  <Box 
+                  <Box
                     className="expand-icon"
                     onClick={() => toggleDatabase(db.name)}
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -347,7 +342,7 @@ export function DatabaseExplorer({
                           style={{ cursor: obj.type === 'table' ? 'pointer' : 'default' }}
                         >
                           {obj.type === 'table' && (
-                            <Box 
+                            <Box
                               className="expand-icon"
                               onClick={() => toggleTable(db.name, obj.name)}
                               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}

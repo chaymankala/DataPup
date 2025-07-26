@@ -32,7 +32,7 @@ src/
     │   ├── DatabaseConnection/      # Connection dialog/form
     │   ├── DatabaseExplorer/        # Database tree view
     │   ├── Layout/                  # Layout components
-    │   ├── QueryEditor/             # SQL editor component
+    │   ├── QueryWorkspace/          # Query workspace with SQL editor
     │   ├── QueryResults/            # Results grid
     │   └── ThemeSwitcher/           # Theme selection dropdown
     └── lib/
@@ -57,7 +57,7 @@ Currently supports:
 1. **No Connection**: Shows MainPanel with connection options and saved connections
 2. **Active Connection**: Shows ActiveConnectionLayout with:
    - DatabaseExplorer (left panel, resizable)
-   - QueryWorkspace (right panel) containing QueryEditor and QueryResults
+   - QueryWorkspace (right panel) containing SqlEditor and QueryResults
 
 ## Development Guidelines
 
@@ -114,7 +114,7 @@ npm run typecheck  # if available
 - Implement actual database connection logic
 - Add database-specific drivers (pg, mysql2, etc.)
 - Implement tree view in DatabaseExplorer
-- Add query execution in QueryEditor
+- Query execution is implemented in QueryWorkspace with SQL intellisense
 - Implement results display in QueryResults
 
 ## Important Notes

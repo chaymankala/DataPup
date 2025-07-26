@@ -86,7 +86,6 @@ data-pup/
 │       │   ├── ActiveConnectionLayout/ # Main connected view
 │       │   ├── ConnectionCard/     # Connection display cards
 │       │   ├── DatabaseExplorer/   # Database tree view
-│       │   ├── QueryEditor/        # SQL editor component
 │       │   ├── QueryHistory/       # Query history panel
 │       │   ├── QueryTabs/          # Tab management
 │       │   ├── QueryWorkspace/     # Query workspace container

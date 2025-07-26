@@ -184,7 +184,9 @@ export interface DatabaseManagerInterface {
   ): Promise<{ success: boolean; schema?: TableSchema; message: string }>
 
   // Connection info
-  getConnectionInfo(connectionId: string): { host: string; port: number; database: string } | null
+  getConnectionInfo(
+    connectionId: string
+  ): { host: string; port: number; database: string; type: string } | null
   getAllConnections(): string[]
   getCapabilities(): DatabaseCapabilities
 

@@ -289,14 +289,17 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
     database?: string
   ): Promise<{ success: boolean; schema?: TableSchema; message: string }>
 
-  getConnectionInfo(connectionId: string): { host: string; port: number; database: string } | null {
+  getConnectionInfo(
+    connectionId: string
+  ): { host: string; port: number; database: string; type: string } | null {
     const connection = this.connections.get(connectionId)
     if (!connection) return null
 
     return {
       host: connection.config.host,
       port: connection.config.port,
-      database: connection.config.database
+      database: connection.config.database,
+      type: connection.config.type
     }
   }
 

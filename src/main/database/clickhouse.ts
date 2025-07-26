@@ -456,13 +456,16 @@ class ClickHouseManager extends BaseDatabaseManager {
     return connection?.isConnected || false
   }
 
-  getConnectionInfo(connectionId: string): { host: string; port: number; database: string } | null {
+  getConnectionInfo(
+    connectionId: string
+  ): { host: string; port: number; database: string; type: string } | null {
     const connection = this.connections.get(connectionId)
     if (connection) {
       return {
         host: connection.config.host,
         port: connection.config.port,
-        database: connection.config.database
+        database: connection.config.database,
+        type: connection.config.type
       }
     }
     return null

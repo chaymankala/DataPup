@@ -381,6 +381,16 @@ ipcMain.handle('db:getAllConnections', async () => {
   }
 })
 
+ipcMain.handle('db:getConnectionInfo', async (_, connectionId: string) => {
+  try {
+    const info = databaseManager.getConnectionInfo(connectionId)
+    return { success: true, info }
+  } catch (error) {
+    console.error('Error getting connection info:', error)
+    return { success: false, info: null }
+  }
+})
+
 // IPC handler for AI processing
 ipcMain.handle('ai:process', async (_, request) => {
   try {
