@@ -8,7 +8,15 @@ import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
 import { SqlEditor } from './SqlEditor'
 import { QueryHistoryPanel } from '../QueryHistoryPanel'
-import { ExclamationTriangleIcon, MagicWandIcon, CodeIcon, PlayIcon, ClockIcon, BookmarkIcon } from '@radix-ui/react-icons'
+import { SavedQueriesPanel } from '../SavedQueriesPanel'
+import {
+  ExclamationTriangleIcon,
+  MagicWandIcon,
+  CodeIcon,
+  PlayIcon,
+  ClockIcon,
+  BookmarkIcon
+} from '@radix-ui/react-icons'
 
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
@@ -43,8 +51,10 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
   const [showHistoryPanel, setShowHistoryPanel] = useState(false)
+  const [showSavedQueriesPanel, setShowSavedQueriesPanel] = useState(false)
   const editorRef = useRef<any>(null)
   const executeQueryRef = useRef<() => void>(() => {})
+  const saveQueryRef = useRef<() => void>(() => {})
   const [showLimitWarning, setShowLimitWarning] = useState(false)
   const [queryLimitOverride, setQueryLimitOverride] = useState(false)
 
@@ -67,6 +77,19 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
       run: () => {
         if (executeQueryRef.current) {
           executeQueryRef.current()
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'save-query',
+      label: 'Save Query',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.6,
+      run: () => {
+        if (saveQueryRef.current) {
+          saveQueryRef.current()
         }
       }
     })
@@ -214,10 +237,39 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
     await executeQuery(queryToExecute)
   }, [activeTab, selectedText, executeQuery])
 
-  // Update the ref whenever handleExecuteQuery changes
+  const handleSaveQuery = useCallback(async () => {
+    if (!activeTab || activeTab.type !== 'query' || !activeTab.query.trim()) return
+
+    // Use the tab title as the query name
+    const name = activeTab.title
+
+    try {
+      const connectionInfo = await window.api.database.getConnectionInfo(connectionId)
+      const result = await window.api.savedQueries.save({
+        name,
+        query: activeTab.query,
+        connectionType: connectionInfo?.info?.type
+      })
+
+      if (result.success) {
+        // Update the tab to indicate it's saved
+        handleUpdateTabContent(activeTab.id, { isDirty: false })
+        // Show a subtle notification or just log
+        console.log('Query saved successfully as:', name)
+      }
+    } catch (error) {
+      console.error('Failed to save query:', error)
+    }
+  }, [activeTab, connectionId, handleUpdateTabContent])
+
+  // Update the refs whenever handlers change
   useEffect(() => {
     executeQueryRef.current = handleExecuteQuery
   }, [handleExecuteQuery])
+
+  useEffect(() => {
+    saveQueryRef.current = handleSaveQuery
+  }, [handleSaveQuery])
 
   const handleExecuteQueryFromAI = async (sqlQuery: string) => {
     // Update the editor content with the SQL query
@@ -240,32 +292,6 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   const formatQuery = () => {
     if (editorRef.current) {
       editorRef.current.getAction('editor.action.formatDocument').run()
-    }
-  }
-
-  const handleSaveQuery = async () => {
-    if (!activeTab || activeTab.type !== 'query' || !activeTab.query.trim()) return
-
-    const name = prompt('Enter a name for this query:')
-    if (!name) return
-
-    const description = prompt('Enter a description (optional):')
-
-    try {
-      const connectionInfo = await window.api.database.getConnectionInfo(connectionId)
-      const result = await window.api.savedQueries.save({
-        name,
-        description: description || undefined,
-        query: activeTab.query,
-        connectionType: connectionInfo?.info?.type
-      })
-
-      if (result.success) {
-        alert('Query saved successfully!')
-      }
-    } catch (error) {
-      console.error('Failed to save query:', error)
-      alert('Failed to save query')
     }
   }
 
@@ -368,7 +394,10 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                       variant={showHistoryPanel ? 'solid' : 'soft'}
                       onClick={() => {
                         setShowHistoryPanel(!showHistoryPanel)
-                        if (!showHistoryPanel) setShowAIPanel(false)
+                        if (!showHistoryPanel) {
+                          setShowAIPanel(false)
+                          setShowSavedQueriesPanel(false)
+                        }
                       }}
                     >
                       <ClockIcon />
@@ -376,10 +405,27 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                     </Button>
                     <Button
                       size="1"
+                      variant={showSavedQueriesPanel ? 'solid' : 'soft'}
+                      onClick={() => {
+                        setShowSavedQueriesPanel(!showSavedQueriesPanel)
+                        if (!showSavedQueriesPanel) {
+                          setShowAIPanel(false)
+                          setShowHistoryPanel(false)
+                        }
+                      }}
+                    >
+                      <BookmarkIcon />
+                      Saved
+                    </Button>
+                    <Button
+                      size="1"
                       variant={showAIPanel ? 'solid' : 'soft'}
                       onClick={() => {
                         setShowAIPanel(!showAIPanel)
-                        if (!showAIPanel) setShowHistoryPanel(false)
+                        if (!showAIPanel) {
+                          setShowHistoryPanel(false)
+                          setShowSavedQueriesPanel(false)
+                        }
                       }}
                     >
                       <MagicWandIcon />
@@ -388,15 +434,6 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                     <Button size="1" variant="soft" onClick={formatQuery}>
                       <CodeIcon />
                       Format
-                    </Button>
-                    <Button 
-                      size="1" 
-                      variant="soft" 
-                      onClick={handleSaveQuery}
-                      disabled={!activeTab || activeTab.type !== 'query' || !activeTab.query.trim()}
-                    >
-                      <BookmarkIcon />
-                      Save
                     </Button>
                     <Button
                       size="1"
@@ -424,7 +461,12 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
 
                 <Box className="editor-container">
                   <PanelGroup direction="horizontal">
-                    <Panel defaultSize={showAIPanel || showHistoryPanel ? 70 : 100} minSize={50}>
+                    <Panel
+                      defaultSize={
+                        showAIPanel || showHistoryPanel || showSavedQueriesPanel ? 70 : 100
+                      }
+                      minSize={50}
+                    >
                       <SqlEditor
                         connectionId={connectionId}
                         value={activeTab.query}
@@ -457,7 +499,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                         </Panel>
                       </>
                     )}
-                    {showHistoryPanel && !showAIPanel && (
+                    {showHistoryPanel && !showAIPanel && !showSavedQueriesPanel && (
                       <>
                         <PanelResizeHandle className="resize-handle-vertical" />
                         <Panel defaultSize={30} minSize={20} maxSize={50}>
@@ -469,6 +511,27 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                                 handleUpdateTabContent(activeTab.id, {
                                   query,
                                   isDirty: true
+                                })
+                              }
+                            }}
+                            onRunQuery={(query) => executeQuery(query)}
+                          />
+                        </Panel>
+                      </>
+                    )}
+                    {showSavedQueriesPanel && !showAIPanel && !showHistoryPanel && (
+                      <>
+                        <PanelResizeHandle className="resize-handle-vertical" />
+                        <Panel defaultSize={30} minSize={20} maxSize={50}>
+                          <SavedQueriesPanel
+                            connectionId={connectionId}
+                            onSelectQuery={(query, name) => {
+                              if (editorRef.current) {
+                                editorRef.current.setValue(query)
+                                handleUpdateTabContent(activeTab.id, {
+                                  query,
+                                  title: name || activeTab.title,
+                                  isDirty: false
                                 })
                               }
                             }}

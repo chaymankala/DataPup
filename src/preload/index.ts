@@ -79,7 +79,8 @@ const api = {
     get: (filter?: any) => ipcRenderer.invoke('query-history:get', filter),
     clear: (connectionId?: string) => ipcRenderer.invoke('query-history:clear', connectionId),
     delete: (id: number) => ipcRenderer.invoke('query-history:delete', id),
-    statistics: (connectionId?: string) => ipcRenderer.invoke('query-history:statistics', connectionId)
+    statistics: (connectionId?: string) =>
+      ipcRenderer.invoke('query-history:statistics', connectionId)
   },
   savedQueries: {
     save: (query: any) => ipcRenderer.invoke('saved-queries:save', query),

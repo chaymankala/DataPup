@@ -22,7 +22,11 @@ interface QueryHistoryPanelProps {
   onRunQuery?: (query: string) => void
 }
 
-export function QueryHistoryPanel({ connectionId, onSelectQuery, onRunQuery }: QueryHistoryPanelProps) {
+export function QueryHistoryPanel({
+  connectionId,
+  onSelectQuery,
+  onRunQuery
+}: QueryHistoryPanelProps) {
   const [history, setHistory] = useState<QueryHistoryEntry[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -54,7 +58,7 @@ export function QueryHistoryPanel({ connectionId, onSelectQuery, onRunQuery }: Q
     try {
       const result = await window.api.queryHistory.delete(id)
       if (result.success) {
-        setHistory(history.filter(item => item.id !== id))
+        setHistory(history.filter((item) => item.id !== id))
       }
     } catch (error) {
       console.error('Failed to delete history entry:', error)
@@ -110,30 +114,30 @@ export function QueryHistoryPanel({ connectionId, onSelectQuery, onRunQuery }: Q
   if (isLoading) {
     return (
       <Flex align="center" justify="center" height="100%" p="4">
-        <Text size="2" color="gray">Loading history...</Text>
+        <Text size="2" color="gray">
+          Loading history...
+        </Text>
       </Flex>
     )
   }
 
   return (
     <Flex direction="column" className="query-history-panel" height="100%">
-      <Box className="history-header" p="3">
-        <Flex justify="between" align="center" mb="2">
+      <Box className="history-header">
+        <Flex justify="between" align="center" mb="1">
           <Flex align="center" gap="2">
             <ClockIcon />
-            <Text size="2" weight="bold">Query History</Text>
+            <Text size="1" weight="bold">
+              Query History
+            </Text>
           </Flex>
-          <Button
-            size="1"
-            variant="ghost"
-            onClick={handleClear}
-            disabled={history.length === 0}
-          >
+          <Button size="1" variant="ghost" onClick={handleClear} disabled={history.length === 0}>
             Clear All
           </Button>
         </Flex>
 
         <TextField.Root
+          size="1"
           placeholder="Search queries..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -163,10 +167,10 @@ export function QueryHistoryPanel({ connectionId, onSelectQuery, onRunQuery }: Q
               >
                 <Flex direction="column" gap="1">
                   <Flex justify="between" align="start">
-                    <Text size="1" className="query-text">
+                    <Text size="1" className="query-text" style={{ marginRight: '12px' }}>
                       {truncateQuery(item.query)}
                     </Text>
-                    <Flex gap="1">
+                    <Flex gap="2" align="center" style={{ flexShrink: 0 }}>
                       <Button
                         size="1"
                         variant="ghost"

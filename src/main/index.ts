@@ -181,7 +181,7 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessio
   const startTime = Date.now()
   try {
     const result = await databaseManager.query(connectionId, query, sessionId)
-    
+
     // Get connection info for history
     const connectionInfo = databaseManager.getConnectionInfo(connectionId)
     if (connectionInfo) {
@@ -197,12 +197,12 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessio
         errorMessage: result.error
       })
     }
-    
+
     return result
   } catch (error) {
     console.error('Query execution error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
+
     // Also log failed queries
     const connectionInfo = databaseManager.getConnectionInfo(connectionId)
     if (connectionInfo) {
@@ -217,7 +217,7 @@ ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessio
         errorMessage
       })
     }
-    
+
     return {
       success: false,
       message: 'Query execution failed',
