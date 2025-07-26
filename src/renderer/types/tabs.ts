@@ -47,4 +47,6 @@ export interface QueryExecutionResult {
   isDDL?: boolean
   isDML?: boolean
   queryType?: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'DDL' | 'SYSTEM' | 'OTHER'
+  totalRows?: number // Total rows available (for pagination)
+  hasMore?: boolean // Indicates if there are more rows beyond current result set
 }

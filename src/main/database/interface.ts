@@ -45,6 +45,8 @@ export interface QueryResult {
   affectedRows?: number
   isDDL?: boolean
   isDML?: boolean
+  totalRows?: number // Total rows available (for pagination)
+  hasMore?: boolean // Indicates if there are more rows beyond current result set
 }
 
 export interface InsertResult extends QueryResult {

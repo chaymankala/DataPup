@@ -7,10 +7,20 @@ import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
 import { SqlEditor } from './SqlEditor'
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
+import {
+  isSelectQuery,
+  hasLimitClause,
+  addLimitToQuery,
+  mightReturnLargeResultSet
+} from '../../utils/queryParser'
 import './QueryWorkspace.css'
+
+
+const DEFAULT_LIMIT = 100
 
 interface QueryWorkspaceProps {
   connectionId: string
@@ -33,7 +43,9 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
   const editorRef = useRef<any>(null)
-  const executeQueryRef = useRef<() => void>()
+  const executeQueryRef = useRef<() => void>(() => {})
+  const [showLimitWarning, setShowLimitWarning] = useState(false)
+  const [queryLimitOverride, setQueryLimitOverride] = useState(false)
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId)
   const activeResult = activeTab ? results[activeTab.id] : null
@@ -96,6 +108,8 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
 
   const handleSelectTab = useCallback((tabId: string) => {
     setActiveTabId(tabId)
+    setShowLimitWarning(false)
+    setQueryLimitOverride(false)
   }, [])
 
   const handleUpdateTabTitle = useCallback(
@@ -132,7 +146,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   }, [openTableTab, onOpenTableTab])
 
   const executeQuery = useCallback(
-    async (queryToExecute: string) => {
+    async (queryToExecute: string, forceUnlimited = false) => {
       if (!activeTab || activeTab.type !== 'query') return
 
       if (!queryToExecute.trim()) return
@@ -141,7 +155,22 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
         setIsExecuting(true)
         const startTime = Date.now()
 
-        const queryResult = await window.api.database.query(connectionId, queryToExecute.trim())
+        let finalQuery = queryToExecute.trim()
+
+        // Check if we should add a limit
+        if (
+          isSelectQuery(finalQuery) &&
+          !hasLimitClause(finalQuery) &&
+          !forceUnlimited &&
+          !queryLimitOverride
+        ) {
+          if (mightReturnLargeResultSet(finalQuery)) {
+            setShowLimitWarning(true)
+            finalQuery = addLimitToQuery(finalQuery, DEFAULT_LIMIT)
+          }
+        }
+
+        const queryResult = await window.api.database.query(connectionId, finalQuery)
         const executionTime = Date.now() - startTime
 
         const result: QueryExecutionResult = {
@@ -164,7 +193,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
         setIsExecuting(false)
       }
     },
-    [activeTab, results, connectionId]
+    [activeTab, results, connectionId, queryLimitOverride]
   )
 
   const handleExecuteQuery = useCallback(async () => {
@@ -346,12 +375,15 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                       <SqlEditor
                         connectionId={connectionId}
                         value={activeTab.query}
-                        onChange={(value) =>
+                        onChange={(value) => {
                           handleUpdateTabContent(activeTab.id, {
                             query: value || '',
                             isDirty: true
                           })
-                        }
+                          // Reset limit override when query changes
+                          setQueryLimitOverride(false)
+                          setShowLimitWarning(false)
+                        }}
                         onMount={handleEditorDidMount}
                         onSelectionChange={setSelectedText}
                         height="100%"
@@ -391,6 +423,9 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                       <>
                         <Badge size="1" variant="soft">
                           {activeResult.rowCount || activeResult.data.length} rows
+                          {activeResult.data.length === 1000 &&
+                            !hasLimitClause(editorRef.current?.getValue() || '') &&
+                            ' (limited)'}
                         </Badge>
                         {activeResult.executionTime && (
                           <Badge size="1" variant="soft" color="gray">
@@ -420,6 +455,45 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                     </Flex>
                   )}
                 </Flex>
+
+                {/* Limit warning */}
+                {showLimitWarning && activeResult?.success && (
+                  <Box
+                    p="2"
+                    style={{
+                      backgroundColor: 'var(--amber-3)',
+                      borderBottom: '1px solid var(--amber-6)'
+                    }}
+                  >
+                    <Flex align="center" justify="between">
+                      <Flex align="center" gap="2">
+                        <ExclamationTriangleIcon color="var(--amber-11)" />
+                        <Text size="1" color="amber" weight="medium">
+                          Query limited to {DEFAULT_LIMIT} rows for safety
+                        </Text>
+                        <Text size="1" color="gray">
+                          Remove LIMIT to see all results
+                        </Text>
+                      </Flex>
+                      <Flex gap="2">
+                        <Button
+                          size="1"
+                          variant="soft"
+                          onClick={() => {
+                            setShowLimitWarning(false)
+                            setQueryLimitOverride(true)
+                            handleExecuteQuery()
+                          }}
+                        >
+                          Run without limit
+                        </Button>
+                        <Button size="1" variant="ghost" onClick={() => setShowLimitWarning(false)}>
+                          Dismiss
+                        </Button>
+                      </Flex>
+                    </Flex>
+                  </Box>
+                )}
 
                 <Box className="results-content" style={{ flex: 1 }}>
                   {activeResult ? (

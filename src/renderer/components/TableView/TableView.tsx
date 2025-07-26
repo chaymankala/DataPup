@@ -22,7 +22,7 @@ import {
   ChevronDownIcon,
   MixerHorizontalIcon
 } from '@radix-ui/react-icons'
-import { Skeleton } from '../ui'
+import { Skeleton, Pagination } from '../ui'
 import { TableFilter } from '../../types/tabs'
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import './TableView.css'
@@ -82,15 +82,20 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const inputRef = useRef<HTMLInputElement>(null)
   const jsonEditorRef = useRef<any>(null)
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
+  const [totalRows, setTotalRows] = useState(0)
+
   // Load table schema on mount
   useEffect(() => {
     loadTableSchema()
   }, [connectionId, database, tableName])
 
-  // Execute query when component mounts or filters change
+  // Execute query when component mounts, filters change, or pagination changes
   useEffect(() => {
     executeQuery()
-  }, [connectionId, database, tableName])
+  }, [connectionId, database, tableName, currentPage, pageSize])
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -197,7 +202,8 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
           database,
           table: tableName,
           filters: validFilters,
-          limit: 100
+          limit: pageSize,
+          offset: (currentPage - 1) * pageSize
         },
         sessionId
       )
@@ -207,6 +213,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
         ...queryResult,
         executionTime
       })
+
+      // Update total rows for pagination
+      if (queryResult.totalRows !== undefined) {
+        setTotalRows(queryResult.totalRows)
+      }
     } catch (error) {
       console.error('Query execution error:', error)
       setResult({
@@ -219,6 +230,15 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     }
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setCurrentPage(1) // Reset to first page when page size changes
+  }
+
   const addFilter = () => {
     const newFilter: TableFilter = {
       id: Date.now().toString(),
@@ -229,18 +249,21 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     const newFilters = [...filters, newFilter]
     setFilters(newFilters)
     onFiltersChange(newFilters)
+    setCurrentPage(1) // Reset to first page when filters change
   }
 
   const updateFilter = (id: string, updates: Partial<TableFilter>) => {
     const newFilters = filters.map((f) => (f.id === id ? { ...f, ...updates } : f))
     setFilters(newFilters)
     onFiltersChange(newFilters)
+    // Don't reset page on filter value changes, only on apply
   }
 
   const removeFilter = (id: string) => {
     const newFilters = filters.filter((f) => f.id !== id)
     setFilters(newFilters)
     onFiltersChange(newFilters)
+    setCurrentPage(1) // Reset to first page when filters change
   }
 
   const toggleRowSelection = (index: number, event?: React.MouseEvent) => {
@@ -788,7 +811,15 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                 <MixerHorizontalIcon />
                 Filter
               </Button>
-              <Button size="1" onClick={executeQuery} disabled={isLoading} title="Apply filters">
+              <Button
+                size="1"
+                onClick={() => {
+                  setCurrentPage(1)
+                  executeQuery()
+                }}
+                disabled={isLoading}
+                title="Apply filters"
+              >
                 <CheckIcon />
               </Button>
             </Flex>
@@ -869,7 +900,9 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               {result?.success && result.data && (
                 <>
                   <Badge size="1" variant="soft">
-                    {result.data.length} rows
+                    {totalRows > pageSize
+                      ? `Page ${currentPage} (${result.data.length} rows)`
+                      : `${result.data.length} rows`}
                   </Badge>
                   {result.executionTime && (
                     <Badge size="1" variant="soft" color="gray">
@@ -961,16 +994,48 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                     </Button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Content>
+                    <DropdownMenu.Label>Current Page</DropdownMenu.Label>
                     <DropdownMenu.Item
-                      onClick={() => exportToCSV(result.data || [], `${tableName}-export.csv`)}
+                      onClick={() =>
+                        exportToCSV(result.data || [], `${tableName}-page${currentPage}-export.csv`)
+                      }
                     >
                       Export as CSV
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
-                      onClick={() => exportToJSON(result.data || [], `${tableName}-export.json`)}
+                      onClick={() =>
+                        exportToJSON(
+                          result.data || [],
+                          `${tableName}-page${currentPage}-export.json`
+                        )
+                      }
                     >
                       Export as JSON
                     </DropdownMenu.Item>
+                    {totalRows > pageSize && (
+                      <>
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Label>
+                          All Data ({totalRows.toLocaleString()} rows)
+                        </DropdownMenu.Label>
+                        <DropdownMenu.Item
+                          onClick={async () => {
+                            // TODO: Implement streaming export for large datasets
+                            alert('Export all data feature coming soon!')
+                          }}
+                        >
+                          Export all as CSV
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          onClick={async () => {
+                            // TODO: Implement streaming export for large datasets
+                            alert('Export all data feature coming soon!')
+                          }}
+                        >
+                          Export all as JSON
+                        </DropdownMenu.Item>
+                      </>
+                    )}
                   </DropdownMenu.Content>
                 </DropdownMenu.Root>
               )}
@@ -1011,6 +1076,19 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
               </Flex>
             )}
           </Box>
+
+          {/* Pagination */}
+          {result?.success && totalRows > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalRows / pageSize)}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              isLoading={isLoading}
+            />
+          )}
         </Box>
       </Flex>
       <Dialog.Root open={isJsonViewerOpen} onOpenChange={setIsJsonViewerOpen}>
