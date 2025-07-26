@@ -34,6 +34,23 @@ export function ActiveConnectionLayout({
     checkReadOnly()
   }, [connectionId])
 
+  // Global keyboard shortcut for Cmd+N / Ctrl+N
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+        event.preventDefault()
+        if (newTabHandlerRef.current) {
+          newTabHandlerRef.current()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
   const handleOpenTableTab = (database: string, tableName: string) => {
     if (window.openTableTab) {
       window.openTableTab(database, tableName)
