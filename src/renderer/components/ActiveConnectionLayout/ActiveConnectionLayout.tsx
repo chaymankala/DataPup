@@ -20,6 +20,7 @@ export function ActiveConnectionLayout({
 }: ActiveConnectionLayoutProps) {
   const [isReadOnly, setIsReadOnly] = useState(false)
   const queryWorkspaceRef = useRef<any>(null)
+  const newTabHandlerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const checkReadOnly = async () => {
@@ -32,6 +33,23 @@ export function ActiveConnectionLayout({
     }
     checkReadOnly()
   }, [connectionId])
+
+  // Global keyboard shortcut for Cmd+T / Ctrl+T
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 't') {
+        event.preventDefault()
+        if (newTabHandlerRef.current) {
+          newTabHandlerRef.current()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   const handleOpenTableTab = (database: string, tableName: string) => {
     if (window.openTableTab) {
@@ -101,6 +119,9 @@ export function ActiveConnectionLayout({
             connectionId={connectionId}
             connectionName={connectionName}
             onOpenTableTab={handleOpenTableTab}
+            onRegisterNewTabHandler={(handler) => {
+              newTabHandlerRef.current = handler
+            }}
           />
         </Panel>
       </PanelGroup>
