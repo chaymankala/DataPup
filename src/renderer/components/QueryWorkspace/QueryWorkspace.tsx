@@ -477,7 +477,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                           Remove LIMIT to see all results
                         </Text>
                       </Flex>
-                      <Flex gap="2">
+                      <Flex gap="2" align="center">
                         <Button
                           size="1"
                           variant="soft"
