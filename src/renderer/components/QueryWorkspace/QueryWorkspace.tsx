@@ -7,7 +7,7 @@ import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
 import { SqlEditor } from './SqlEditor'
-import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
+import { ExclamationTriangleIcon, MagicWandIcon, CodeIcon, PlayIcon } from '@radix-ui/react-icons'
 
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
@@ -18,7 +18,6 @@ import {
   mightReturnLargeResultSet
 } from '../../utils/queryParser'
 import './QueryWorkspace.css'
-
 
 const DEFAULT_LIMIT = 100
 
@@ -338,19 +337,21 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                   <Flex gap="2" align="center">
                     <Button
                       size="1"
-                      variant={showAIPanel ? 'solid' : 'ghost'}
+                      variant={showAIPanel ? 'solid' : 'soft'}
                       onClick={() => setShowAIPanel(!showAIPanel)}
-                      style={{ minWidth: '60px' }}
                     >
-                      ✨ AI
+                      <MagicWandIcon />
+                      AI
                     </Button>
-                    <Button size="1" variant="ghost" onClick={formatQuery}>
+                    <Button size="1" variant="soft" onClick={formatQuery}>
+                      <CodeIcon />
                       Format
                     </Button>
                     <Button
+                      size="1"
+                      variant="solid"
                       onClick={handleExecuteQuery}
                       disabled={isExecuting || (!activeTab.query && !selectedText.trim())}
-                      size="1"
                     >
                       {isExecuting ? (
                         <>
@@ -359,8 +360,9 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                         </>
                       ) : (
                         <>
+                          <PlayIcon />
                           Run
-                          <Text size="1" color="gray" ml="1">
+                          <Text size="1" ml="1" style={{ opacity: 0.7 }}>
                             ⌘↵
                           </Text>
                         </>
