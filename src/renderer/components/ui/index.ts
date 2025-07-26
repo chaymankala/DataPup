@@ -37,6 +37,10 @@ export type { SkeletonProps } from './Skeleton'
 // Logo
 export { Logo } from './Logo'
 
+// Pagination
+export { Pagination } from './Pagination'
+export type { PaginationProps } from './Pagination'
+
 // Re-export commonly used Radix components that don't need wrapping
 export {
   Flex,

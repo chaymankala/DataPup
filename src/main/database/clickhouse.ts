@@ -292,7 +292,7 @@ class ClickHouseManager extends BaseDatabaseManager {
     // ClickHouse uses backticks for identifiers
     const qualifiedTable = database ? `\`${database}\`.\`${table}\`` : `\`${table}\``
 
-    let sql = `SELECT * FROM ${qualifiedTable}`
+    let baseQuery = `FROM ${qualifiedTable}`
 
     // Add WHERE clause if filters exist
     if (filters && filters.length > 0) {
@@ -300,9 +300,12 @@ class ClickHouseManager extends BaseDatabaseManager {
         .map((filter) => this.buildClickHouseWhereClause(filter))
         .filter(Boolean)
       if (whereClauses.length > 0) {
-        sql += ` WHERE ${whereClauses.join(' AND ')}`
+        baseQuery += ` WHERE ${whereClauses.join(' AND ')}`
       }
     }
+
+    // Build the main SELECT query
+    let sql = `SELECT * ${baseQuery}`
 
     // Add ORDER BY clause
     if (orderBy && orderBy.length > 0) {
@@ -318,7 +321,26 @@ class ClickHouseManager extends BaseDatabaseManager {
       sql += ` OFFSET ${offset}`
     }
 
-    return this.query(connectionId, sql, sessionId)
+    // Execute the main query
+    const result = await this.query(connectionId, sql, sessionId)
+
+    // If successful and we have pagination, get the total count
+    if (result.success && (limit || offset)) {
+      try {
+        const countSql = `SELECT count() as total ${baseQuery}`
+        const countResult = await this.query(connectionId, countSql)
+
+        if (countResult.success && countResult.data && countResult.data[0]) {
+          result.totalRows = Number(countResult.data[0].total)
+          result.hasMore = offset + (result.data?.length || 0) < result.totalRows
+        }
+      } catch (error) {
+        // If count fails, continue without it
+        console.warn('Failed to get total count:', error)
+      }
+    }
+
+    return result
   }
 
   private buildClickHouseWhereClause(filter: TableFilter): string {
