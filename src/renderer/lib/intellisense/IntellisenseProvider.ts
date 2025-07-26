@@ -69,6 +69,11 @@ export abstract class IntellisenseProvider {
         suggestions.push(...this.getColumnSuggestions(context, schema, position, range))
         suggestions.push(...this.getFunctionSuggestions(context, schema, position, range))
         break
+      case 'select_complete':
+        suggestions.push(...this.getKeywordSuggestions(context, schema, position, range))
+        suggestions.push(...this.getColumnSuggestions(context, schema, position, range))
+        suggestions.push(...this.getFunctionSuggestions(context, schema, position, range))
+        break
       case 'function':
         suggestions.push(...this.getFunctionSuggestions(context, schema, position, range))
         break

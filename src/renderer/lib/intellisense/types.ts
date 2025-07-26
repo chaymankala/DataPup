@@ -22,7 +22,16 @@ export interface Position {
 }
 
 export interface SQLContext {
-  type: 'select' | 'from' | 'where' | 'join' | 'column' | 'function' | 'keyword' | 'unknown'
+  type:
+    | 'select'
+    | 'from'
+    | 'where'
+    | 'join'
+    | 'column'
+    | 'function'
+    | 'keyword'
+    | 'unknown'
+    | 'select_complete'
   currentClause?: string
   tableAliases: Map<string, string>
   availableTables: string[]
