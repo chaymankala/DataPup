@@ -158,6 +158,87 @@ declare global {
         }>
       }
       on: (channel: string, callback: (event: any, ...args: any[]) => void) => () => void
+      secureStorage: {
+        get: (key: string) => Promise<{ success: boolean; value: string | null }>
+        set: (key: string, value: string) => Promise<{ success: boolean }>
+        delete: (key: string) => Promise<{ success: boolean }>
+      }
+      queryHistory: {
+        get: (filter?: {
+          connectionId?: string
+          connectionType?: string
+          startDate?: string
+          endDate?: string
+          success?: boolean
+          searchTerm?: string
+          limit?: number
+          offset?: number
+        }) => Promise<{
+          success: boolean
+          history: Array<{
+            id: number
+            connectionId: string
+            connectionType: string
+            connectionName: string
+            query: string
+            executionTime?: number
+            rowCount?: number
+            success: boolean
+            errorMessage?: string
+            createdAt: string
+          }>
+        }>
+        clear: (connectionId?: string) => Promise<{ success: boolean; deletedCount: number }>
+        delete: (id: number) => Promise<{ success: boolean }>
+        statistics: (connectionId?: string) => Promise<{
+          success: boolean
+          stats: {
+            totalQueries: number
+            successfulQueries: number
+            failedQueries: number
+            averageExecutionTime: number
+          } | null
+        }>
+      }
+      savedQueries: {
+        save: (query: {
+          name: string
+          description?: string
+          query: string
+          connectionType?: string
+          tags?: string[]
+        }) => Promise<{ success: boolean; id: number | null }>
+        get: (filter?: {
+          connectionType?: string
+          tags?: string[]
+          searchTerm?: string
+          limit?: number
+          offset?: number
+        }) => Promise<{
+          success: boolean
+          queries: Array<{
+            id: number
+            name: string
+            description?: string
+            query: string
+            connectionType?: string
+            tags: string[]
+            createdAt: string
+            updatedAt: string
+          }>
+        }>
+        update: (
+          id: number,
+          updates: {
+            name?: string
+            description?: string
+            query?: string
+            connectionType?: string
+            tags?: string[]
+          }
+        ) => Promise<{ success: boolean }>
+        delete: (id: number) => Promise<{ success: boolean }>
+      }
     }
   }
 }

@@ -7,7 +7,8 @@ import { QueryTabs } from '../QueryTabs/QueryTabs'
 import { TableView } from '../TableView/TableView'
 import { AIAssistant } from '../AIAssistant'
 import { SqlEditor } from './SqlEditor'
-import { ExclamationTriangleIcon, MagicWandIcon, CodeIcon, PlayIcon } from '@radix-ui/react-icons'
+import { QueryHistoryPanel } from '../QueryHistoryPanel'
+import { ExclamationTriangleIcon, MagicWandIcon, CodeIcon, PlayIcon, ClockIcon, BookmarkIcon } from '@radix-ui/react-icons'
 
 import { exportToCSV, exportToJSON } from '../../utils/exportData'
 import { Tab, QueryTab, TableTab, QueryExecutionResult } from '../../types/tabs'
@@ -41,6 +42,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
   const [isExecuting, setIsExecuting] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [showAIPanel, setShowAIPanel] = useState(false)
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false)
   const editorRef = useRef<any>(null)
   const executeQueryRef = useRef<() => void>(() => {})
   const [showLimitWarning, setShowLimitWarning] = useState(false)
@@ -241,6 +243,32 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
     }
   }
 
+  const handleSaveQuery = async () => {
+    if (!activeTab || activeTab.type !== 'query' || !activeTab.query.trim()) return
+
+    const name = prompt('Enter a name for this query:')
+    if (!name) return
+
+    const description = prompt('Enter a description (optional):')
+
+    try {
+      const connectionInfo = await window.api.database.getConnectionInfo(connectionId)
+      const result = await window.api.savedQueries.save({
+        name,
+        description: description || undefined,
+        query: activeTab.query,
+        connectionType: connectionInfo?.info?.type
+      })
+
+      if (result.success) {
+        alert('Query saved successfully!')
+      }
+    } catch (error) {
+      console.error('Failed to save query:', error)
+      alert('Failed to save query')
+    }
+  }
+
   const formatResult = (data: any[], result?: QueryExecutionResult) => {
     if (!data || data.length === 0) {
       // Check if this is a successful DDL/DML command
@@ -337,8 +365,22 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                   <Flex gap="2" align="center">
                     <Button
                       size="1"
+                      variant={showHistoryPanel ? 'solid' : 'soft'}
+                      onClick={() => {
+                        setShowHistoryPanel(!showHistoryPanel)
+                        if (!showHistoryPanel) setShowAIPanel(false)
+                      }}
+                    >
+                      <ClockIcon />
+                      History
+                    </Button>
+                    <Button
+                      size="1"
                       variant={showAIPanel ? 'solid' : 'soft'}
-                      onClick={() => setShowAIPanel(!showAIPanel)}
+                      onClick={() => {
+                        setShowAIPanel(!showAIPanel)
+                        if (!showAIPanel) setShowHistoryPanel(false)
+                      }}
                     >
                       <MagicWandIcon />
                       AI
@@ -346,6 +388,15 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                     <Button size="1" variant="soft" onClick={formatQuery}>
                       <CodeIcon />
                       Format
+                    </Button>
+                    <Button 
+                      size="1" 
+                      variant="soft" 
+                      onClick={handleSaveQuery}
+                      disabled={!activeTab || activeTab.type !== 'query' || !activeTab.query.trim()}
+                    >
+                      <BookmarkIcon />
+                      Save
                     </Button>
                     <Button
                       size="1"
@@ -373,7 +424,7 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
 
                 <Box className="editor-container">
                   <PanelGroup direction="horizontal">
-                    <Panel defaultSize={showAIPanel ? 70 : 100} minSize={50}>
+                    <Panel defaultSize={showAIPanel || showHistoryPanel ? 70 : 100} minSize={50}>
                       <SqlEditor
                         connectionId={connectionId}
                         value={activeTab.query}
@@ -402,6 +453,26 @@ export function QueryWorkspace({ connectionId, onOpenTableTab }: QueryWorkspaceP
                             }}
                             onExecuteQuery={handleExecuteQueryFromAI}
                             onClose={() => setShowAIPanel(false)}
+                          />
+                        </Panel>
+                      </>
+                    )}
+                    {showHistoryPanel && !showAIPanel && (
+                      <>
+                        <PanelResizeHandle className="resize-handle-vertical" />
+                        <Panel defaultSize={30} minSize={20} maxSize={50}>
+                          <QueryHistoryPanel
+                            connectionId={connectionId}
+                            onSelectQuery={(query) => {
+                              if (editorRef.current) {
+                                editorRef.current.setValue(query)
+                                handleUpdateTabContent(activeTab.id, {
+                                  query,
+                                  isDirty: true
+                                })
+                              }
+                            }}
+                            onRunQuery={(query) => executeQuery(query)}
                           />
                         </Panel>
                       </>

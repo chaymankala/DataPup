@@ -1,0 +1,93 @@
+.query-history-panel {
+  background: var(--gray-1);
+  border-left: 1px solid var(--gray-4);
+  height: 100%;
+  overflow: hidden;
+}
+
+.history-header {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.history-search {
+  width: 100%;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: var(--gray-2);
+  border: 1px solid var(--gray-4);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: var(--gray-3);
+  border-color: var(--gray-5);
+}
+
+.history-item.selected {
+  background: var(--accent-3);
+  border-color: var(--accent-6);
+}
+
+.history-item.error {
+  border-color: var(--red-6);
+}
+
+.history-item.error:hover {
+  background: var(--red-3);
+  border-color: var(--red-7);
+}
+
+.query-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--gray-12);
+  word-break: break-word;
+  flex: 1;
+}
+
+.error-text {
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.action-button {
+  padding: 4px;
+  min-width: unset;
+  height: unset;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.history-item:hover .action-button {
+  opacity: 1;
+}
+
+.action-button:hover {
+  background: var(--gray-4);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .history-item {
+  background: var(--gray-3);
+}
+
+[data-theme="dark"] .history-item:hover {
+  background: var(--gray-4);
+}
+
+[data-theme="dark"] .history-item.selected {
+  background: var(--accent-4);
+}

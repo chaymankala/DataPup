@@ -74,6 +74,18 @@ const api = {
     get: (key: string) => ipcRenderer.invoke('secureStorage:get', key),
     set: (key: string, value: string) => ipcRenderer.invoke('secureStorage:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('secureStorage:delete', key)
+  },
+  queryHistory: {
+    get: (filter?: any) => ipcRenderer.invoke('query-history:get', filter),
+    clear: (connectionId?: string) => ipcRenderer.invoke('query-history:clear', connectionId),
+    delete: (id: number) => ipcRenderer.invoke('query-history:delete', id),
+    statistics: (connectionId?: string) => ipcRenderer.invoke('query-history:statistics', connectionId)
+  },
+  savedQueries: {
+    save: (query: any) => ipcRenderer.invoke('saved-queries:save', query),
+    get: (filter?: any) => ipcRenderer.invoke('saved-queries:get', filter),
+    update: (id: number, updates: any) => ipcRenderer.invoke('saved-queries:update', id, updates),
+    delete: (id: number) => ipcRenderer.invoke('saved-queries:delete', id)
   }
 }
 
