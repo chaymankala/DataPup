@@ -1,11 +1,11 @@
-# 🐶 Data-Pup
+# DataPup
 
 > A modern, AI-assisted, cross-platform database client built with Electron, React, and Radix UI.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Data-Pup is an open-source database client designed to make database management intuitive and enjoyable. With AI-powered query assistance and a beautiful, accessible interface, it's the database tool that developers actually want to use.
+DataPup is an open-source database client designed to make database management intuitive and enjoyable. With AI-powered query assistance and a beautiful, accessible interface, it's the database tool that developers actually want to use.
 
 ## 📸 Screenshots
 
