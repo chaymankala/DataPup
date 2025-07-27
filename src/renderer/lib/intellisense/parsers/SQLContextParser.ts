@@ -94,7 +94,16 @@ export class SQLContextParser {
 
     switch (lastKeywordMatch.type) {
       case 'select':
-        context.type = hasContent ? 'column' : 'select'
+        if (hasContent) {
+          // Check if we're at the end of the SELECT clause and should suggest keywords
+          const endsWithSpace = textBefore.endsWith(' ')
+          const hasFrom = this.hasFromClause(lowerText)
+          const shouldSuggestKeywords = endsWithSpace && !hasFrom
+
+          context.type = shouldSuggestKeywords ? 'select_complete' : 'column'
+        } else {
+          context.type = 'select'
+        }
         context.currentClause = 'SELECT'
         break
 
@@ -134,6 +143,10 @@ export class SQLContextParser {
     if (context.currentWord.includes('(')) {
       context.type = 'function'
     }
+  }
+
+  private hasFromClause(text: string): boolean {
+    return this.keywordPatterns.from.test(text)
   }
 
   private findLastKeyword(text: string): { type: string; keyword: string; index: number } | null {

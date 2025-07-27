@@ -31,10 +31,15 @@ interface QueryWorkspaceProps {
   connectionId: string
   connectionName?: string
   onOpenTableTab?: (database: string, tableName: string) => void
+  onRegisterNewTabHandler?: (handler: () => void) => void
 }
 
 export const QueryWorkspace = forwardRef<any, QueryWorkspaceProps>(
-  ({ connectionId, onOpenTableTab }, ref) => {
+  ({
+  connectionId,
+  onOpenTableTab,
+  onRegisterNewTabHandler
+}, ref) => {
     const [tabs, setTabs] = useState<Tab[]>([
       {
         id: '1',
@@ -51,6 +56,7 @@ export const QueryWorkspace = forwardRef<any, QueryWorkspaceProps>(
     const editorRef = useRef<any>(null)
     const executeQueryRef = useRef<() => void>(() => {})
     const saveQueryRef = useRef<() => void>(() => {})
+    const newTabRef = useRef<() => void>(() => {})
     const [showLimitWarning, setShowLimitWarning] = useState(false)
     const [queryLimitOverride, setQueryLimitOverride] = useState(false)
 
@@ -89,6 +95,19 @@ export const QueryWorkspace = forwardRef<any, QueryWorkspaceProps>(
           }
         }
       })
+
+    editor.addAction({
+      id: 'new-query-tab',
+      label: 'New Query Tab',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.6,
+      run: () => {
+        if (newTabRef.current) {
+          newTabRef.current()
+        }
+      }
+    })
     }, [])
 
     // Tab management functions
@@ -164,6 +183,18 @@ export const QueryWorkspace = forwardRef<any, QueryWorkspaceProps>(
         window.openTableTab = openTableTab
       }
     }, [openTableTab, onOpenTableTab])
+
+  // Update the ref whenever handleNewTab changes
+  useEffect(() => {
+    newTabRef.current = handleNewTab
+  }, [handleNewTab])
+
+  // Register the new tab handler with parent component
+  useEffect(() => {
+    if (onRegisterNewTabHandler) {
+      onRegisterNewTabHandler(handleNewTab)
+    }
+  }, [handleNewTab, onRegisterNewTabHandler])
 
     const executeQuery = useCallback(
       async (queryToExecute: string, forceUnlimited = false) => {
