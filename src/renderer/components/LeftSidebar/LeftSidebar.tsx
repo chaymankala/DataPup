@@ -45,18 +45,17 @@ export function LeftSidebar({
     <Flex direction="column" className="left-sidebar" height="100%">
       {/* Icon bar */}
       <Box className="sidebar-icon-bar">
-        <Flex gap="1" p="2">
+        <Flex direction="row" align="center" gap="1" p="2">
           {iconButtons.map(({ view, icon: Icon, tooltip }) => (
-            <Button
+            <button
               key={view}
-              size="2"
-              variant={activeView === view ? 'solid' : 'soft'}
               onClick={() => setActiveView(view)}
               className="sidebar-icon-button"
               title={tooltip}
+              data-state={activeView === view ? 'on' : 'off'}
             >
               <Icon />
-            </Button>
+            </button>
           ))}
         </Flex>
       </Box>

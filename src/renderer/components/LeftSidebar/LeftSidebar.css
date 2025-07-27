@@ -18,15 +18,48 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  color: var(--gray-11);
+  cursor: pointer;
+  position: relative;
+  border-radius: var(--radius-2);
 }
 
 .sidebar-icon-button svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 
 .sidebar-icon-button:hover {
-  transform: translateY(-1px);
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.sidebar-icon-button:hover svg {
+  opacity: 0.9;
+}
+
+.sidebar-icon-button[data-state="on"] {
+  background: var(--gray-3);
+  color: var(--accent-11);
+}
+
+.sidebar-icon-button[data-state="on"] svg {
+  opacity: 1;
+}
+
+.sidebar-icon-button[data-state="on"]::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: var(--accent-9);
+  border-radius: 1px;
 }
 
 .sidebar-content {
