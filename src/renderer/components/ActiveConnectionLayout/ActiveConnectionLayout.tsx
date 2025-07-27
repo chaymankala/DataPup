@@ -1,10 +1,10 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Box, Flex, Text, Badge } from '@radix-ui/themes'
 import { Button } from '../ui'
-import { DatabaseExplorer } from '../DatabaseExplorer/DatabaseExplorer'
+import { LeftSidebar } from '../LeftSidebar'
 import { QueryWorkspace } from '../QueryWorkspace/QueryWorkspace'
 import { ThemeSwitcher } from '../ThemeSwitcher'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './ActiveConnectionLayout.css'
 
 interface ActiveConnectionLayoutProps {
@@ -19,6 +19,7 @@ export function ActiveConnectionLayout({
   onDisconnect
 }: ActiveConnectionLayoutProps) {
   const [isReadOnly, setIsReadOnly] = useState(false)
+  const queryWorkspaceRef = useRef<any>(null)
 
   useEffect(() => {
     const checkReadOnly = async () => {
@@ -35,6 +36,24 @@ export function ActiveConnectionLayout({
   const handleOpenTableTab = (database: string, tableName: string) => {
     if (window.openTableTab) {
       window.openTableTab(database, tableName)
+    }
+  }
+
+  const handleSelectQuery = (query: string, name?: string) => {
+    if (queryWorkspaceRef.current?.updateActiveTabQuery) {
+      queryWorkspaceRef.current.updateActiveTabQuery(query, name)
+    }
+  }
+
+  const handleRunQuery = (query: string) => {
+    if (queryWorkspaceRef.current?.executeQueryDirectly) {
+      queryWorkspaceRef.current.executeQueryDirectly(query)
+    }
+  }
+
+  const handleExecuteQueryFromAI = (query: string) => {
+    if (queryWorkspaceRef.current?.executeQueryFromAI) {
+      queryWorkspaceRef.current.executeQueryFromAI(query)
     }
   }
 
@@ -61,12 +80,15 @@ export function ActiveConnectionLayout({
       </Flex>
 
       <PanelGroup direction="horizontal" className="panel-group">
-        {/* Left sidebar with database explorer */}
+        {/* Left sidebar with navigation */}
         <Panel defaultSize={20} minSize={15} maxSize={40} className="explorer-panel">
-          <DatabaseExplorer
+          <LeftSidebar
             connectionId={connectionId}
             connectionName={connectionName}
             onTableDoubleClick={handleOpenTableTab}
+            onSelectQuery={handleSelectQuery}
+            onRunQuery={handleRunQuery}
+            onExecuteQueryFromAI={handleExecuteQueryFromAI}
           />
         </Panel>
 
@@ -75,6 +97,7 @@ export function ActiveConnectionLayout({
         {/* Right side with query workspace */}
         <Panel defaultSize={80} className="workspace-panel">
           <QueryWorkspace
+            ref={queryWorkspaceRef}
             connectionId={connectionId}
             connectionName={connectionName}
             onOpenTableTab={handleOpenTableTab}

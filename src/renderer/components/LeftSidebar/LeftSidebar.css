@@ -1,0 +1,51 @@
+.left-sidebar {
+  background: var(--gray-1);
+  border-right: 1px solid var(--gray-4);
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-icon-bar {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.sidebar-icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.sidebar-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-icon-button:hover {
+  transform: translateY(-1px);
+}
+
+.sidebar-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure child components take full height */
+.sidebar-content > * {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .left-sidebar {
+  background: var(--gray-2);
+}
+
+[data-theme='dark'] .sidebar-icon-bar {
+  background: var(--gray-3);
+}
