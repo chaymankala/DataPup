@@ -55,6 +55,7 @@
 .database-reload-button {
   opacity: 0;
   transition: opacity 0.2s;
+  cursor: pointer;
 }
 
 .database-item:hover .database-reload-button {
@@ -67,6 +68,7 @@
   color: var(--gray-10);
   width: 16px;
   height: 16px;
+  cursor: pointer;
 }
 
 .object-list {

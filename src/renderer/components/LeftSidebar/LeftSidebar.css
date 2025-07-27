@@ -1,0 +1,84 @@
+.left-sidebar {
+  background: var(--gray-1);
+  border-right: 1px solid var(--gray-4);
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-icon-bar {
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.sidebar-icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  color: var(--gray-11);
+  cursor: pointer;
+  position: relative;
+  border-radius: var(--radius-2);
+}
+
+.sidebar-icon-button svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-icon-button:hover {
+  background: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.sidebar-icon-button:hover svg {
+  opacity: 0.9;
+}
+
+.sidebar-icon-button[data-state="on"] {
+  background: var(--gray-3);
+  color: var(--accent-11);
+}
+
+.sidebar-icon-button[data-state="on"] svg {
+  opacity: 1;
+}
+
+.sidebar-icon-button[data-state="on"]::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: var(--accent-9);
+  border-radius: 1px;
+}
+
+.sidebar-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure child components take full height */
+.sidebar-content > * {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .left-sidebar {
+  background: var(--gray-2);
+}
+
+[data-theme='dark'] .sidebar-icon-bar {
+  background: var(--gray-3);
+}

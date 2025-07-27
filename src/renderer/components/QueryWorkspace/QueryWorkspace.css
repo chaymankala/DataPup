@@ -184,6 +184,12 @@
   background: var(--gray-3);
 }
 
+/* Button cursor styles */
+.editor-header button,
+.results-header button {
+  cursor: pointer;
+}
+
 /* Badge styling */
 .editor-header [data-accent-color] {
   font-size: 10px;
