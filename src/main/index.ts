@@ -5,6 +5,7 @@ import { SecureStorage, DatabaseConnection } from './secureStorage'
 import { DatabaseManager } from './database/manager'
 import { DatabaseConfig, TableQueryOptions } from './database/interface'
 import { LangChainAgent } from './llm/langchainAgent'
+import QueryHistoryService from './services/QueryHistoryService'
 import * as fs from 'fs'
 
 function createWindow(): void {
@@ -44,6 +45,7 @@ function createWindow(): void {
 // Initialize secure storage and database manager
 const secureStorage = new SecureStorage()
 const databaseManager = new DatabaseManager()
+const queryHistoryService = new QueryHistoryService()
 
 // Initialize AI agent
 const aiAgent = new LangChainAgent(databaseManager, secureStorage)
@@ -176,15 +178,50 @@ ipcMain.handle('db:disconnect', async (_, connectionId?: string) => {
 })
 
 ipcMain.handle('db:query', async (_, connectionId: string, query: string, sessionId?: string) => {
+  const startTime = Date.now()
   try {
     const result = await databaseManager.query(connectionId, query, sessionId)
+
+    // Get connection info for history
+    const connectionInfo = databaseManager.getConnectionInfo(connectionId)
+    if (connectionInfo) {
+      const savedConnection = secureStorage.getConnection(connectionId)
+      queryHistoryService.addQueryToHistory({
+        connectionId,
+        connectionType: connectionInfo.type || 'unknown',
+        connectionName: savedConnection?.name || `${connectionInfo.host}:${connectionInfo.port}`,
+        query,
+        executionTime: Date.now() - startTime,
+        rowCount: result.data?.length,
+        success: result.success,
+        errorMessage: result.error
+      })
+    }
+
     return result
   } catch (error) {
     console.error('Query execution error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    // Also log failed queries
+    const connectionInfo = databaseManager.getConnectionInfo(connectionId)
+    if (connectionInfo) {
+      const savedConnection = secureStorage.getConnection(connectionId)
+      queryHistoryService.addQueryToHistory({
+        connectionId,
+        connectionType: connectionInfo.type || 'unknown',
+        connectionName: savedConnection?.name || `${connectionInfo.host}:${connectionInfo.port}`,
+        query,
+        executionTime: Date.now() - startTime,
+        success: false,
+        errorMessage
+      })
+    }
+
     return {
       success: false,
       message: 'Query execution failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     }
   }
 })
@@ -434,6 +471,88 @@ ipcMain.handle('secureStorage:delete', async (_, key: string) => {
     return { success: true }
   } catch (error) {
     console.error('Error deleting from secure storage:', error)
+    return { success: false }
+  }
+})
+
+// IPC handlers for query history
+ipcMain.handle('query-history:get', async (_, filter) => {
+  try {
+    const history = queryHistoryService.getQueryHistory(filter)
+    return { success: true, history }
+  } catch (error) {
+    console.error('Error getting query history:', error)
+    return { success: false, history: [] }
+  }
+})
+
+ipcMain.handle('query-history:clear', async (_, connectionId?: string) => {
+  try {
+    const deletedCount = queryHistoryService.clearHistory(connectionId)
+    return { success: true, deletedCount }
+  } catch (error) {
+    console.error('Error clearing query history:', error)
+    return { success: false, deletedCount: 0 }
+  }
+})
+
+ipcMain.handle('query-history:delete', async (_, id: number) => {
+  try {
+    const deleted = queryHistoryService.deleteHistoryEntry(id)
+    return { success: deleted }
+  } catch (error) {
+    console.error('Error deleting query history entry:', error)
+    return { success: false }
+  }
+})
+
+ipcMain.handle('query-history:statistics', async (_, connectionId?: string) => {
+  try {
+    const stats = queryHistoryService.getStatistics(connectionId)
+    return { success: true, stats }
+  } catch (error) {
+    console.error('Error getting query statistics:', error)
+    return { success: false, stats: null }
+  }
+})
+
+// IPC handlers for saved queries
+ipcMain.handle('saved-queries:save', async (_, query) => {
+  try {
+    const id = queryHistoryService.saveQuery(query)
+    return { success: true, id }
+  } catch (error) {
+    console.error('Error saving query:', error)
+    return { success: false, id: null }
+  }
+})
+
+ipcMain.handle('saved-queries:get', async (_, filter) => {
+  try {
+    const queries = queryHistoryService.getSavedQueries(filter)
+    return { success: true, queries }
+  } catch (error) {
+    console.error('Error getting saved queries:', error)
+    return { success: false, queries: [] }
+  }
+})
+
+ipcMain.handle('saved-queries:update', async (_, id: number, updates) => {
+  try {
+    const updated = queryHistoryService.updateSavedQuery(id, updates)
+    return { success: updated }
+  } catch (error) {
+    console.error('Error updating saved query:', error)
+    return { success: false }
+  }
+})
+
+ipcMain.handle('saved-queries:delete', async (_, id: number) => {
+  try {
+    const deleted = queryHistoryService.deleteSavedQuery(id)
+    return { success: deleted }
+  } catch (error) {
+    console.error('Error deleting saved query:', error)
     return { success: false }
   }
 })
