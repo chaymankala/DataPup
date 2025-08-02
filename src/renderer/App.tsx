@@ -20,6 +20,8 @@ interface Connection {
 function App() {
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null)
   const [savedConnections, setSavedConnections] = useState<Connection[]>([])
+  const [isConnectionLoading, setIsConnectionLoading] = useState(false)
+  const [loadingConnectionId, setLoadingConnectionId] = useState<string | null>(null)
 
   // Load saved connections from secure storage on app start
   useEffect(() => {
@@ -64,6 +66,9 @@ function App() {
 
   const handleConnectionSelect = async (connection: Connection) => {
     try {
+      setIsConnectionLoading(true)
+      setLoadingConnectionId(connection.id)
+
       // Retrieve the full connection details including password from secure storage
       const fullConnectionResult = await window.api.connections.getById(connection.id)
 
@@ -129,6 +134,9 @@ function App() {
     } catch (error) {
       console.error('Connection error:', error)
       alert('Connection error occurred')
+    } finally {
+      setIsConnectionLoading(false) // Hide Loading Screen regardless of success/failure
+      setLoadingConnectionId(null)
     }
   }
 
@@ -173,6 +181,8 @@ function App() {
             activeConnection ? { id: activeConnection.id, name: activeConnection.name } : undefined
           }
           onConnectionSuccess={handleConnectionSuccess}
+          connectionLoading={isConnectionLoading}
+          loadingConnectionId={loadingConnectionId}
           savedConnections={savedConnections}
           onConnectionSelect={handleConnectionSelect}
           onConnectionDelete={handleConnectionDelete}
