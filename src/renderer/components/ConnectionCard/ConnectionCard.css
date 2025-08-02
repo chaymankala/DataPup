@@ -183,7 +183,7 @@
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.2s ease-in;
-  min-height: 60px; /* Ensure minimum height for centering */
+  min-height: 72px; /* Ensure minimum height for centering */
 }
 
 .custom-spinner {
