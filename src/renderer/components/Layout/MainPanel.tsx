@@ -14,6 +14,8 @@ interface MainPanelProps {
     name: string
   }
   onConnectionSuccess?: (connection: any) => void
+  connectionLoading?: boolean
+  loadingConnectionId?: string | null
   savedConnections?: any[]
   onConnectionSelect?: (connection: any) => void
   onConnectionDelete?: (connectionId: string) => void
@@ -36,6 +38,8 @@ interface SavedConnection {
 export function MainPanel({
   activeConnection,
   onConnectionSuccess,
+  connectionLoading = false,
+  loadingConnectionId = null,
   savedConnections = [],
   onConnectionSelect,
   onConnectionDelete,
@@ -139,7 +143,7 @@ export function MainPanel({
           </Flex>
 
           {/* Main Content */}
-          <Box flex="1" p="6">
+          <Box style={{ flex: 1 }} p="6">
             {showConnectionForm ? (
               <Flex justify="center">
                 <Box style={{ maxWidth: '600px', width: '100%' }}>
@@ -176,6 +180,9 @@ export function MainPanel({
                         onSelect={handleConnectionSelect}
                         onDelete={handleConnectionDelete}
                         onTestConnection={handleTestConnection}
+                        isLoadingConnection={
+                          connectionLoading && loadingConnectionId === connection.id
+                        }
                       />
                     ))}
                   </Flex>
