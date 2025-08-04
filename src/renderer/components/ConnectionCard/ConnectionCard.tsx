@@ -93,7 +93,11 @@ export function ConnectionCard({
     >
       <Box className="card-glow" />
 
-      <Flex direction="column" gap="2" className={`card-content ${isLoadingConnection ? 'loading' : ''}`}>
+      <Flex
+        direction="column"
+        gap="2"
+        className={`card-content ${isLoadingConnection ? 'loading' : ''}`}
+      >
         {isLoadingConnection ? (
           <Flex className="card-loading">
             <Spinner className="custom-spinner" />
@@ -165,9 +169,17 @@ export function ConnectionCard({
 
             <Box className="connection-details">
               <Flex align="center" gap="2">
-                <Text size="1" color="gray">
-                  {connection.host}:{connection.port}/{connection.database}
-                </Text>
+                <Flex direction="column" gap="1">
+                  <Text size="1" color="gray">
+                    host: {connection.host}
+                  </Text>
+                  <Text size="1" color="gray">
+                    port: {connection.port}
+                  </Text>
+                  <Text size="1" color="gray">
+                    db: {connection.database}
+                  </Text>
+                </Flex>
                 {connection.secure && (
                   <Text size="1" color="green" weight="medium">
                     🔒 Secure
