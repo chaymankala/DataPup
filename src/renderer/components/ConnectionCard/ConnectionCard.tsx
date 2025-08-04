@@ -171,20 +171,17 @@ export function ConnectionCard({
               <Flex align="center" gap="2">
                 <Flex direction="column" gap="1">
                   <Text size="1" color="gray">
-                    host: {connection.host}
+                    <strong>host: </strong> {connection.host}
                   </Text>
                   <Text size="1" color="gray">
-                    port: {connection.port}
+                    <strong>port: </strong>
+                    {connection.port}
                   </Text>
                   <Text size="1" color="gray">
-                    db: {connection.database}
+                    <strong>db: </strong>
+                    {connection.database}
                   </Text>
                 </Flex>
-                {connection.secure && (
-                  <Text size="1" color="green" weight="medium">
-                    🔒 Secure
-                  </Text>
-                )}
                 {connection.readonly && (
                   <Badge size="1" color="amber" variant="soft">
                     Read-only
@@ -197,6 +194,11 @@ export function ConnectionCard({
               <Text size="1" color="gray">
                 @{connection.username}
               </Text>
+              {connection.secure && (
+                <Text size="1" color="green" weight="medium">
+                  🔒 Secure
+                </Text>
+              )}
               <Text size="1" color="gray">
                 {formatLastUsed(connection.lastUsed || connection.createdAt)}
               </Text>
