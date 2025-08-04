@@ -152,7 +152,15 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
     // Validate read-only connections
     if (connection.config.readonly) {
-      this.validateReadOnly(sql)
+      const validation = this.validateReadOnlyQuery(connectionId, sql)
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error || 'Read-only validation failed',
+          message: validation.error || 'Read-only validation failed',
+          data: []
+        }
+      }
     }
 
     connection.lastUsed = new Date()
@@ -163,20 +171,15 @@ class PostgreSQLManager extends BaseDatabaseManager {
       return {
         success: true,
         data: result.rows || [],
-        rowCount: result.rowCount || 0,
-        fields: result.fields?.map((field: any) => ({
-          name: field.name,
-          type: this.mapPostgreSQLType(field.dataTypeID)
-        })) || [],
-        executionTime: 0 // PostgreSQL pg library doesn't provide execution time
+        message: 'Query executed successfully',
+        affectedRows: result.rowCount || 0
       }
     } catch (error: any) {
       return {
         success: false,
         error: error.message,
-        data: [],
-        rowCount: 0,
-        fields: []
+        message: error.message,
+        data: []
       }
     }
   }
@@ -200,7 +203,7 @@ class PostgreSQLManager extends BaseDatabaseManager {
     return typeMap[typeId] || 'unknown'
   }
 
-  async getDatabases(connectionId: string): Promise<string[]> {
+  async getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }> {
     console.log('PostgreSQL getDatabases called for connectionId:', connectionId)
     
     const result = await this.query(
@@ -210,16 +213,23 @@ class PostgreSQLManager extends BaseDatabaseManager {
     
     console.log('PostgreSQL getDatabases query result:', result)
     
-    if (result.success) {
+    if (result.success && result.data) {
       const databases = result.data.map((row: any) => row.datname)
       console.log('PostgreSQL databases found:', databases)
-      return databases
+      return {
+        success: true,
+        databases,
+        message: `Found ${databases.length} databases`
+      }
     }
     console.log('PostgreSQL getDatabases failed:', result.error)
-    return []
+    return {
+      success: false,
+      message: result.error || 'Failed to get databases'
+    }
   }
 
-  async getTables(connectionId: string, database?: string): Promise<string[]> {
+  async getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }> {
     console.log('PostgreSQL getTables called for connectionId:', connectionId, 'database:', database)
     
     const result = await this.query(
@@ -231,16 +241,23 @@ class PostgreSQLManager extends BaseDatabaseManager {
     
     console.log('PostgreSQL getTables query result:', result)
     
-    if (result.success) {
+    if (result.success && result.data) {
       const tables = result.data.map((row: any) => row.tablename)
       console.log('PostgreSQL tables found:', tables)
-      return tables
+      return {
+        success: true,
+        tables,
+        message: `Found ${tables.length} tables`
+      }
     }
     console.log('PostgreSQL getTables failed:', result.error)
-    return []
+    return {
+      success: false,
+      message: result.error || 'Failed to get tables'
+    }
   }
 
-  async getTableSchema(connectionId: string, tableName: string): Promise<TableSchema> {
+  async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
     const result = await this.query(
       connectionId,
       `SELECT 
@@ -254,23 +271,86 @@ class PostgreSQLManager extends BaseDatabaseManager {
        ORDER BY ordinal_position`
     )
 
-    if (result.success) {
-      const columns: ColumnSchema[] = result.data.map((row: any) => ({
+    if (result.success && result.data) {
+      const schema = result.data.map((row: any) => ({
+        name: row.column_name,
+        type: row.data_type,
+        nullable: row.is_nullable === 'YES',
+        default: row.column_default
+      }))
+
+      return {
+        success: true,
+        schema,
+        message: `Retrieved schema for table ${tableName}`
+      }
+    }
+
+    return {
+      success: false,
+      message: result.error || `Failed to get schema for table ${tableName}`
+    }
+  }
+
+  async getTableFullSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: TableSchema; message: string }> {
+    try {
+      // Get column information
+      const columnResult = await this.query(
+        connectionId,
+        `SELECT 
+           column_name,
+           data_type,
+           is_nullable,
+           column_default
+         FROM information_schema.columns 
+         WHERE table_name = '${tableName}' 
+         AND table_schema = 'public'
+         ORDER BY ordinal_position`
+      )
+
+      if (!columnResult.success || !columnResult.data) {
+        return {
+          success: false,
+          message: columnResult.error || `Failed to get schema for table ${tableName}`
+        }
+      }
+
+      const columns: ColumnSchema[] = columnResult.data.map((row: any) => ({
         name: row.column_name,
         type: row.data_type,
         nullable: row.is_nullable === 'YES',
         defaultValue: row.column_default
       }))
 
-      return {
-        name: tableName,
+      // Get primary key information
+      const pkResult = await this.query(
+        connectionId,
+        `SELECT a.attname
+         FROM pg_index i
+         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+         WHERE i.indrelid = '${tableName}'::regclass AND i.indisprimary`
+      )
+
+      const primaryKeys: string[] = pkResult.success && pkResult.data ? 
+        pkResult.data.map((row: any) => row.attname) : []
+
+      const schema: TableSchema = {
         columns,
-        primaryKeys: [], // Would need additional query to get primary keys
-        foreignKeys: []
+        primaryKeys,
+        uniqueKeys: [] // Would need additional query for unique keys
+      }
+
+      return {
+        success: true,
+        schema,
+        message: `Retrieved full schema for table ${tableName}`
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Error getting table schema: ${error.message}`
       }
     }
-
-    throw new Error(`Failed to get schema for table ${tableName}`)
   }
 
   async queryTable(
@@ -342,6 +422,14 @@ class PostgreSQLManager extends BaseDatabaseManager {
         return `${escapedColumn} ${operator}`
       default:
         return ''
+    }
+  }
+
+  async cleanup(): Promise<void> {
+    // Disconnect all connections
+    const connectionIds = Array.from(this.connections.keys())
+    for (const connectionId of connectionIds) {
+      await this.disconnect(connectionId)
     }
   }
 }
