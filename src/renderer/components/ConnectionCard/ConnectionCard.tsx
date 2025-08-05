@@ -2,6 +2,7 @@ import { Card, Flex, Text, Button, Box } from '../ui'
 import { DropdownMenu, Badge, Spinner } from '@radix-ui/themes'
 import { DotsVerticalIcon } from '@radix-ui/react-icons'
 import { useState } from 'react'
+import { LockKeyhole } from 'lucide-react'
 import './ConnectionCard.css'
 
 interface ConnectionCardProps {
@@ -182,11 +183,6 @@ export function ConnectionCard({
                     {connection.database}
                   </Text>
                 </Flex>
-                {connection.readonly && (
-                  <Badge size="1" color="amber" variant="soft">
-                    Read-only
-                  </Badge>
-                )}
               </Flex>
             </Box>
 
@@ -194,10 +190,18 @@ export function ConnectionCard({
               <Text size="1" color="gray">
                 @{connection.username}
               </Text>
+              {connection.readonly && (
+                <Badge size="1" color="amber" variant="soft">
+                  Read-only
+                </Badge>
+              )}
               {connection.secure && (
-                <Text size="1" color="green" weight="medium">
-                  🔒 Secure
-                </Text>
+                <Flex align="center" gap="1">
+                  <LockKeyhole size={14} color="green" />
+                  <Text size="1" color="green" weight="medium">
+                    Secure
+                  </Text>
+                </Flex>
               )}
               <Text size="1" color="gray">
                 {formatLastUsed(connection.lastUsed || connection.createdAt)}
