@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
-import { TrashIcon } from '@radix-ui/react-icons'
+import { Trash2 } from 'lucide-react'
 import { MessageRenderer } from './MessageRenderer'
 import { useChatContext, type AIContext } from '../../contexts/ChatContext'
 import './AIAssistant.css'
@@ -177,7 +177,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
               onClick={clearChat}
               title="Clear chat history"
             >
-              Clear Chat<TrashIcon />
+              <Trash2 size={16} />
             </Button>
           )}
           {onClose && (
