@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react'
+import { logger } from '../utils/logger'
 
 export interface Message {
   id: string
@@ -27,7 +28,7 @@ interface ChatContextType {
   apiKey: string | null
   showApiKeySetup: boolean
   sessionId: string
-  
+
   // Actions
   addMessage: (message: Message) => void
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void
@@ -36,7 +37,7 @@ interface ChatContextType {
   setApiKey: (key: string | null) => void
   setShowApiKeySetup: (show: boolean) => void
   clearChat: () => void
-  
+
   // AI Operations
   sendMessage: (content: string, context: AIContext, onExecuteQuery?: (query: string) => void) => Promise<void>
   handleApiKeySubmit: (key: string, provider: AIProvider) => Promise<void>
@@ -69,7 +70,7 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
   })
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
-  
+
   // Generate session ID that persists for the lifetime of this provider
   const sessionIdRef = useRef(`session-${connectionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
   const sessionId = sessionIdRef.current
@@ -86,7 +87,7 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
           setShowApiKeySetup(true)
         }
       } catch (error) {
-        console.error('[ChatContext] Error checking API key:', error)
+        logger.error('Error checking API key:', error)
         setShowApiKeySetup(true)
       }
     }
@@ -225,7 +226,7 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
         setShowApiKeySetup(false)
       }
     } catch (error) {
-      console.error('[ChatContext] Error saving API key:', error)
+      logger.error('Error saving API key:', error)
     }
   }
 
@@ -237,7 +238,7 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
     apiKey,
     showApiKeySetup,
     sessionId,
-    
+
     // Actions
     addMessage,
     setMessages,
@@ -246,7 +247,7 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
     setApiKey,
     setShowApiKeySetup,
     clearChat,
-    
+
     // AI Operations
     sendMessage,
     handleApiKeySubmit

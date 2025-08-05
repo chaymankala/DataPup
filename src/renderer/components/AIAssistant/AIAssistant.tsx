@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Box, Flex, Text, Button, ScrollArea, TextArea, Card, Select } from '@radix-ui/themes'
+import { TrashIcon } from '@radix-ui/react-icons'
 import { MessageRenderer } from './MessageRenderer'
 import { useChatContext, type AIContext } from '../../contexts/ChatContext'
 import './AIAssistant.css'
@@ -21,7 +22,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
     setProvider,
     clearChat
   } = useChatContext()
-  
+
   const [inputValue, setInputValue] = useState('')
   const [apiKeyInput, setApiKeyInput] = useState('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -40,7 +41,7 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
 
     const userInput = inputValue.trim()
     setInputValue('')
-    
+
     await sendMessage(userInput, context, onExecuteQuery)
   }
 
@@ -170,13 +171,13 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
             </Select.Content>
           </Select.Root>
           {messages.length > 0 && (
-            <Button 
-              size="1" 
-              variant="ghost" 
+            <Button
+              size="1"
+              variant="ghost"
               onClick={clearChat}
               title="Clear chat history"
             >
-              🗑️
+              Clear Chat<TrashIcon />
             </Button>
           )}
           {onClose && (
