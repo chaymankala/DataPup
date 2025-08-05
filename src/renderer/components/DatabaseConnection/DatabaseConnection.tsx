@@ -139,7 +139,7 @@ export function DatabaseConnection({
         })
 
         if (updateResult.success) {
-          console.log('Connection updated:', updateResult.message)
+          console.log('Connection updated:', updateResult)
           resetForm()
           // Notify parent component with updated connection
           if (onConnectionSuccess) {
