@@ -8,7 +8,10 @@ import {
   TableSchema,
   ColumnSchema,
   TableQueryOptions,
-  TableFilter
+  TableFilter,
+  InsertResult,
+  UpdateResult,
+  DeleteResult
 } from './interface'
 
 interface PostgreSQLConfig {
@@ -143,7 +146,7 @@ class PostgreSQLManager extends BaseDatabaseManager {
   ): Promise<QueryResult> {
     console.log('PostgreSQL query called with connectionId:', connectionId)
     console.log('Available connections:', Array.from(this.connections.keys()))
-    
+
     const connection = this.connections.get(connectionId)
     if (!connection || !connection.isConnected) {
       console.log('Connection not found or not connected:', connection)
@@ -167,7 +170,7 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
     try {
       const result = await connection.client.query(sql)
-      
+
       return {
         success: true,
         data: result.rows || [],
@@ -175,6 +178,7 @@ class PostgreSQLManager extends BaseDatabaseManager {
         affectedRows: result.rowCount || 0
       }
     } catch (error: any) {
+      console.error('PostgreSQL query error:', error)
       return {
         success: false,
         error: error.message,
@@ -205,14 +209,14 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
   async getDatabases(connectionId: string): Promise<{ success: boolean; databases?: string[]; message: string }> {
     console.log('PostgreSQL getDatabases called for connectionId:', connectionId)
-    
+
     const result = await this.query(
       connectionId,
       'SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname'
     )
-    
+
     console.log('PostgreSQL getDatabases query result:', result)
-    
+
     if (result.success && result.data) {
       const databases = result.data.map((row: any) => row.datname)
       console.log('PostgreSQL databases found:', databases)
@@ -231,16 +235,16 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
   async getTables(connectionId: string, database?: string): Promise<{ success: boolean; tables?: string[]; message: string }> {
     console.log('PostgreSQL getTables called for connectionId:', connectionId, 'database:', database)
-    
+
     const result = await this.query(
       connectionId,
-      `SELECT tablename FROM pg_tables 
-       WHERE schemaname = 'public' 
+      `SELECT tablename FROM pg_tables
+       WHERE schemaname = 'public'
        ORDER BY tablename`
     )
-    
+
     console.log('PostgreSQL getTables query result:', result)
-    
+
     if (result.success && result.data) {
       const tables = result.data.map((row: any) => row.tablename)
       console.log('PostgreSQL tables found:', tables)
@@ -260,13 +264,13 @@ class PostgreSQLManager extends BaseDatabaseManager {
   async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
     const result = await this.query(
       connectionId,
-      `SELECT 
+      `SELECT
          column_name,
          data_type,
          is_nullable,
          column_default
-       FROM information_schema.columns 
-       WHERE table_name = '${tableName}' 
+       FROM information_schema.columns
+       WHERE table_name = '${tableName}'
        AND table_schema = 'public'
        ORDER BY ordinal_position`
     )
@@ -297,13 +301,13 @@ class PostgreSQLManager extends BaseDatabaseManager {
       // Get column information
       const columnResult = await this.query(
         connectionId,
-        `SELECT 
+        `SELECT
            column_name,
            data_type,
            is_nullable,
            column_default
-         FROM information_schema.columns 
-         WHERE table_name = '${tableName}' 
+         FROM information_schema.columns
+         WHERE table_name = '${tableName}'
          AND table_schema = 'public'
          ORDER BY ordinal_position`
       )
@@ -331,8 +335,8 @@ class PostgreSQLManager extends BaseDatabaseManager {
          WHERE i.indrelid = '${tableName}'::regclass AND i.indisprimary`
       )
 
-      const primaryKeys: string[] = pkResult.success && pkResult.data ? 
-        pkResult.data.map((row: any) => row.attname) : []
+      const primaryKeys: string[] =
+        pkResult.success && pkResult.data ? pkResult.data.map((row: any) => row.attname) : []
 
       const schema: TableSchema = {
         columns,
@@ -423,6 +427,102 @@ class PostgreSQLManager extends BaseDatabaseManager {
       default:
         return ''
     }
+  }
+
+  async insertRow(
+    connectionId: string,
+    table: string,
+    data: Record<string, any>,
+    database?: string
+  ): Promise<InsertResult> {
+    const connection = this.connections.get(connectionId)
+    if (!connection || !connection.isConnected) {
+      return {
+        success: false,
+        message: 'Not connected to PostgreSQL',
+        error: 'No active connection'
+      }
+    }
+
+    // PostgreSQL uses schemas, not database prefix. Use public schema by default
+    const schema = 'public'
+    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    
+    const columns = Object.keys(data)
+    const values = Object.values(data)
+    
+    const escapedColumns = columns.map(col => this.escapeIdentifier(col)).join(', ')
+    const escapedValues = values.map(val => this.escapeValue(val)).join(', ')
+    
+    const sql = `INSERT INTO ${qualifiedTable} (${escapedColumns}) VALUES (${escapedValues})`
+    
+    const result = await this.query(connectionId, sql)
+    return result as InsertResult
+  }
+
+  async updateRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    updates: Record<string, any>,
+    database?: string
+  ): Promise<UpdateResult> {
+    const connection = this.connections.get(connectionId)
+    if (!connection || !connection.isConnected) {
+      return {
+        success: false,
+        message: 'Not connected to PostgreSQL',
+        error: 'No active connection',
+        affectedRows: 0
+      }
+    }
+
+    // PostgreSQL uses schemas, not database prefix. Use public schema by default
+    const schema = 'public'
+    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    
+    const setClauses = Object.entries(updates).map(([col, val]) => {
+      return `${this.escapeIdentifier(col)} = ${this.escapeValue(val)}`
+    })
+    
+    const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
+      return `${this.escapeIdentifier(col)} = ${this.escapeValue(val)}`
+    })
+    
+    const sql = `UPDATE ${qualifiedTable} SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')}`
+    
+    const result = await this.query(connectionId, sql)
+    return result as UpdateResult
+  }
+
+  async deleteRow(
+    connectionId: string,
+    table: string,
+    primaryKey: Record<string, any>,
+    database?: string
+  ): Promise<DeleteResult> {
+    const connection = this.connections.get(connectionId)
+    if (!connection || !connection.isConnected) {
+      return {
+        success: false,
+        message: 'Not connected to PostgreSQL',
+        error: 'No active connection',
+        affectedRows: 0
+      }
+    }
+
+    // PostgreSQL uses schemas, not database prefix. Use public schema by default
+    const schema = 'public'
+    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    
+    const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
+      return `${this.escapeIdentifier(col)} = ${this.escapeValue(val)}`
+    })
+    
+    const sql = `DELETE FROM ${qualifiedTable} WHERE ${whereClauses.join(' AND ')}`
+    
+    const result = await this.query(connectionId, sql)
+    return result as DeleteResult
   }
 
   async cleanup(): Promise<void> {
