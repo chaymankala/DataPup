@@ -20,6 +20,7 @@ interface ConnectionCardProps {
   }
   onSelect: (connection: any) => void
   onDelete: (connectionId: string) => void
+  onEdit?: (connection: any) => void
   onTestConnection?: (connection: any) => void
   isLoadingConnection?: boolean
 }
@@ -28,6 +29,7 @@ export function ConnectionCard({
   connection,
   onSelect,
   onDelete,
+  onEdit,
   onTestConnection,
   isLoadingConnection
 }: ConnectionCardProps) {
@@ -153,6 +155,16 @@ export function ConnectionCard({
                       }}
                     >
                       Test Connection
+                    </DropdownMenu.Item>
+                  )}
+                  {onEdit && (
+                    <DropdownMenu.Item
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEdit(connection)
+                      }}
+                    >
+                      Edit Connection
                     </DropdownMenu.Item>
                   )}
                   <DropdownMenu.Separator />
