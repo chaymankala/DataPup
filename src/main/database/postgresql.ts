@@ -396,7 +396,37 @@ class PostgreSQLManager extends BaseDatabaseManager {
     }
 
     console.log('PostgreSQL queryTable SQL:', sql)
-    return this.query(connectionId, sql, sessionId)
+    
+    // Execute the main query
+    const result = await this.query(connectionId, sql, sessionId)
+
+    // If successful and we have pagination, get the total count
+    if (result.success && (limit || offset)) {
+      try {
+        // Build count query without LIMIT/OFFSET
+        let countSql = `SELECT COUNT(*) as total FROM ${qualifiedTable}`
+        
+        // Add WHERE clause if filters exist (same as main query)
+        if (filters && filters.length > 0) {
+          const whereClauses = filters.map((filter) => this.buildWhereClause(filter)).filter(Boolean)
+          if (whereClauses.length > 0) {
+            countSql += ` WHERE ${whereClauses.join(' AND ')}`
+          }
+        }
+        
+        const countResult = await this.query(connectionId, countSql)
+
+        if (countResult.success && countResult.data && countResult.data[0]) {
+          result.totalRows = Number(countResult.data[0].total)
+          result.hasMore = (offset || 0) + (result.data?.length || 0) < result.totalRows
+        }
+      } catch (error) {
+        // If count fails, continue without it
+        console.warn('Failed to get total count:', error)
+      }
+    }
+
+    return result
   }
 
   protected buildWhereClause(filter: TableFilter): string {
