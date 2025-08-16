@@ -118,6 +118,14 @@ class PostgreSQLManager extends BaseDatabaseManager {
     }
   }
 
+  private parseTableName(tableName: string): { schema: string; table: string } {
+    if (tableName.includes('.')) {
+      const parts = tableName.split('.')
+      return { schema: parts[0], table: parts[1] }
+    }
+    return { schema: 'public', table: tableName }
+  }
+
   protected escapeIdentifier(identifier: string): string {
     // PostgreSQL uses double quotes for identifiers
     return `"${identifier.replace(/"/g, '""')}"`
@@ -238,15 +246,17 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
     const result = await this.query(
       connectionId,
-      `SELECT tablename FROM pg_tables
-       WHERE schemaname = 'public'
-       ORDER BY tablename`
+      `SELECT schemaname, tablename FROM pg_tables
+       WHERE schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+       AND schemaname NOT LIKE 'pg_temp_%'
+       AND schemaname NOT LIKE 'pg_toast_temp_%'
+       ORDER BY schemaname, tablename`
     )
 
     console.log('PostgreSQL getTables query result:', result)
 
     if (result.success && result.data) {
-      const tables = result.data.map((row: any) => row.tablename)
+      const tables = result.data.map((row: any) => `${row.schemaname}.${row.tablename}`)
       console.log('PostgreSQL tables found:', tables)
       return {
         success: true,
@@ -262,6 +272,8 @@ class PostgreSQLManager extends BaseDatabaseManager {
   }
 
   async getTableSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: any[]; message: string }> {
+    const { schema: schemaName, table: actualTableName } = this.parseTableName(tableName)
+
     const result = await this.query(
       connectionId,
       `SELECT
@@ -270,8 +282,8 @@ class PostgreSQLManager extends BaseDatabaseManager {
          is_nullable,
          column_default
        FROM information_schema.columns
-       WHERE table_name = '${tableName}'
-       AND table_schema = 'public'
+       WHERE table_name = '${actualTableName}'
+       AND table_schema = '${schemaName}'
        ORDER BY ordinal_position`
     )
 
@@ -298,6 +310,8 @@ class PostgreSQLManager extends BaseDatabaseManager {
 
   async getTableFullSchema(connectionId: string, tableName: string, database?: string): Promise<{ success: boolean; schema?: TableSchema; message: string }> {
     try {
+      const { schema: schemaName, table: actualTableName } = this.parseTableName(tableName)
+
       // Get column information
       const columnResult = await this.query(
         connectionId,
@@ -307,8 +321,8 @@ class PostgreSQLManager extends BaseDatabaseManager {
            is_nullable,
            column_default
          FROM information_schema.columns
-         WHERE table_name = '${tableName}'
-         AND table_schema = 'public'
+         WHERE table_name = '${actualTableName}'
+         AND table_schema = '${schemaName}'
          ORDER BY ordinal_position`
       )
 
@@ -327,12 +341,13 @@ class PostgreSQLManager extends BaseDatabaseManager {
       }))
 
       // Get primary key information
+      const qualifiedTableName = `${schemaName}.${actualTableName}`
       const pkResult = await this.query(
         connectionId,
         `SELECT a.attname
          FROM pg_index i
          JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-         WHERE i.indrelid = '${tableName}'::regclass AND i.indisprimary`
+         WHERE i.indrelid = '${qualifiedTableName}'::regclass AND i.indisprimary`
       )
 
       const primaryKeys: string[] =
@@ -365,11 +380,10 @@ class PostgreSQLManager extends BaseDatabaseManager {
     console.log('PostgreSQL queryTable called with options:', options)
     const { database, table, filters, orderBy, limit, offset } = options
 
-    // In PostgreSQL, ignore the 'database' parameter and always use 'public' schema
-    // The database is already selected in the connection, tables are in schemas
-    const schema = 'public'
-    console.log('PostgreSQL queryTable - database param:', database, 'using schema:', schema, 'table:', table)
-    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    const { schema: schemaName, table: actualTableName } = this.parseTableName(table)
+    
+    console.log('PostgreSQL queryTable - database param:', database, 'using schema:', schemaName, 'table:', actualTableName)
+    const qualifiedTable = `${this.escapeIdentifier(schemaName)}.${this.escapeIdentifier(actualTableName)}`
 
     let sql = `SELECT * FROM ${qualifiedTable}`
 
@@ -474,9 +488,9 @@ class PostgreSQLManager extends BaseDatabaseManager {
       }
     }
 
-    // PostgreSQL uses schemas, not database prefix. Use public schema by default
-    const schema = 'public'
-    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    const { schema: schemaName, table: actualTableName } = this.parseTableName(table)
+    
+    const qualifiedTable = `${this.escapeIdentifier(schemaName)}.${this.escapeIdentifier(actualTableName)}`
     
     const columns = Object.keys(data)
     const values = Object.values(data)
@@ -507,9 +521,9 @@ class PostgreSQLManager extends BaseDatabaseManager {
       }
     }
 
-    // PostgreSQL uses schemas, not database prefix. Use public schema by default
-    const schema = 'public'
-    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    const { schema: schemaName, table: actualTableName } = this.parseTableName(table)
+    
+    const qualifiedTable = `${this.escapeIdentifier(schemaName)}.${this.escapeIdentifier(actualTableName)}`
     
     const setClauses = Object.entries(updates).map(([col, val]) => {
       return `${this.escapeIdentifier(col)} = ${this.escapeValue(val)}`
@@ -541,9 +555,9 @@ class PostgreSQLManager extends BaseDatabaseManager {
       }
     }
 
-    // PostgreSQL uses schemas, not database prefix. Use public schema by default
-    const schema = 'public'
-    const qualifiedTable = `${this.escapeIdentifier(schema)}.${this.escapeIdentifier(table)}`
+    const { schema: schemaName, table: actualTableName } = this.parseTableName(table)
+    
+    const qualifiedTable = `${this.escapeIdentifier(schemaName)}.${this.escapeIdentifier(actualTableName)}`
     
     const whereClauses = Object.entries(primaryKey).map(([col, val]) => {
       return `${this.escapeIdentifier(col)} = ${this.escapeValue(val)}`
