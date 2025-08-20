@@ -569,6 +569,22 @@ class PostgreSQLManager extends BaseDatabaseManager {
     return result as DeleteResult
   }
 
+  getConnectionInfo(
+    connectionId: string
+  ): { host: string; port: number; database: string; type: string } | null {
+    const connection = this.connections.get(connectionId)
+    if (!connection) {
+      return null
+    }
+
+    return {
+      host: connection.config.host,
+      port: connection.config.port,
+      database: connection.config.database,
+      type: 'postgresql'
+    }
+  }
+
   async cleanup(): Promise<void> {
     // Disconnect all connections
     const connectionIds = Array.from(this.connections.keys())
