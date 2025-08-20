@@ -9,7 +9,6 @@ export function createIntellisenseProvider(
   monaco: Monaco,
   options: IntellisenseOptions
 ): IntellisenseProvider {
-  console.log(`🔍 INTELLISENSE DEBUG: Creating ${options.databaseType} provider for connection ${options.connectionId}`)
   switch (options.databaseType.toLowerCase()) {
     case 'clickhouse':
       return new ClickHouseIntellisenseProvider(monaco, options)
