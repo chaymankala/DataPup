@@ -1,5 +1,5 @@
 import { Card, Flex, Text, Button, Box } from '../ui'
-import { DropdownMenu, Badge, Spinner } from '@radix-ui/themes'
+import { DropdownMenu, ContextMenu, Badge, Spinner } from '@radix-ui/themes'
 import { DotsVerticalIcon } from '@radix-ui/react-icons'
 import { useState } from 'react'
 import { LockKeyhole } from 'lucide-react'
@@ -74,154 +74,166 @@ export function ConnectionCard({
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsDeleting(true)
-
-    // Add a small delay for better UX
     await new Promise((resolve) => setTimeout(resolve, 300))
     onDelete(connection.id)
   }
 
   return (
-    <Card
-      className={`connection-card ${isLoadingConnection ? 'loading' : ''} ${isHovered ? 'hovered' : ''} ${isDeleting ? 'deleting' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onMouseMove={handleMouseMove}
-      onClick={() => !isDeleting && onSelect(connection)}
-      style={
-        {
-          '--mouse-x': mousePosition.x,
-          '--mouse-y': mousePosition.y
-        } as React.CSSProperties
-      }
-    >
-      <Box className="card-glow" />
+    <ContextMenu.Root>
+      <ContextMenu.Trigger>
+        <Card
+          className={`connection-card ${isLoadingConnection ? 'loading' : ''} ${isHovered ? 'hovered' : ''} ${isDeleting ? 'deleting' : ''}`}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onMouseMove={handleMouseMove}
+          onClick={() => !isDeleting && onSelect(connection)}
+          style={
+            {
+              '--mouse-x': mousePosition.x,
+              '--mouse-y': mousePosition.y
+            } as React.CSSProperties
+          }
+        >
+          <Box className="card-glow" />
 
-      <Flex
-        direction="column"
-        gap="2"
-        className={`card-content ${isLoadingConnection ? 'loading' : ''}`}
-      >
-        {isLoadingConnection ? (
-          <Flex className="card-loading">
-            <Spinner className="custom-spinner" />
-          </Flex>
-        ) : (
-          <>
-            <Flex justify="between" align="center" gap="2">
-              <Flex align="center" gap="2" style={{ flex: 1, minWidth: 0 }}>
-                <Text size="3" className="database-icon">
-                  {getDatabaseIcon(connection.type)}
-                </Text>
-                <Box style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    size="2"
-                    weight="medium"
-                    className="connection-name"
-                    title={connection.name}
-                  >
-                    {connection.name}
-                  </Text>
+          <Flex
+            direction="column"
+            gap="2"
+            className={`card-content ${isLoadingConnection ? 'loading' : ''}`}
+          >
+            {isLoadingConnection ? (
+              <Flex className="card-loading">
+                <Spinner className="custom-spinner" />
+              </Flex>
+            ) : (
+              <>
+                <Flex justify="between" align="center" gap="2">
+                  <Flex align="center" gap="2" style={{ flex: 1, minWidth: 0 }}>
+                    <Text size="3" className="database-icon">
+                      {getDatabaseIcon(connection.type)}
+                    </Text>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        size="2"
+                        weight="medium"
+                        className="connection-name"
+                        title={connection.name}
+                      >
+                        {connection.name}
+                      </Text>
+                    </Box>
+                  </Flex>
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      <Button
+                        size="1"
+                        variant="ghost"
+                        color="gray"
+                        className="menu-button"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DotsVerticalIcon />
+                      </Button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content>
+                      <DropdownMenu.Item
+                        onSelect={() => onSelect({ ...connection, readonly: false })}
+                      >
+                        Connect
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onSelect={() => onSelect({ ...connection, readonly: true })}
+                      >
+                        Connect (Read-only)
+                      </DropdownMenu.Item>
+                      {onTestConnection && (
+                        <DropdownMenu.Item onSelect={() => onTestConnection(connection)}>
+                          Test Connection
+                        </DropdownMenu.Item>
+                      )}
+                      {onEdit && (
+                        <DropdownMenu.Item onSelect={() => onEdit(connection)}>
+                          Edit Connection
+                        </DropdownMenu.Item>
+                      )}
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item
+                        color="red"
+                        onSelect={(e) => handleDelete(e as unknown as React.MouseEvent)}
+                      >
+                        Delete Connection
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                </Flex>
+
+                <Box className="connection-details">
+                  <Flex align="center" gap="2">
+                    <Flex direction="column" gap="1">
+                      <Text size="1" color="gray">
+                        <strong>host: </strong> {connection.host}
+                      </Text>
+                      <Text size="1" color="gray">
+                        <strong>port: </strong>
+                        {connection.port}
+                      </Text>
+                      <Text size="1" color="gray">
+                        <strong>db: </strong>
+                        {connection.database}
+                      </Text>
+                    </Flex>
+                  </Flex>
                 </Box>
-              </Flex>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger>
-                  <Button
-                    size="1"
-                    variant="ghost"
-                    color="gray"
-                    className="menu-button"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DotsVerticalIcon />
-                  </Button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content>
-                  <DropdownMenu.Item
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelect({ ...connection, readonly: false })
-                    }}
-                  >
-                    Connect
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelect({ ...connection, readonly: true })
-                    }}
-                  >
-                    Connect (Read-only)
-                  </DropdownMenu.Item>
-                  {onTestConnection && (
-                    <DropdownMenu.Item
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onTestConnection(connection)
-                      }}
-                    >
-                      Test Connection
-                    </DropdownMenu.Item>
-                  )}
-                  {onEdit && (
-                    <DropdownMenu.Item
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEdit(connection)
-                      }}
-                    >
-                      Edit Connection
-                    </DropdownMenu.Item>
-                  )}
-                  <DropdownMenu.Separator />
-                  <DropdownMenu.Item color="red" onClick={handleDelete}>
-                    Delete Connection
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
-            </Flex>
 
-            <Box className="connection-details">
-              <Flex align="center" gap="2">
-                <Flex direction="column" gap="1">
+                <Flex justify="between" align="center" className="card-footer">
                   <Text size="1" color="gray">
-                    <strong>host: </strong> {connection.host}
+                    @{connection.username}
                   </Text>
+                  {connection.readonly && (
+                    <Badge size="1" color="amber" variant="soft">
+                      Read-only
+                    </Badge>
+                  )}
+                  {connection.secure && (
+                    <Flex align="center" gap="1">
+                      <LockKeyhole size={14} color="green" />
+                      <Text size="1" color="green" weight="medium">
+                        Secure
+                      </Text>
+                    </Flex>
+                  )}
                   <Text size="1" color="gray">
-                    <strong>port: </strong>
-                    {connection.port}
-                  </Text>
-                  <Text size="1" color="gray">
-                    <strong>db: </strong>
-                    {connection.database}
+                    {formatLastUsed(connection.lastUsed || connection.createdAt)}
                   </Text>
                 </Flex>
-              </Flex>
-            </Box>
-
-            <Flex justify="between" align="center" className="card-footer">
-              <Text size="1" color="gray">
-                @{connection.username}
-              </Text>
-              {connection.readonly && (
-                <Badge size="1" color="amber" variant="soft">
-                  Read-only
-                </Badge>
-              )}
-              {connection.secure && (
-                <Flex align="center" gap="1">
-                  <LockKeyhole size={14} color="green" />
-                  <Text size="1" color="green" weight="medium">
-                    Secure
-                  </Text>
-                </Flex>
-              )}
-              <Text size="1" color="gray">
-                {formatLastUsed(connection.lastUsed || connection.createdAt)}
-              </Text>
-            </Flex>
-          </>
+              </>
+            )}
+          </Flex>
+        </Card>
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item onSelect={() => onSelect({ ...connection, readonly: false })}>
+          Connect
+        </ContextMenu.Item>
+        <ContextMenu.Item onSelect={() => onSelect({ ...connection, readonly: true })}>
+          Connect (Read-only)
+        </ContextMenu.Item>
+        {onTestConnection && (
+          <ContextMenu.Item onSelect={() => onTestConnection(connection)}>
+            Test Connection
+          </ContextMenu.Item>
         )}
-      </Flex>
-    </Card>
+        {onEdit && (
+          <ContextMenu.Item onSelect={() => onEdit(connection)}>Edit Connection</ContextMenu.Item>
+        )}
+        <ContextMenu.Separator />
+        <ContextMenu.Item
+          color="red"
+          onSelect={(e) => handleDelete(e as unknown as React.MouseEvent)}
+        >
+          Delete Connection
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   )
 }
