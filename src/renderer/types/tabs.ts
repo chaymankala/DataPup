@@ -32,7 +32,9 @@ export interface TableFilter {
     | 'NOT IN'
     | 'IS NULL'
     | 'IS NOT NULL'
-  value: string
+    | 'BETWEEN'
+    | 'NOT BETWEEN'
+  value: string | string[]
 }
 
 export type Tab = QueryTab | TableTab

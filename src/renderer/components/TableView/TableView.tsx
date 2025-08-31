@@ -58,6 +58,8 @@ const OPERATORS = [
   { value: '<=', label: 'less or equal' },
   { value: 'LIKE', label: 'contains' },
   { value: 'NOT LIKE', label: 'not contains' },
+  { value: 'BETWEEN', label: 'between' },
+  { value: 'NOT BETWEEN', label: 'not between' },
   { value: 'IS NULL', label: 'is null' },
   { value: 'IS NOT NULL', label: 'is not null' }
 ]
@@ -182,10 +184,20 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
 
   const getValidFilters = () => {
     return filters.filter(
-      (f) =>
-        f.column &&
-        f.operator &&
-        (f.value || f.operator === 'IS NULL' || f.operator === 'IS NOT NULL')
+      (f) => {
+        if (!f.column || !f.operator) return false
+        
+        // NULL operators don't need values
+        if (f.operator === 'IS NULL' || f.operator === 'IS NOT NULL') return true
+        
+        // BETWEEN operators need both values in array
+        if (f.operator === 'BETWEEN' || f.operator === 'NOT BETWEEN') {
+          return Array.isArray(f.value) && f.value.length === 2 && f.value[0] && f.value[1]
+        }
+        
+        // Other operators need a value
+        return f.value && (!Array.isArray(f.value) || f.value.length > 0)
+      }
     )
   }
 
@@ -862,18 +874,60 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
                 </Select.Root>
 
                 {filter.operator !== 'IS NULL' && filter.operator !== 'IS NOT NULL' && (
-                  <TextField.Root
-                    value={filter.value}
-                    onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                    placeholder="Value"
-                    className="filter-input"
-                    size="1"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        executeQuery()
-                      }
-                    }}
-                  />
+                  <>
+                    {filter.operator === 'BETWEEN' || filter.operator === 'NOT BETWEEN' ? (
+                      <Flex gap="1" align="center">
+                        <TextField.Root
+                          value={Array.isArray(filter.value) ? filter.value[0] || '' : filter.value || ''}
+                          onChange={(e) => {
+                            const currentValue = Array.isArray(filter.value) ? filter.value : ['', '']
+                            const newValue = [e.target.value, currentValue[1] || '']
+                            updateFilter(filter.id, { value: newValue })
+                          }}
+                          placeholder="From"
+                          className="filter-input"
+                          size="1"
+                          style={{ width: '80px' }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              executeQuery()
+                            }
+                          }}
+                        />
+                        <Text size="1" color="gray">and</Text>
+                        <TextField.Root
+                          value={Array.isArray(filter.value) ? filter.value[1] || '' : ''}
+                          onChange={(e) => {
+                            const currentValue = Array.isArray(filter.value) ? filter.value : ['', '']
+                            const newValue = [currentValue[0] || '', e.target.value]
+                            updateFilter(filter.id, { value: newValue })
+                          }}
+                          placeholder="To"
+                          className="filter-input"
+                          size="1"
+                          style={{ width: '80px' }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              executeQuery()
+                            }
+                          }}
+                        />
+                      </Flex>
+                    ) : (
+                      <TextField.Root
+                        value={Array.isArray(filter.value) ? filter.value[0] || '' : filter.value || ''}
+                        onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
+                        placeholder="Value"
+                        className="filter-input"
+                        size="1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            executeQuery()
+                          }
+                        }}
+                      />
+                    )}
+                  </>
                 )}
 
                 <Button
