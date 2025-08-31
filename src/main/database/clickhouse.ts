@@ -362,6 +362,14 @@ class ClickHouseManager extends BaseDatabaseManager {
       return `\`${column}\` ${operator} ${this.escapeClickHouseValue(`%${value}%`)}`
     }
 
+    // Handle BETWEEN operators
+    if (operator === 'BETWEEN' || operator === 'NOT BETWEEN') {
+      if (Array.isArray(value) && value.length === 2) {
+        return `\`${column}\` ${operator} ${this.escapeClickHouseValue(value[0])} AND ${this.escapeClickHouseValue(value[1])}`
+      }
+      return ''
+    }
+
     // Handle other operators
     if (value !== undefined && value !== null) {
       return `\`${column}\` ${operator} ${this.escapeClickHouseValue(value)}`

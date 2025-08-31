@@ -168,6 +168,14 @@ export abstract class BaseDatabaseManager implements DatabaseManagerInterface {
       return `"${column}" ${operator} ${this.escapeValue(`%${value}%`)}`
     }
 
+    // Handle BETWEEN operators
+    if (operator === 'BETWEEN' || operator === 'NOT BETWEEN') {
+      if (Array.isArray(value) && value.length === 2) {
+        return `"${column}" ${operator} ${this.escapeValue(value[0])} AND ${this.escapeValue(value[1])}`
+      }
+      return ''
+    }
+
     // Handle other operators
     if (value !== undefined && value !== null) {
       return `"${column}" ${operator} ${this.escapeValue(value)}`
