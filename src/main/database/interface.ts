@@ -115,6 +115,8 @@ export interface TableFilter {
     | 'NOT IN'
     | 'IS NULL'
     | 'IS NOT NULL'
+    | 'BETWEEN'
+    | 'NOT BETWEEN'
   value?: string | string[] | number | number[]
 }
 

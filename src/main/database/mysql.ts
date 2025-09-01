@@ -391,6 +391,12 @@ class MySQLManager extends BaseDatabaseManager {
         return `${column} IS NULL`
       case 'IS NOT NULL':
         return `${column} IS NOT NULL`
+      case 'BETWEEN':
+      case 'NOT BETWEEN':
+        if (Array.isArray(value) && value.length === 2) {
+          return `${column} ${operator} ${this.escapeValue(value[0])} AND ${this.escapeValue(value[1])}`
+        }
+        return ''
       default:
         return `${column} = ${this.escapeValue(value)}`
     }

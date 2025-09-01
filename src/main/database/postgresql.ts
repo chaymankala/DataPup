@@ -468,6 +468,12 @@ class PostgreSQLManager extends BaseDatabaseManager {
       case 'IS NULL':
       case 'IS NOT NULL':
         return `${escapedColumn} ${operator}`
+      case 'BETWEEN':
+      case 'NOT BETWEEN':
+        if (Array.isArray(value) && value.length === 2) {
+          return `${escapedColumn} ${operator} ${this.escapeValue(value[0])} AND ${this.escapeValue(value[1])}`
+        }
+        return ''
       default:
         return ''
     }
