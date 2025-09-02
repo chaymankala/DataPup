@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -89,6 +89,28 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   const [pageSize, setPageSize] = useState(100)
   const [totalRows, setTotalRows] = useState(0)
 
+  const getValidFilters = () => {
+    return filters.filter(
+      (f) => {
+        if (!f.column || !f.operator) return false
+        
+        // NULL operators don't need values
+        if (f.operator === 'IS NULL' || f.operator === 'IS NOT NULL') return true
+        
+        // BETWEEN operators need both values in array
+        if (f.operator === 'BETWEEN' || f.operator === 'NOT BETWEEN') {
+          return Array.isArray(f.value) && f.value.length === 2 && f.value[0] && f.value[1]
+        }
+        
+        // Other operators need a value
+        return f.value && (!Array.isArray(f.value) || f.value.length > 0)
+      }
+    )
+  }
+
+  // Memoize valid filters to avoid unnecessary re-executions
+  const validFilters = useMemo(() => getValidFilters(), [filters])
+
   // Load table schema on mount
   useEffect(() => {
     loadTableSchema()
@@ -97,7 +119,7 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
   // Execute query when component mounts, filters change, or pagination changes
   useEffect(() => {
     executeQuery()
-  }, [connectionId, database, tableName, currentPage, pageSize])
+  }, [connectionId, database, tableName, currentPage, pageSize, validFilters])
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -182,30 +204,11 @@ export function TableView({ connectionId, database, tableName, onFiltersChange }
     }
   }
 
-  const getValidFilters = () => {
-    return filters.filter(
-      (f) => {
-        if (!f.column || !f.operator) return false
-        
-        // NULL operators don't need values
-        if (f.operator === 'IS NULL' || f.operator === 'IS NOT NULL') return true
-        
-        // BETWEEN operators need both values in array
-        if (f.operator === 'BETWEEN' || f.operator === 'NOT BETWEEN') {
-          return Array.isArray(f.value) && f.value.length === 2 && f.value[0] && f.value[1]
-        }
-        
-        // Other operators need a value
-        return f.value && (!Array.isArray(f.value) || f.value.length > 0)
-      }
-    )
-  }
 
   const executeQuery = async () => {
     try {
       setIsLoading(true)
       const startTime = Date.now()
-      const validFilters = getValidFilters()
 
       const sessionId = uuidv4()
       const queryResult = await window.api.database.queryTable(
