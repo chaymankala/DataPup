@@ -11,12 +11,13 @@ import { SecureStorage } from '../secureStorage'
 import { AITools } from './tools'
 import { logger } from '../utils/logger'
 import { BrowserWindow } from 'electron'
+import { AIProvider } from '../../renderer/contexts/ChatContext'
 
 interface AgentRequest {
   connectionId: string
   query: string
   database?: string
-  provider?: 'openai' | 'claude' | 'gemini' | 'openrouter'
+  provider?: AIProvider
   model?: string
   sessionId?: string // For maintaining conversation context
 }
@@ -77,7 +78,7 @@ export class LangChainAgent {
       case 'openrouter':
         return new ChatOpenAI({
           apiKey,
-          modelName: modelOverride || 'openai/gpt-4o-mini',
+          modelName: modelOverride || 'openai/gpt-3.5-turbo',
           temperature: 0.1,
           configuration: {
             baseURL: 'https://openrouter.ai/api/v1',

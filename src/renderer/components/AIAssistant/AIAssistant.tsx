@@ -192,7 +192,11 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
           AI Assistant
         </Text>
         <Flex align="center" gap="2">
-          <Select.Root value={provider} onValueChange={handleProviderChange}>
+          <Select.Root
+            value={provider}
+            onValueChange={handleProviderChange}
+            disabled={messages.length > 0}
+          >
             <Select.Trigger />
             <Select.Content>
               {aiProviderCatalog.map((p) => (
@@ -202,7 +206,11 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
               ))}
             </Select.Content>
           </Select.Root>
-          <Select.Root value={model} onValueChange={handleModelChange}>
+          <Select.Root
+            value={model}
+            onValueChange={handleModelChange}
+            disabled={messages.length > 0}
+          >
             <Select.Trigger />
             <Select.Content>
               {aiProviderCatalog
@@ -214,14 +222,16 @@ export function AIAssistant({ context, onExecuteQuery, onClose }: AIAssistantPro
                 ))}
             </Select.Content>
           </Select.Root>
-          <Button
-            size="1"
-            variant="ghost"
-            onClick={() => setShowApiKeySetup(true)}
-            title="Edit API Key"
-          >
-            <Pencil size={16} />
-          </Button>
+          {messages.length === 0 && (
+            <Button
+              size="1"
+              variant="ghost"
+              onClick={() => setShowApiKeySetup(true)}
+              title="Edit API Key"
+            >
+              <Pencil size={16} />
+            </Button>
+          )}
           {messages.length > 0 && (
             <Button size="1" variant="ghost" onClick={clearChat} title="Clear chat history">
               <Trash2 size={16} />

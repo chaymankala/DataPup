@@ -439,7 +439,8 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
         connectionId: context.connectionId || '',
         database: context.database || undefined,
         provider: provider,
-        sessionId: sessionId
+        sessionId: sessionId,
+        model: model
       })
 
       if (result.success) {

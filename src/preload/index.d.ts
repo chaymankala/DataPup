@@ -1,4 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import { AIProvider } from '../renderer/contexts/ChatContext'
 
 declare global {
   interface Window {
@@ -47,8 +48,9 @@ declare global {
           query: string
           connectionId: string
           database?: string
-          provider?: 'openai' | 'claude' | 'gemini'
+          provider?: AIProvider
           sessionId?: string
+          model?: string
         }) => Promise<{
           success: boolean
           message?: string

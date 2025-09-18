@@ -150,6 +150,7 @@ declare global {
           database?: string
           provider?: AIProvider
           sessionId?: string
+          model?: string
         }) => Promise<{
           success: boolean
           message?: string
