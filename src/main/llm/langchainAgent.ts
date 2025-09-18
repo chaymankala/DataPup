@@ -16,7 +16,8 @@ interface AgentRequest {
   connectionId: string
   query: string
   database?: string
-  provider?: 'openai' | 'claude' | 'gemini'
+  provider?: 'openai' | 'claude' | 'gemini' | 'openrouter'
+  model?: string
   sessionId?: string // For maintaining conversation context
 }
 
@@ -60,7 +61,7 @@ export class LangChainAgent {
     this.aiTools = new AITools(databaseManager)
   }
 
-  private async getModel(provider: string = 'openai') {
+  private async getModel(provider: string = 'openai', modelOverride?: string) {
     const apiKey = await this.secureStorage.get(`ai-api-key-${provider}`)
     if (!apiKey) {
       throw new Error(`No API key found for ${provider}`)
@@ -70,8 +71,20 @@ export class LangChainAgent {
       case 'openai':
         return new ChatOpenAI({
           apiKey,
-          modelName: 'gpt-4o-mini',
+          modelName: modelOverride || 'gpt-4o-mini',
           temperature: 0.1
+        })
+      case 'openrouter':
+        return new ChatOpenAI({
+          apiKey,
+          modelName: modelOverride || 'openai/gpt-4o-mini',
+          temperature: 0.1,
+          configuration: {
+            baseURL: 'https://openrouter.ai/api/v1',
+            defaultHeaders: {
+              'X-Title': 'DataPup'
+            }
+          } as any
         })
       case 'claude':
         return new ChatAnthropic({
@@ -181,7 +194,11 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ table, database: db }) => {
-          const result = await this.aiTools.getTableSchema(connectionId, table, db || database)
+          const result = await this.aiTools.getTableSchema(
+            connectionId,
+            table,
+            db || state.currentDatabase
+          )
           return JSON.stringify(result)
         }
       }),
@@ -211,7 +228,11 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ pattern, database: db }) => {
-          const result = await this.aiTools.searchTables(connectionId, pattern, db || database)
+          const result = await this.aiTools.searchTables(
+            connectionId,
+            pattern,
+            db || state.currentDatabase
+          )
           return JSON.stringify(result)
         }
       }),
@@ -223,7 +244,11 @@ export class LangChainAgent {
           database: z.string().optional().describe('Database name (optional)')
         }),
         func: async ({ pattern, database: db }) => {
-          const result = await this.aiTools.searchColumns(connectionId, pattern, db || database)
+          const result = await this.aiTools.searchColumns(
+            connectionId,
+            pattern,
+            db || state.currentDatabase
+          )
           return JSON.stringify(result)
         }
       }),
@@ -262,7 +287,7 @@ export class LangChainAgent {
 
   async processQuery(request: AgentRequest): Promise<AgentResponse> {
     try {
-      const { connectionId, query, database, provider = 'openai', sessionId } = request
+      const { connectionId, query, database, provider = 'openai', sessionId, model } = request
 
       // Check if connection is active
       if (!this.databaseManager.isConnected(connectionId)) {
@@ -286,7 +311,7 @@ export class LangChainAgent {
           conversationId: sessionKey
         }
 
-        const model = await this.getModel(provider)
+        const modelInstance = await this.getModel(provider, model)
         const tools = this.createTools(connectionId, state)
 
         // Create memory with chat history
@@ -320,7 +345,7 @@ IMPORTANT RULES:
         ])
 
         const agentModel = createToolCallingAgent({
-          llm: model,
+          llm: modelInstance,
           tools,
           prompt
         })
@@ -362,8 +387,9 @@ IMPORTANT RULES:
       if (session.state.currentDatabase) {
         contextInfo.push(`Current database: ${session.state.currentDatabase}`)
       }
-      if (session.state.availableDatabases.length > 0) {
-        contextInfo.push(`Available databases: ${session.state.availableDatabases.join(', ')}`)
+      const availableDbs = session.state.availableDatabases || []
+      if (availableDbs.length > 0) {
+        contextInfo.push(`Available databases: ${availableDbs.join(', ')}`)
       }
       if (session.state.exploredTables.size > 0) {
         contextInfo.push(
@@ -543,7 +569,7 @@ IMPORTANT RULES:
   formatSchemaForDisplay(schema: any): string {
     let formatted = `Database: ${schema.database}\n\n`
 
-    for (const table of schema.tables) {
+    for (const table of schema.tables as any[]) {
       formatted += `Table: ${table.name}\n`
       for (const column of table.columns) {
         formatted += `  - ${column.name}: ${column.type}\n`
