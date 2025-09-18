@@ -18,28 +18,247 @@ export interface AIContext {
   database?: string
 }
 
-export type AIProvider = 'openai' | 'claude' | 'gemini'
+export type AIProvider = 'openai' | 'claude' | 'gemini' | 'openrouter'
+
+export type AIProviderCatalog = {
+  id: AIProvider
+  label: string
+  models: AIModelDescriptor[]
+  dynamicModels?: boolean
+  dynamicModelsGetter?: () => Promise<{ success: boolean; models: AIModelDescriptor[] }>
+}
+
+export interface AIModelDescriptor {
+  id: string
+  label?: string
+  contextLength?: number
+  notes?: string
+  default?: boolean
+}
+
+export const aiProviderCatalog: AIProviderCatalog[] = [
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    models: [
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: true },
+      { id: 'gpt-4o', label: 'GPT-4o' },
+      { id: 'o4-mini', label: 'o4-mini (reasoning)' }
+    ]
+  },
+  {
+    id: 'claude',
+    label: 'Claude',
+    models: [
+      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', default: true },
+      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+      { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+    ]
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    models: [
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', default: true },
+      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+    ]
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    models: [
+      {
+        id: 'openai/gpt-4o',
+        label: 'OpenAI: GPT-4o',
+        contextLength: 128000,
+        default: true
+      },
+      {
+        id: 'openai/gpt-4o-mini',
+        label: 'OpenAI: GPT-4o-mini',
+        contextLength: 128000
+      },
+      {
+        id: 'openai/gpt-3.5-turbo',
+        label: 'OpenAI: GPT-3.5 Turbo',
+        contextLength: 16385
+      },
+      {
+        id: 'openai/o1-mini',
+        label: 'OpenAI: o1-mini',
+        contextLength: 128000
+      },
+      {
+        id: 'openai/o3-mini',
+        label: 'OpenAI: o3 Mini',
+        contextLength: 200000
+      },
+      {
+        id: 'anthropic/claude-3.5-sonnet',
+        label: 'Anthropic: Claude 3.5 Sonnet',
+        contextLength: 200000
+      },
+      {
+        id: 'anthropic/claude-3-haiku',
+        label: 'Anthropic: Claude 3 Haiku',
+        contextLength: 200000
+      },
+      {
+        id: 'anthropic/claude-opus-4',
+        label: 'Anthropic: Claude Opus 4',
+        contextLength: 200000
+      },
+      {
+        id: 'anthropic/claude-sonnet-4',
+        label: 'Anthropic: Claude Sonnet 4',
+        contextLength: 1000000
+      },
+      {
+        id: 'google/gemini-2.5-flash',
+        label: 'Google: Gemini 2.5 Flash',
+        contextLength: 1048576
+      },
+      {
+        id: 'google/gemini-2.5-pro',
+        label: 'Google: Gemini 2.5 Pro',
+        contextLength: 1048576
+      },
+      {
+        id: 'google/gemini-pro-1.5',
+        label: 'Google: Gemini 1.5 Pro',
+        contextLength: 2000000
+      },
+      {
+        id: 'meta-llama/llama-3.1-405b-instruct',
+        label: 'Meta: Llama 3.1 405B Instruct',
+        contextLength: 32768
+      },
+      {
+        id: 'meta-llama/llama-3.1-70b-instruct',
+        label: 'Meta: Llama 3.1 70B Instruct',
+        contextLength: 131072
+      },
+      {
+        id: 'meta-llama/llama-3.1-8b-instruct',
+        label: 'Meta: Llama 3.1 8B Instruct',
+        contextLength: 131072
+      },
+      {
+        id: 'meta-llama/llama-3.3-70b-instruct',
+        label: 'Meta: Llama 3.3 70B Instruct',
+        contextLength: 131072
+      },
+      {
+        id: 'mistralai/mistral-large-2411',
+        label: 'Mistral Large 2411',
+        contextLength: 131072
+      },
+      {
+        id: 'mistralai/mistral-medium-3',
+        label: 'Mistral: Mistral Medium 3',
+        contextLength: 131072
+      },
+      {
+        id: 'mistralai/mistral-nemo',
+        label: 'Mistral: Mistral Nemo',
+        contextLength: 131072
+      },
+      {
+        id: 'mistralai/mistral-7b-instruct',
+        label: 'Mistral: Mistral 7B Instruct',
+        contextLength: 32768
+      },
+      {
+        id: 'qwen/qwen2.5-72b-instruct',
+        label: 'Qwen2.5 72B Instruct',
+        contextLength: 32768
+      },
+      {
+        id: 'qwen/qwen3-max',
+        label: 'Qwen: Qwen3 Max',
+        contextLength: 256000
+      },
+      {
+        id: 'qwen/qwq-32b',
+        label: 'Qwen: QwQ 32B',
+        contextLength: 32768
+      },
+      {
+        id: 'qwen/qwen-plus',
+        label: 'Qwen: Qwen-Plus',
+        contextLength: 131072
+      },
+      {
+        id: 'deepseek/deepseek-chat-v3.1',
+        label: 'DeepSeek: DeepSeek V3.1',
+        contextLength: 163840
+      },
+      {
+        id: 'deepseek/deepseek-r1',
+        label: 'DeepSeek: R1',
+        contextLength: 163840
+      },
+      {
+        id: 'mistralai/codestral-2501',
+        label: 'Mistral: Codestral 2501',
+        contextLength: 262144
+      },
+      {
+        id: 'qwen/qwen-2.5-coder-32b-instruct',
+        label: 'Qwen2.5 Coder 32B Instruct',
+        contextLength: 32768
+      },
+      {
+        id: 'cohere/command-r-plus',
+        label: 'Cohere: Command R+',
+        contextLength: 128000
+      },
+      {
+        id: 'cohere/command-r',
+        label: 'Cohere: Command R',
+        contextLength: 128000
+      },
+      {
+        id: 'nousresearch/hermes-3-llama-3.1-70b',
+        label: 'Nous: Hermes 3 70B Instruct',
+        contextLength: 131072
+      },
+      {
+        id: 'microsoft/phi-3-mini-128k-instruct',
+        label: 'Microsoft: Phi-3 Mini 128K Instruct',
+        contextLength: 128000
+      }
+    ]
+  }
+]
 
 interface ChatContextType {
   // State
   messages: Message[]
   isLoading: boolean
   provider: AIProvider
+  model?: string
   apiKey: string | null
   showApiKeySetup: boolean
   sessionId: string
+  isApiKeySetupLocked: boolean
 
   // Actions
   addMessage: (message: Message) => void
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void
   setIsLoading: (loading: boolean) => void
   setProvider: (provider: AIProvider) => void
+  setModel: (model: string) => void
   setApiKey: (key: string | null) => void
   setShowApiKeySetup: (show: boolean) => void
   clearChat: () => void
 
   // AI Operations
-  sendMessage: (content: string, context: AIContext, onExecuteQuery?: (query: string) => void) => Promise<void>
+  sendMessage: (
+    content: string,
+    context: AIContext,
+    onExecuteQuery?: (query: string) => void
+  ) => Promise<void>
   handleApiKeySubmit: (key: string, provider: AIProvider) => Promise<void>
 }
 
@@ -63,16 +282,36 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [provider, setProviderState] = useState<AIProvider>(() => {
     const saved = localStorage.getItem('datapup-ai-provider')
-    if (saved && ['openai', 'claude', 'gemini'].includes(saved)) {
+    if (saved && ['openai', 'claude', 'gemini', 'openrouter'].includes(saved)) {
       return saved as AIProvider
     }
     return 'openai'
   })
+  const [model, setModelState] = useState<string>(() => {
+    const saved = localStorage.getItem('datapup-ai-model')
+    if (
+      saved &&
+      aiProviderCatalog
+        .find((p: AIProviderCatalog) => p.id === provider)
+        ?.models.find((m: AIModelDescriptor) => m.id === saved)
+    ) {
+      return saved as string
+    } else {
+      return (
+        aiProviderCatalog
+          .find((p: AIProviderCatalog) => p.id === provider)
+          ?.models.find((m: AIModelDescriptor) => m.default)?.id || ''
+      )
+    }
+  })
   const [apiKey, setApiKey] = useState<string | null>(null)
-  const [showApiKeySetup, setShowApiKeySetup] = useState(false)
+  const [showApiKeySetupState, setShowApiKeySetupState] = useState(false)
+  const apiKeySetupLockedRef = useRef(false)
 
   // Generate session ID that persists for the lifetime of this provider
-  const sessionIdRef = useRef(`session-${connectionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+  const sessionIdRef = useRef(
+    `session-${connectionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  )
   const sessionId = sessionIdRef.current
 
   // Check for API key on mount and when provider changes
@@ -82,13 +321,15 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
         const result = await window.api.secureStorage.get(`ai-api-key-${provider}`)
         if (result.success && result.value) {
           setApiKey(result.value)
-          setShowApiKeySetup(false)
+          if (!apiKeySetupLockedRef.current) {
+            setShowApiKeySetupState(false)
+          }
         } else {
-          setShowApiKeySetup(true)
+          setShowApiKeySetupState(true)
         }
       } catch (error) {
         logger.error('Error checking API key:', error)
-        setShowApiKeySetup(true)
+        setShowApiKeySetupState(true)
       }
     }
     checkApiKey()
@@ -148,12 +389,22 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
   }, [connectionId])
 
   const addMessage = (message: Message) => {
-    setMessages(prev => [...prev, message])
+    setMessages((prev) => [...prev, message])
   }
 
   const setProvider = (newProvider: AIProvider) => {
     setProviderState(newProvider)
     localStorage.setItem('datapup-ai-provider', newProvider)
+  }
+
+  const setModel = (newModel: string) => {
+    setModelState(newModel)
+    localStorage.setItem('datapup-ai-model', newModel)
+  }
+
+  const setShowApiKeySetup = (show: boolean) => {
+    setShowApiKeySetupState(show)
+    apiKeySetupLockedRef.current = show
   }
 
   const clearChat = () => {
@@ -162,7 +413,11 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
     sessionIdRef.current = `session-${connectionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }
 
-  const sendMessage = async (content: string, context: AIContext, onExecuteQuery?: (query: string) => void) => {
+  const sendMessage = async (
+    content: string,
+    context: AIContext,
+    onExecuteQuery?: (query: string) => void
+  ) => {
     if (!content.trim() || isLoading) return
 
     const userInput = content.trim()
@@ -184,7 +439,8 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
         connectionId: context.connectionId || '',
         database: context.database || undefined,
         provider: provider,
-        sessionId: sessionId
+        sessionId: sessionId,
+        model: model
       })
 
       if (result.success) {
@@ -223,7 +479,8 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
       const result = await window.api.secureStorage.set(`ai-api-key-${currentProvider}`, key)
       if (result.success) {
         setApiKey(key)
-        setShowApiKeySetup(false)
+        setShowApiKeySetupState(false)
+        apiKeySetupLockedRef.current = false
       }
     } catch (error) {
       logger.error('Error saving API key:', error)
@@ -235,15 +492,18 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
     messages,
     isLoading,
     provider,
+    model,
     apiKey,
-    showApiKeySetup,
+    showApiKeySetup: showApiKeySetupState,
     sessionId,
+    isApiKeySetupLocked: apiKeySetupLockedRef.current,
 
     // Actions
     addMessage,
     setMessages,
     setIsLoading,
     setProvider,
+    setModel,
     setApiKey,
     setShowApiKeySetup,
     clearChat,
@@ -253,9 +513,5 @@ export function ChatProvider({ children, connectionId }: ChatProviderProps) {
     handleApiKeySubmit
   }
 
-  return (
-    <ChatContext.Provider value={contextValue}>
-      {children}
-    </ChatContext.Provider>
-  )
+  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>
 }

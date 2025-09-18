@@ -148,8 +148,9 @@ declare global {
           query: string
           connectionId: string
           database?: string
-          provider?: 'openai' | 'claude' | 'gemini'
+          provider?: AIProvider
           sessionId?: string
+          model?: string
         }) => Promise<{
           success: boolean
           message?: string
