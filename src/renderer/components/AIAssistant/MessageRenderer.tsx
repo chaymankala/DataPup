@@ -19,12 +19,19 @@ export function MessageRenderer({ content, sqlQuery, onRunQuery }: MessageRender
             const match = /language-(\w+)/.exec(className || '')
             const language = match ? match[1] : ''
 
-            if (!inline && (language === 'sql' || language === 'SQL')) {
+            if (
+              !inline &&
+              (language === 'sql' ||
+                language === 'SQL' ||
+                language === 'json' ||
+                language === 'javascript' ||
+                language === 'js')
+            ) {
               return (
                 <Box my="2">
                   <Flex direction="column" gap="2">
                     <SyntaxHighlighter
-                      language="sql"
+                      language={language === 'sql' || language === 'SQL' ? 'sql' : language}
                       style={oneDark}
                       customStyle={{
                         margin: 0,
