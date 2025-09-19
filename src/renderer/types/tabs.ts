@@ -51,4 +51,5 @@ export interface QueryExecutionResult {
   queryType?: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'DDL' | 'SYSTEM' | 'OTHER'
   totalRows?: number // Total rows available (for pagination)
   hasMore?: boolean // Indicates if there are more rows beyond current result set
+  isNoSQL?: boolean // Indicates if this is a NoSQL database result (should be displayed as JSON)
 }
