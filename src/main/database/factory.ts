@@ -2,6 +2,7 @@ import { DatabaseManagerInterface } from './interface'
 import { ClickHouseManager } from './clickhouse'
 import { PostgreSQLManager } from './postgresql'
 import { MySQLManager } from './mysql'
+import { MongoDBManager } from './mongodb'
 
 class DatabaseManagerFactory {
   private managers: Map<string, DatabaseManagerInterface> = new Map()
@@ -11,6 +12,7 @@ class DatabaseManagerFactory {
     this.managers.set('clickhouse', new ClickHouseManager())
     this.managers.set('postgresql', new PostgreSQLManager())
     this.managers.set('mysql', new MySQLManager())
+    this.managers.set('mongodb', new MongoDBManager())
   }
 
   getManager(databaseType: string): DatabaseManagerInterface | null {

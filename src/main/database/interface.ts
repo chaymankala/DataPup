@@ -47,6 +47,7 @@ export interface QueryResult {
   isDML?: boolean
   totalRows?: number // Total rows available (for pagination)
   hasMore?: boolean // Indicates if there are more rows beyond current result set
+  isNoSQL?: boolean // Indicates if this is a NoSQL database result (should be displayed as JSON)
 }
 
 export interface InsertResult extends QueryResult {
@@ -127,6 +128,7 @@ export interface TableQueryOptions {
   orderBy?: Array<{ column: string; direction: 'asc' | 'desc' }>
   limit?: number
   offset?: number
+  aggregationPipeline?: any[] // For MongoDB aggregation pipelines
 }
 
 export interface DatabaseManagerInterface {
