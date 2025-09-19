@@ -12,6 +12,7 @@ import { AITools } from './tools'
 import { logger } from '../utils/logger'
 import { BrowserWindow } from 'electron'
 import { AIProvider } from '../../renderer/contexts/ChatContext'
+import { DatabaseStringProvider } from './databaseStrings'
 
 interface AgentRequest {
   connectionId: string
@@ -112,11 +113,19 @@ export class LangChainAgent {
     })
   }
 
-  private createTools(connectionId: string, state: AgentState) {
-    const tools = [
+  private getDatabaseType(connectionId: string): string {
+    const connectionInfo = this.databaseManager.getConnectionInfo(connectionId)
+    return connectionInfo?.type || 'unknown'
+  }
+
+  private createTools(connectionId: string, state: AgentState): any[] {
+    const dbType = this.getDatabaseType(connectionId)
+    const strings = DatabaseStringProvider.getStrings(dbType)
+
+    const tools: any[] = [
       new DynamicStructuredTool({
         name: 'listDatabases',
-        description: 'Get all available databases',
+        description: strings.listDatabases,
         schema: z.object({}),
         func: async () => {
           const cacheKey = 'listDatabases'
@@ -150,9 +159,9 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'listTables',
-        description: 'Get all tables in a database',
+        description: strings.listTables,
         schema: z.object({
-          database: z.string().optional().describe('Database name (optional)')
+          database: z.string().optional().describe(strings.databaseName)
         }),
         func: async ({ database: db }) => {
           const targetDb = db || state.currentDatabase
@@ -172,7 +181,7 @@ export class LangChainAgent {
 
           const result = await this.aiTools.listTables(connectionId, targetDb)
 
-          // Cache the result and track explored tables
+          // Cache the result and track explored tables/collections
           if (result.success && result.tables) {
             state.toolResultsCache.set(cacheKey, result)
             result.tables.forEach((table) => state.exploredTables.add(table))
@@ -189,10 +198,10 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'getTableSchema',
-        description: 'Get schema of a specific table',
+        description: strings.getTableSchema,
         schema: z.object({
-          table: z.string().describe('Table name'),
-          database: z.string().optional().describe('Database name (optional)')
+          table: z.string().describe(strings.tableName),
+          database: z.string().optional().describe(strings.databaseName)
         }),
         func: async ({ table, database: db }) => {
           const result = await this.aiTools.getTableSchema(
@@ -205,16 +214,16 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'getSampleRows',
-        description: 'Get sample data from a table',
+        description: strings.getSampleRows,
         schema: z.object({
-          table: z.string().describe('Table name'),
+          table: z.string().describe(strings.tableName),
           database: z.string().optional().describe('Database name'),
-          limit: z.number().optional().default(5).describe('Number of rows to return')
+          limit: z.number().optional().default(5).describe(strings.limitDescription)
         }),
         func: async ({ table, database: db, limit }) => {
           const result = await this.aiTools.getSampleRows(
             connectionId,
-            db || database || '',
+            db || state.currentDatabase || '',
             table,
             limit
           )
@@ -223,10 +232,10 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'searchTables',
-        description: 'Search for tables by name pattern',
+        description: strings.searchTables,
         schema: z.object({
           pattern: z.string().describe('Search pattern'),
-          database: z.string().optional().describe('Database name (optional)')
+          database: z.string().optional().describe(strings.databaseName)
         }),
         func: async ({ pattern, database: db }) => {
           const result = await this.aiTools.searchTables(
@@ -239,10 +248,10 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'searchColumns',
-        description: 'Search for columns by name pattern',
+        description: strings.searchColumns,
         schema: z.object({
           pattern: z.string().describe('Search pattern'),
-          database: z.string().optional().describe('Database name (optional)')
+          database: z.string().optional().describe(strings.databaseName)
         }),
         func: async ({ pattern, database: db }) => {
           const result = await this.aiTools.searchColumns(
@@ -255,11 +264,10 @@ export class LangChainAgent {
       }),
       new DynamicStructuredTool({
         name: 'analyzeQueryPerformance',
-        description:
-          'Analyze SQL query performance using EXPLAIN ANALYZE and provide optimization suggestions',
+        description: strings.analyzeQueryPerformance,
         schema: z.object({
-          sql: z.string().describe('SQL query to analyze for performance'),
-          database: z.string().optional().describe('Database name (optional)')
+          sql: z.string().describe(strings.queryDescription),
+          database: z.string().optional().describe(strings.databaseName)
         }),
         func: async ({ sql, database: db }) => {
           const targetDb = db || state.currentDatabase
@@ -327,19 +335,11 @@ export class LangChainAgent {
           humanPrefix: 'Human'
         })
 
-        const prompt = ChatPromptTemplate.fromMessages([
-          [
-            'system',
-            `You are an intelligent database agent with memory of our conversation. Your job is to help users explore and query their databases.
+        const currentDbType = this.getDatabaseType(connectionId)
+        const systemPrompt = DatabaseStringProvider.getSystemPrompt(currentDbType)
 
-IMPORTANT RULES:
-1. Remember what we've already discussed - don't repeat tool calls unnecessarily
-2. Use cached information when available
-3. For questions about tables/schemas, use tools like listTables, getTableSchema
-4. For data queries, generate appropriate SQL
-5. Always verify table exists before generating SQL for it
-6. If a table doesn't exist in current database, explore other databases`
-          ],
+        const prompt = ChatPromptTemplate.fromMessages([
+          ['system', systemPrompt],
           new MessagesPlaceholder('chat_history'),
           ['human', '{input}'],
           ['placeholder', '{agent_scratchpad}']
@@ -355,7 +355,7 @@ IMPORTANT RULES:
           agent: agentModel,
           tools,
           memory,
-          maxIterations: 15,
+          maxIterations: 8,
           handleParsingErrors: true,
           verbose: true
         })
@@ -425,17 +425,12 @@ IMPORTANT RULES:
           const modelWithoutMemory = await this.getModel(provider)
           const toolsWithoutMemory = this.createTools(connectionId, session.state)
 
-          const promptWithoutMemory = ChatPromptTemplate.fromMessages([
-            [
-              'system',
-              `You are an intelligent database agent. Your job is to help users explore and query their databases.
+          const systemPromptWithoutMemory = DatabaseStringProvider.getSystemPromptWithoutMemory(
+            this.getDatabaseType(connectionId)
+          )
 
-IMPORTANT RULES:
-1. For questions about tables/schemas, use tools like listTables, getTableSchema
-2. For data queries, generate appropriate SQL
-3. Always verify table exists before generating SQL for it
-4. If a table doesn't exist in current database, explore other databases`
-            ],
+          const promptWithoutMemory = ChatPromptTemplate.fromMessages([
+            ['system', systemPromptWithoutMemory],
             ['human', '{input}'],
             ['placeholder', '{agent_scratchpad}']
           ])
@@ -480,9 +475,10 @@ IMPORTANT RULES:
       // Format the complete response as markdown
       let formattedResponse = outputText
 
-      // Extract SQL for backwards compatibility
+      // Extract SQL/MongoDB queries for backwards compatibility
       const sqlMatch = outputText.match(/```sql\n([\s\S]*?)\n```/)
-      const sqlQuery = sqlMatch ? sqlMatch[1].trim() : undefined
+      const mongoMatch = outputText.match(/```(?:json|javascript|js)\n([\s\S]*?)\n```/)
+      const sqlQuery = sqlMatch ? sqlMatch[1].trim() : mongoMatch ? mongoMatch[1].trim() : undefined
 
       // If we have intermediate steps, emit tool events
       if (result.intermediateSteps && Array.isArray(result.intermediateSteps)) {
@@ -551,7 +547,7 @@ IMPORTANT RULES:
     if (result.success && result.tables) {
       const schema = {
         database: database || 'default',
-        tables: []
+        tables: [] as any[]
       }
 
       // Get schema for each table
