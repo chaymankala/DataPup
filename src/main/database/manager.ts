@@ -299,7 +299,7 @@ class DatabaseManager {
     }
 
     const info = this.activeConnection.manager.getConnectionInfo(connectionId)
-    return info ? { type: this.activeConnection.type, ...info } : null
+    return info ? { ...info, type: this.activeConnection.type } : null
   }
 
   getActiveConnection(): string | null {
@@ -475,11 +475,11 @@ class DatabaseManager {
     }
   }
 
-  supportsTransactions(connectionId: string): boolean {
+  async supportsTransactions(connectionId: string): Promise<boolean> {
     if (!this.activeConnection || this.activeConnection.id !== connectionId) {
       return false
     }
-    return this.activeConnection.manager.supportsTransactions(connectionId)
+    return await this.activeConnection.manager.supportsTransactions(connectionId)
   }
 
   async beginTransaction(connectionId: string): Promise<TransactionHandle> {
@@ -508,6 +508,16 @@ class DatabaseManager {
       return []
     }
     return await this.activeConnection.manager.getPrimaryKeys(connectionId, table, database)
+  }
+
+  // Get database-specific AI tools
+  getDatabaseSpecificAITools(connectionId: string): any {
+    if (!this.activeConnection || this.activeConnection.id !== connectionId) {
+      return null
+    }
+
+    // Return the manager instance which may have AI-specific methods
+    return this.activeConnection.manager
   }
 }
 
