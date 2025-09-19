@@ -33,8 +33,21 @@ export class AITools {
     limit: number = 5
   ) {
     try {
-      const query = `SELECT * FROM ${database}.${tableName} LIMIT ${limit}`
-      return await this.databaseManager.query(connectionId, query)
+      // Check if this is a NoSQL connection
+      const connectionInfo = this.databaseManager.getConnectionInfo(connectionId)
+      if (connectionInfo?.type === 'mongodb') {
+        // For MongoDB, use queryTable with empty filters to get sample documents
+        return await this.databaseManager.queryTable(connectionId, {
+          database,
+          table: tableName,
+          filters: [],
+          limit
+        })
+      } else {
+        // For SQL databases, use the original SQL query
+        const query = `SELECT * FROM ${database}.${tableName} LIMIT ${limit}`
+        return await this.databaseManager.query(connectionId, query)
+      }
     } catch (error) {
       logger.error('Error getting sample rows:', error)
       return {
@@ -72,7 +85,7 @@ export class AITools {
     try {
       const tablesResult = await this.databaseManager.getTables(connectionId, database)
       if (!tablesResult.success || !tablesResult.tables) {
-        return { success: false, tables: [], error: tablesResult.error }
+        return { success: false, tables: [], message: tablesResult.message }
       }
       const filtered = tablesResult.tables.filter((table) =>
         table.toLowerCase().includes(pattern.toLowerCase())
@@ -92,7 +105,7 @@ export class AITools {
     try {
       const tablesResult = await this.databaseManager.getTables(connectionId, database)
       if (!tablesResult.success || !tablesResult.tables) {
-        return { success: false, columns: [], error: tablesResult.error }
+        return { success: false, columns: [], message: tablesResult.message }
       }
 
       const matchingColumns: Array<{ table: string; column: string; type: string }> = []
@@ -132,7 +145,7 @@ export class AITools {
     try {
       const tablesResult = await this.databaseManager.getTables(connectionId, database)
       if (!tablesResult.success || !tablesResult.tables) {
-        return { success: false, summary: '', error: tablesResult.error }
+        return { success: false, summary: '', message: tablesResult.message }
       }
 
       const tableCount = tablesResult.tables.length
@@ -173,7 +186,7 @@ export class AITools {
         database
       )
       if (!schemaResult.success || !schemaResult.schema) {
-        return { success: false, summary: '', error: schemaResult.error }
+        return { success: false, summary: '', message: schemaResult.message }
       }
 
       const columns = schemaResult.schema
@@ -293,8 +306,8 @@ GROUP BY department;
   }
 
   async analyzeQueryPerformance(
-    connectionId: string, 
-    sql: string, 
+    connectionId: string,
+    sql: string,
     database?: string
   ): Promise<QueryPerformanceResult> {
     return await this.queryPerformanceAnalyzer.analyzeQueryPerformance(connectionId, sql, database)
